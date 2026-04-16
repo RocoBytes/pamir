@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum DifficultyLevel {
+  FACIL
+  MODERADO
+  DIFICIL
+  MUY_DIFICIL
+  EXTREMO
+}
+
+enum SalidaStatus {
+  BORRADOR
+  CONFIRMADA
+  EN_CURSO
+  COMPLETADA
+  CANCELADA
+  INCIDENTE
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  picture   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  salidas Salida[]
+
+  @@map("users")
+}
+
+model Salida {
+  id     String  @id @default(uuid())
+  userId String? @map("user_id")
+
+  // Paso 1 – Información general
+  mountain  String
+  route     String
+  objective String?
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+
+  // Paso 2 – Participantes
+  // Array de { name: string, phone: string, experience: string }
+  participants   Json    @default("[]")
+  emergencyName  String? @map("emergency_name")
+  emergencyPhone String? @map("emergency_phone")
+
+  // Paso 3 – Equipamiento y condiciones
+  difficulty  DifficultyLevel @default(MODERADO)
+  equipment   Json            @default("[]")
+  weatherNote String?         @map("weather_note")
+
+  // Paso 4 – Archivo GPX (se rellena en Fase 3)
+  gpxFileId   String? @map("gpx_file_id")
+  gpxFileName String? @map("gpx_file_name")
+  gpxFileUrl  String? @map("gpx_file_url")
+
+  // Paso 5 – Estado e incidencias
+  status         SalidaStatus @default(BORRADOR)
+  incidentReport String?      @map("incident_report")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("salidas")
+}
