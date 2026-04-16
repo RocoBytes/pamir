@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/rodrigocontrerasrubio/proyectos/Pamir/backend)",
+      "Bash(npm init *)",
+      "Bash(npm run *)"
+    ]
+  }
+}

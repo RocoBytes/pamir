@@ -1,0 +1,36 @@
+# Render.com Infrastructure-as-Code
+# Referencia: https://render.com/docs/blueprint-spec
+#
+# Uso: conecta tu repositorio en Render.com y este archivo se detecta automáticamente.
+# Las variables marcadas con `sync: false` debes añadirlas manualmente en el dashboard.
+
+services:
+  - type: web
+    name: pamir-api
+    runtime: node
+    rootDir: backend
+    # Render.com Free Tier duerme tras 15 min de inactividad.
+    # El endpoint /api/health recibe pings cada 14 min desde un cronjob externo
+    # (p. ej. cron-job.org) para evitar el cold start.
+    buildCommand: npm install && npm run build && npm run db:generate
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      # ── Añadir manualmente en el dashboard de Render ──────────────────────────
+      - key: DATABASE_URL
+        sync: false   # Neon.tech pooled endpoint
+      - key: GOOGLE_CLIENT_ID
+        sync: false   # Mismo Client ID que en Vercel
+      - key: GOOGLE_SERVICE_ACCOUNT_EMAIL
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_KEY
+        sync: false   # Pega el contenido de "private_key" del JSON (con \n literales)
+      - key: GOOGLE_DRIVE_FOLDER_ID
+        sync: false
+      - key: FRONTEND_URL
+        sync: false   # URL de tu app en Vercel, ej: https://pamir.vercel.app
