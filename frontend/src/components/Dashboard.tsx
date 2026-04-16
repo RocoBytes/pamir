@@ -1,0 +1,252 @@
+import { useState, useEffect, useCallback } from 'react'
+import {
+  Mountain,
+  Calendar,
+  LogOut,
+  Loader2,
+  AlertCircle,
+  Backpack,
+  MapPin,
+  FileWarning,
+  ChevronRight,
+  ClipboardList,
+  Clock,
+} from 'lucide-react'
+
+import type { SalidaRecord, User } from '../types/salida'
+import {
+  STATUS_LABELS,
+  STATUS_COLORS,
+  DISCIPLINA_LABELS,
+} from '../types/salida'
+import { fetchSalidas } from '../lib/api'
+import { loadGuestSalidas } from '../lib/storage'
+import { Button } from './ui/Button'
+
+// Imagen de ruta alpinista en Chile — reemplazar por foto propia si se desea
+const HERO_IMAGE =
+  'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=80'
+
+interface DashboardProps {
+  user: User
+  isGuest: boolean
+  onNewSalida: () => void
+  onLogout: () => void
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  } catch {
+    return iso
+  }
+}
+
+function SalidaCard({ salida }: { salida: SalidaRecord }) {
+  return (
+    <article className="bg-white rounded-2xl border border-[#687C6B]/15 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-slate-900 text-base leading-tight truncate">
+              {salida.nombreActividad}
+            </h3>
+            <p className="text-sm text-[#757874] mt-0.5 truncate flex items-center gap-1">
+              <MapPin size={12} className="shrink-0" />
+              {salida.ubicacionGeografica}
+            </p>
+          </div>
+          <span
+            className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_COLORS[salida.status]}`}
+          >
+            {STATUS_LABELS[salida.status]}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs text-[#757874]">
+          <div className="flex items-center gap-1.5">
+            <Calendar size={13} className="text-[#757874]/60 shrink-0" />
+            <span>{formatDate(salida.fechaInicio)}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Clock size={13} className="text-[#757874]/60 shrink-0" />
+            <span>Retorno {salida.horaRetornoEstimada}</span>
+          </div>
+          <div className="flex items-center gap-1.5 col-span-2">
+            <Backpack size={13} className="text-[#757874]/60 shrink-0" />
+            <span className="font-medium text-[#687C6B]">
+              {DISCIPLINA_LABELS[salida.disciplina]}
+            </span>
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+export function Dashboard({ user, isGuest, onNewSalida, onLogout }: DashboardProps) {
+  const [salidas, setSalidas] = useState<SalidaRecord[]>([])
+  const [isLoading, setIsLoading] = useState(!isGuest)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadSalidas = useCallback(async () => {
+    if (isGuest) {
+      setSalidas(loadGuestSalidas())
+      return
+    }
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await fetchSalidas()
+      setSalidas(data)
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Error al cargar las salidas',
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }, [isGuest])
+
+  useEffect(() => {
+    void loadSalidas()
+  }, [loadSalidas])
+
+  return (
+    <div className="min-h-screen bg-[#f2f0ec]">
+      {/* Top nav */}
+      <header className="bg-white border-b border-[#687C6B]/10 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#4E805D]">
+              <Mountain className="text-white" size={16} />
+            </div>
+            <span className="font-bold text-slate-900 text-lg">Pamir</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[#757874] hidden sm:inline">
+              {isGuest ? 'Invitado' : user.name}
+            </span>
+            <Button variant="ghost" size="sm" onClick={onLogout} aria-label="Cerrar sesion">
+              <LogOut size={16} />
+              <span className="hidden sm:inline">Salir</span>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6">
+        {/* Guest banner */}
+        {isGuest && (
+          <div className="flex items-start gap-2 rounded-2xl bg-[#fef9f0] border border-[#A4636E]/20 p-4 mb-5 text-sm text-[#8b5a3a]">
+            <AlertCircle size={16} className="mt-0.5 shrink-0 text-[#A4636E]" />
+            <span>
+              Modo invitado: tus salidas se guardan solo en este dispositivo.
+              Para sincronizar en la nube,{' '}
+              <button
+                onClick={onLogout}
+                className="underline font-semibold hover:text-[#A4636E] transition-colors"
+              >
+                inicia sesion
+              </button>
+              .
+            </span>
+          </div>
+        )}
+
+        {/* Hero card — acceso principal al formulario */}
+        <button
+          onClick={onNewSalida}
+          className="relative w-full rounded-3xl overflow-hidden mb-6 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] focus-visible:ring-offset-2"
+          aria-label="Abrir formulario de salida"
+          style={{ minHeight: '260px' }}
+        >
+          {/* Imagen de fondo */}
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+            style={{ backgroundImage: `url(${HERO_IMAGE})` }}
+          />
+          {/* Overlay verde con 50% opacidad */}
+          <div className="absolute inset-0 bg-[#4E805D] opacity-60" />
+          {/* Contenido sobre el overlay */}
+          <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 py-12 text-white text-center gap-4">
+            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-inner">
+              <ClipboardList size={28} className="text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-1">
+                Andino Club Pamir
+              </p>
+              <h2 className="text-2xl sm:text-3xl font-bold leading-tight drop-shadow">
+                Formulario de Salida
+              </h2>
+            </div>
+            <span className="inline-flex items-center gap-1.5 text-sm font-semibold bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-full transition-colors group-hover:bg-white/30">
+              Registrar salida
+              <ChevronRight size={16} />
+            </span>
+          </div>
+        </button>
+
+        {/* Page header */}
+        <div className="mb-5">
+          <h1 className="text-xl font-bold text-slate-900">Mis Salidas</h1>
+          <p className="text-sm text-[#757874] mt-0.5">
+            {salidas.length === 0
+              ? 'Aun no hay salidas registradas'
+              : `${salidas.length} ${salidas.length === 1 ? 'salida' : 'salidas'} registradas`}
+          </p>
+        </div>
+
+        {/* States */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#757874]">
+            <Loader2 className="animate-spin text-[#4E805D]" size={28} />
+            <p className="text-sm">Cargando salidas...</p>
+          </div>
+        )}
+
+        {error && !isLoading && (
+          <div className="flex flex-col items-center py-12 gap-4 text-center">
+            <AlertCircle size={32} className="text-[#A4636E]" />
+            <div>
+              <p className="font-semibold text-slate-700">Error al cargar</p>
+              <p className="text-sm text-[#757874] mt-1">{error}</p>
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => void loadSalidas()}>
+              Reintentar
+            </Button>
+          </div>
+        )}
+
+        {!isLoading && !error && salidas.length === 0 && (
+          <div className="flex flex-col items-center py-12 gap-3 text-center">
+            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-[#e8f0ea]">
+              <FileWarning size={24} className="text-[#4E805D]" />
+            </div>
+            <div>
+              <p className="font-semibold text-slate-700">Sin salidas aun</p>
+              <p className="text-sm text-[#757874] mt-0.5">
+                Usa la tarjeta de arriba para registrar tu primera salida
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!isLoading && !error && salidas.length > 0 && (
+          <div className="grid gap-3">
+            {salidas.map((salida) => (
+              <SalidaCard key={salida.id} salida={salida} />
+            ))}
+          </div>
+        )}
+      </main>
+
+    </div>
+  )
+}
