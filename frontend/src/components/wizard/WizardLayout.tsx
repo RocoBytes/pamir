@@ -1,14 +1,14 @@
 import { useState, useCallback } from 'react'
-import { Mountain, Users, Radio, Flag, ChevronLeft, X, Check } from 'lucide-react'
-import type { SalidaFormData, User, SalidaRecord, SalidaStatus } from '../../types/salida'
+import { Mountain, Users, Radio, Map, ChevronLeft, X, Check } from 'lucide-react'
+import type { SalidaFormData, User, SalidaRecord } from '../../types/salida'
 import { saveDraft, loadDraft, loadDraftStep, clearDraft, saveDraftStep, saveGuestSalida } from '../../lib/storage'
-import { createSalida } from '../../lib/api'
+import { createSalida, uploadGpx } from '../../lib/api'
 import { Button } from '../ui/Button'
 import { Step1General } from './Step1General'
 import { Step2Participants } from './Step2Participants'
 import { Step3HumanTeam } from './Step3Equipment'
 import { Step4Communications } from './Step4GPX'
-import { Step5Status } from './Step5Status'
+import { Step5Status, type Step5Data } from './Step5Status'
 
 interface WizardLayoutProps {
   user: User
@@ -27,18 +27,13 @@ interface StepMeta {
   icon: React.ReactNode
 }
 
-// Matches what Zod infers from step5Schema (incidentReport is optional)
-interface Step5SubmitData {
-  status: SalidaStatus
-  incidentReport?: string
-}
 
 const STEPS: StepMeta[] = [
   { id: 1, label: 'Clasificacion de la Salida', shortLabel: 'Clasificacion', icon: <Mountain size={16} /> },
   { id: 2, label: 'Cronologia y Seguridad', shortLabel: 'Cronologia', icon: <Users size={16} /> },
   { id: 3, label: 'Equipo Humano', shortLabel: 'Equipo', icon: <Users size={16} /> },
   { id: 4, label: 'Comunicaciones y Equipo Crítico', shortLabel: 'Comunicaciones', icon: <Radio size={16} /> },
-  { id: 5, label: 'Estado', shortLabel: 'Estado', icon: <Flag size={16} /> },
+  { id: 5, label: 'Planificación Técnica', shortLabel: 'Plan Técnico', icon: <Map size={16} /> },
 ]
 
 const EMPTY_FORM: Omit<SalidaFormData, 'gpxFile'> = {
@@ -59,6 +54,10 @@ const EMPTY_FORM: Omit<SalidaFormData, 'gpxFile'> = {
   idDispositivoFrecuencia: '',
   equipoColectivo: [],
   equipoColectivoOtro: '',
+  pronosticoMeteorologico: '',
+  riesgosIdentificados: [],
+  riesgosOtro: '',
+  planEvacuacion: '',
   status: 'BORRADOR',
   incidentReport: '',
 }
@@ -71,6 +70,7 @@ function hasDraft(): boolean {
 export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegrante }: WizardLayoutProps) {
   const [currentStep, setCurrentStep] = useState<StepId>(1)
   const [formData, setFormData] = useState<Omit<SalidaFormData, 'gpxFile'>>(EMPTY_FORM)
+  const [gpxFile, setGpxFile] = useState<File | null>(null)
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set())
   // Initialize banner from localStorage directly in useState — no effect needed
   const [showDraftBanner, setShowDraftBanner] = useState<boolean>(hasDraft)
@@ -131,28 +131,40 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
   }, [currentStep])
 
   const handleFinalSubmit = useCallback(
-    async (step5Data: Step5SubmitData) => {
-      const finalData: Omit<SalidaFormData, 'gpxFile'> = {
+    async (step5Data: Step5Data) => {
+      const finalData: Omit<SalidaFormData, never> = {
         ...formData,
-        status: step5Data.status,
-        incidentReport: step5Data.incidentReport ?? '',
+        pronosticoMeteorologico: step5Data.pronosticoMeteorologico,
+        riesgosIdentificados: step5Data.riesgosIdentificados,
+        riesgosOtro: step5Data.riesgosOtro ?? '',
+        planEvacuacion: step5Data.planEvacuacion ?? '',
       }
       setIsSubmitting(true)
       setSubmitError(null)
 
       try {
+        let gpxMeta: { gpxFileId?: string; gpxFileName?: string; gpxFileUrl?: string } = {}
+        if (!isGuest && gpxFile) {
+          const uploaded = await uploadGpx(gpxFile)
+          gpxMeta = {
+            gpxFileId: uploaded.fileId,
+            gpxFileName: uploaded.fileName,
+            gpxFileUrl: uploaded.fileUrl,
+          }
+        }
+
         if (isGuest) {
-          // Save locally for guest users
           const localRecord: SalidaRecord = {
             id: `guest-${Date.now()}`,
             ...finalData,
+            ...gpxMeta,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             userId: user.id,
           }
           saveGuestSalida(localRecord)
         } else {
-          await createSalida(finalData)
+          await createSalida({ ...finalData, ...gpxMeta })
         }
 
         clearDraft()
@@ -165,7 +177,7 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
         setIsSubmitting(false)
       }
     },
-    [formData, isGuest, user.id, onDone],
+    [formData, gpxFile, isGuest, user.id, onDone],
   )
 
   // Success screen
@@ -337,10 +349,15 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
         {currentStep === 5 && (
           <Step5Status
             defaultValues={{
-              status: formData.status,
-              incidentReport: formData.incidentReport,
+              pronosticoMeteorologico: formData.pronosticoMeteorologico,
+              riesgosIdentificados: formData.riesgosIdentificados,
+              riesgosOtro: formData.riesgosOtro,
+              planEvacuacion: formData.planEvacuacion,
             }}
+            gpxFile={gpxFile}
+            isGuest={isGuest}
             isSubmitting={isSubmitting}
+            onFileChange={setGpxFile}
             onSubmit={handleFinalSubmit}
             onBack={goBack}
           />

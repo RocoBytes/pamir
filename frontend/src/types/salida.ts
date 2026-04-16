@@ -36,6 +36,16 @@ export type EquipoColectivoSeguridad =
   | 'SIN_EQUIPO'
   | 'OTRO'
 
+export type RiesgoIdentificado =
+  | 'AVALANCHAS'
+  | 'DESPRENDIMIENTO_ROCAS'
+  | 'CRUCE_RIOS'
+  | 'FRIO_EXTREMO'
+  | 'MAL_ALTURA'
+  | 'CAIDA_DISTINTO_NIVEL'
+  | 'CALOR_EXTREMO'
+  | 'OTRO'
+
 export type TipoSalida =
   | 'OFICIAL_CLUB'
   | 'NO_OFICIAL'
@@ -83,7 +93,13 @@ export interface SalidaFormData {
   equipoColectivo: EquipoColectivoSeguridad[]
   equipoColectivoOtro: string
 
-  // Step 5 – Status & incidents
+  // Step 5 – Planificación Técnica
+  pronosticoMeteorologico: string
+  riesgosIdentificados: RiesgoIdentificado[]
+  riesgosOtro: string
+  planEvacuacion: string
+
+  // Status & incidents (set by default, not shown in wizard)
   status: SalidaStatus
   incidentReport: string
 }
@@ -112,6 +128,10 @@ export interface SalidaRecord {
   idDispositivoFrecuencia?: string
   equipoColectivo: EquipoColectivoSeguridad[]
   equipoColectivoOtro?: string
+  pronosticoMeteorologico?: string
+  riesgosIdentificados?: RiesgoIdentificado[]
+  riesgosOtro?: string
+  planEvacuacion?: string
   status: SalidaStatus
   incidentReport?: string
   createdAt: string
@@ -182,6 +202,17 @@ export const MEDIO_COMUNICACION_LABELS: Record<MedioComunicacion, string> = {
   NINGUNO: 'Ninguno',
 }
 
+export const RIESGO_IDENTIFICADO_LABELS: Record<RiesgoIdentificado, string> = {
+  AVALANCHAS: 'Avalanchas',
+  DESPRENDIMIENTO_ROCAS: 'Desprendimiento de rocas',
+  CRUCE_RIOS: 'Cruce de ríos',
+  FRIO_EXTREMO: 'Frío extremo',
+  MAL_ALTURA: 'Mal de altura',
+  CAIDA_DISTINTO_NIVEL: 'Caída a distinto nivel',
+  CALOR_EXTREMO: 'Calor Extremo',
+  OTRO: 'Otro',
+}
+
 export const EQUIPO_COLECTIVO_LABELS: Record<EquipoColectivoSeguridad, string> = {
   CUERDAS: 'Cuerdas',
   BOTIQUIN_AVANZADO: 'Botiquín Avanzado',
@@ -191,5 +222,49 @@ export const EQUIPO_COLECTIVO_LABELS: Record<EquipoColectivoSeguridad, string> =
   ARVA_PALA_SONDA: 'ARVA / Pala / Sonda',
   SIN_EQUIPO: 'No cuenta con equipo colectivo de seguridad',
   OTRO: 'Otro',
+}
+
+// ─── Ficha de Cierre ──────────────────────────────────────────────────────────
+
+export type EstadoCierre =
+  | 'COMPLETADA_SEGUN_PLAN'
+  | 'COMPLETADA_CON_VARIACIONES'
+  | 'ABORTADA_INCOMPLETA'
+
+export type MotivoAbandono =
+  | 'METEOROLOGIA'
+  | 'SALUD_INTEGRANTE'
+  | 'MAL_ESTADO_RUTA'
+  | 'FALLO_EQUIPO'
+  | 'ERROR_PLANIFICACION'
+  | 'FALTA_TIEMPO'
+
+export interface FichaCierreFormData {
+  salidaId: string
+  fechaFinalizacionReal: string
+  estadoCierre: EstadoCierre
+  motivoAbandono?: MotivoAbandono
+}
+
+export interface FichaCierreRecord extends FichaCierreFormData {
+  id: string
+  salidaNombre: string
+  createdAt: string
+  userId: string
+}
+
+export const ESTADO_CIERRE_LABELS: Record<EstadoCierre, string> = {
+  COMPLETADA_SEGUN_PLAN: 'Completada según lo previsto',
+  COMPLETADA_CON_VARIACIONES: 'Completada con variaciones',
+  ABORTADA_INCOMPLETA: 'Abortada/Incompleta',
+}
+
+export const MOTIVO_ABANDONO_LABELS: Record<MotivoAbandono, string> = {
+  METEOROLOGIA: 'Meteorología',
+  SALUD_INTEGRANTE: 'Salud de un integrante',
+  MAL_ESTADO_RUTA: 'Mal estado de la ruta',
+  FALLO_EQUIPO: 'Fallo de equipo',
+  ERROR_PLANIFICACION: 'Error de planificación',
+  FALTA_TIEMPO: 'Falta de tiempo',
 }
 

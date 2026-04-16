@@ -11,6 +11,8 @@ import {
   ChevronRight,
   ClipboardList,
   Clock,
+  ClipboardCheck,
+  Lock,
 } from 'lucide-react'
 
 import type { SalidaRecord, User } from '../types/salida'
@@ -27,10 +29,15 @@ import { Button } from './ui/Button'
 const HERO_IMAGE =
   'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=80'
 
+// Imagen de refugio alpino — reemplazar por foto propia si se desea
+const CIERRE_IMAGE =
+  'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1400&q=80'
+
 interface DashboardProps {
   user: User
   isGuest: boolean
   onNewSalida: () => void
+  onNewCierre: () => void
   onLogout: () => void
 }
 
@@ -88,7 +95,7 @@ function SalidaCard({ salida }: { salida: SalidaRecord }) {
   )
 }
 
-export function Dashboard({ user, isGuest, onNewSalida, onLogout }: DashboardProps) {
+export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onLogout }: DashboardProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
   const [isLoading, setIsLoading] = useState(!isGuest)
   const [error, setError] = useState<string | null>(null)
@@ -159,39 +166,104 @@ export function Dashboard({ user, isGuest, onNewSalida, onLogout }: DashboardPro
           </div>
         )}
 
-        {/* Hero card — acceso principal al formulario */}
-        <button
-          onClick={onNewSalida}
-          className="relative w-full rounded-3xl overflow-hidden mb-6 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] focus-visible:ring-offset-2"
-          aria-label="Abrir formulario de salida"
-          style={{ minHeight: '260px' }}
-        >
-          {/* Imagen de fondo */}
-          <div
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-            style={{ backgroundImage: `url(${HERO_IMAGE})` }}
-          />
-          {/* Overlay verde con 50% opacidad */}
-          <div className="absolute inset-0 bg-[#4E805D] opacity-60" />
-          {/* Contenido sobre el overlay */}
-          <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 py-12 text-white text-center gap-4">
-            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-inner">
-              <ClipboardList size={28} className="text-white" />
+        {/* Hero cards — formulario de salida + ficha de cierre */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {/* Card: Formulario de Salida */}
+          <button
+            onClick={onNewSalida}
+            className="relative w-full rounded-3xl overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] focus-visible:ring-offset-2"
+            aria-label="Abrir formulario de salida"
+            style={{ minHeight: '220px' }}
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+              style={{ backgroundImage: `url(${HERO_IMAGE})` }}
+            />
+            <div className="absolute inset-0 bg-[#4E805D] opacity-60" />
+            <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 py-10 text-white text-center gap-3">
+              <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-inner">
+                <ClipboardList size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-1">
+                  Andino Club Pamir
+                </p>
+                <h2 className="text-xl font-bold leading-tight drop-shadow">
+                  Formulario de Salida
+                </h2>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-white/20 backdrop-blur-sm border border-white/30 px-3 py-1.5 rounded-full transition-colors group-hover:bg-white/30">
+                Registrar salida
+                <ChevronRight size={14} />
+              </span>
             </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-1">
-                Andino Club Pamir
-              </p>
-              <h2 className="text-2xl sm:text-3xl font-bold leading-tight drop-shadow">
-                Formulario de Salida
-              </h2>
+          </button>
+
+          {/* Card: Ficha de Cierre */}
+          {salidas.length > 0 ? (
+            <button
+              onClick={onNewCierre}
+              className="relative w-full rounded-3xl overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#687C6B] focus-visible:ring-offset-2"
+              aria-label="Abrir ficha de cierre de actividad"
+              style={{ minHeight: '220px' }}
+            >
+              {/* Imagen de fondo */}
+              <div
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+                style={{ backgroundImage: `url(${CIERRE_IMAGE})` }}
+              />
+              {/* Overlay al 50% desbloqueado */}
+              <div className="absolute inset-0 bg-[#1a2e20] opacity-50" />
+              <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 py-10 text-white text-center gap-3">
+                <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-inner">
+                  <ClipboardCheck size={24} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-1">
+                    Post-Salida
+                  </p>
+                  <h2 className="text-xl font-bold leading-tight drop-shadow">
+                    Ficha de Cierre
+                  </h2>
+                </div>
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-white/20 backdrop-blur-sm border border-white/30 px-3 py-1.5 rounded-full transition-colors group-hover:bg-white/30">
+                  Cerrar actividad
+                  <ChevronRight size={14} />
+                </span>
+              </div>
+            </button>
+          ) : (
+            <div
+              className="relative w-full rounded-3xl overflow-hidden"
+              aria-label="Ficha de cierre bloqueada"
+              style={{ minHeight: '220px' }}
+            >
+              {/* Imagen de fondo */}
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(${CIERRE_IMAGE})` }}
+              />
+              {/* Overlay al 75% bloqueado */}
+              <div className="absolute inset-0 bg-[#1a2e20] opacity-75" />
+              <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 py-10 text-white text-center gap-3">
+                <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/10 border border-white/20">
+                  <Lock size={20} className="text-white/70" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-1">
+                    Post-Salida
+                  </p>
+                  <h2 className="text-xl font-bold leading-tight text-white/80">
+                    Ficha de Cierre
+                  </h2>
+                </div>
+                <p className="text-xs text-white/50 max-w-[180px]">
+                  Registra tu primera salida para desbloquear esta sección
+                </p>
+              </div>
             </div>
-            <span className="inline-flex items-center gap-1.5 text-sm font-semibold bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-full transition-colors group-hover:bg-white/30">
-              Registrar salida
-              <ChevronRight size={16} />
-            </span>
-          </div>
-        </button>
+          )}
+        </div>
 
         {/* Page header */}
         <div className="mb-5">

@@ -4,8 +4,9 @@ import { AuthPage } from './components/AuthPage'
 import { Dashboard } from './components/Dashboard'
 import { WizardLayout } from './components/wizard/WizardLayout'
 import { RegistroIntegrante } from './components/RegistroIntegrante'
+import { FichaCierre } from './components/FichaCierre'
 
-type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante'
+type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre'
 
 export default function App() {
   const { user, token, isGuest, isLoading, loginAsGuest, logout } = useAuth()
@@ -48,11 +49,23 @@ export default function App() {
     )
   }
 
+  if (route === 'nueva-cierre' && user) {
+    return (
+      <FichaCierre
+        user={user}
+        isGuest={isGuest}
+        onDone={() => setRoute('dashboard')}
+        onCancel={() => setRoute('dashboard')}
+      />
+    )
+  }
+
   return (
     <Dashboard
       user={user!}
       isGuest={isGuest}
       onNewSalida={() => setRoute('nueva-salida')}
+      onNewCierre={() => setRoute('nueva-cierre')}
       onLogout={logout}
     />
   )
