@@ -1,8 +1,7 @@
-import { useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ChevronLeft, Send, FileUp, X, AlertCircle } from 'lucide-react'
+import { ChevronLeft, Send, Link } from 'lucide-react'
 import { Button } from '../ui/Button'
 import type { RiesgoIdentificado } from '../../types/salida'
 import { RIESGO_IDENTIFICADO_LABELS } from '../../types/salida'
@@ -19,9 +18,6 @@ const RIESGOS = [
   'CALOR_EXTREMO',
   'OTRO',
 ] as const
-
-const MAX_GPX_MB = 10
-const MAX_GPX_BYTES = MAX_GPX_MB * 1024 * 1024
 
 const step5Schema = z.object({
   pronosticoMeteorologico: z
@@ -131,128 +127,49 @@ function CheckboxGroup<T extends string>({
   )
 }
 
-// ─── GPX upload section ───────────────────────────────────────────────────────
+// ─── GPX link input ───────────────────────────────────────────────────────────
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+interface GpxLinkInputProps {
+  value: string
+  onChange: (link: string) => void
 }
 
-interface GpxUploaderProps {
-  gpxFile: File | null
-  isGuest: boolean
-  onFileChange: (file: File | null) => void
-}
-
-function GpxUploader({ gpxFile, isGuest, onFileChange }: GpxUploaderProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const sizeError = gpxFile && gpxFile.size > MAX_GPX_BYTES
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    onFileChange(file)
-    e.target.value = ''
-  }
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    const file = e.dataTransfer.files[0]
-    if (file && file.name.endsWith('.gpx')) onFileChange(file)
-  }
+function GpxLinkInput({ value, onChange }: GpxLinkInputProps) {
+  const isValidUrl = value === '' || /^https?:\/\/.+/.test(value)
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm font-semibold text-[#4E805D]">
-        Carga la Ruta en GPX{' '}
+      <label htmlFor="gpxLink" className="text-sm font-semibold text-[#4E805D]">
+        Link de la Ruta GPX{' '}
         <span className="text-[#757874] font-normal">(opcional)</span>
-      </p>
+      </label>
       <p className="text-xs text-[#757874]">
-        Máximo {MAX_GPX_MB} MB. Solo archivos .gpx.
+        Sube tu archivo .gpx a Google Drive o OneDrive, compártelo con acceso
+        público y pega el link aquí.
       </p>
-
-      {isGuest && (
-        <div className="flex items-start gap-2 rounded-xl bg-[#fef9f0] border border-[#A4636E]/20 p-3 text-sm text-[#8b5a3a]">
-          <AlertCircle size={15} className="mt-0.5 shrink-0 text-[#A4636E]" />
-          <span>
-            En modo invitado el archivo GPX no se subirá a la nube. Los datos
-            de la salida se guardarán localmente.
-          </span>
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+          <Link size={15} className="text-[#687C6B]/60" />
         </div>
+        <input
+          id="gpxLink"
+          type="url"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="https://drive.google.com/file/d/..."
+          className={[
+            'w-full rounded-xl border pl-9 pr-3 py-2.5 text-sm text-slate-900 bg-white',
+            'placeholder:text-[#757874]/50',
+            'focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-colors',
+            !isValidUrl ? 'border-[#A4636E]' : 'border-[#687C6B]/40',
+          ].join(' ')}
+        />
+      </div>
+      {!isValidUrl && (
+        <p className="text-xs text-[#A4636E]" role="alert">
+          Ingresa una URL válida (debe comenzar con http:// o https://)
+        </p>
       )}
-
-      {!gpxFile ? (
-        <div
-          onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
-          onClick={() => fileInputRef.current?.click()}
-          role="button"
-          tabIndex={0}
-          aria-label="Seleccionar archivo GPX"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
-          }}
-          className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#687C6B]/30 bg-[#f2f0ec] hover:bg-[#eef1ee] hover:border-[#4E805D]/50 transition-colors p-8 cursor-pointer"
-        >
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#e8f0ea] mb-3">
-            <FileUp size={20} className="text-[#4E805D]" />
-          </div>
-          <p className="text-sm font-semibold text-slate-700 mb-1">
-            Arrastra tu archivo GPX aquí
-          </p>
-          <p className="text-xs text-[#757874] mb-3">o haz clic para seleccionar</p>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation()
-              fileInputRef.current?.click()
-            }}
-          >
-            Seleccionar archivo
-          </Button>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-[#687C6B]/15 bg-white p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#e8f0ea] shrink-0">
-              <FileUp size={18} className="text-[#4E805D]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-800 truncate">
-                {gpxFile.name}
-              </p>
-              <p className={`text-xs ${sizeError ? 'text-[#A4636E]' : 'text-[#757874]'}`}>
-                {formatBytes(gpxFile.size)}
-                {sizeError && ` — excede el límite de ${MAX_GPX_MB} MB`}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onFileChange(null)}
-              className="text-[#757874]/60 hover:text-[#A4636E] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A4636E] rounded p-1"
-              aria-label="Quitar archivo"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          {sizeError && (
-            <p className="text-xs text-[#A4636E] mt-2" role="alert">
-              El archivo supera el tamaño máximo permitido de {MAX_GPX_MB} MB.
-            </p>
-          )}
-        </div>
-      )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".gpx"
-        className="sr-only"
-        onChange={handleFileChange}
-        aria-label="Seleccionar archivo GPX"
-      />
     </div>
   )
 }
@@ -261,10 +178,9 @@ function GpxUploader({ gpxFile, isGuest, onFileChange }: GpxUploaderProps) {
 
 interface Step5TechnicalPlanProps {
   defaultValues: Step5Data
-  gpxFile: File | null
-  isGuest: boolean
+  gpxLink: string
   isSubmitting: boolean
-  onFileChange: (file: File | null) => void
+  onLinkChange: (link: string) => void
   onSubmit: (data: Step5Data) => Promise<void>
   onBack: () => void
 }
@@ -273,10 +189,9 @@ interface Step5TechnicalPlanProps {
 
 export function Step5Status({
   defaultValues,
-  gpxFile,
-  isGuest,
+  gpxLink,
   isSubmitting,
-  onFileChange,
+  onLinkChange,
   onSubmit,
   onBack,
 }: Step5TechnicalPlanProps) {
@@ -293,8 +208,6 @@ export function Step5Status({
 
   const riesgosSeleccionados = watch('riesgosIdentificados')
   const showOtroRiesgo = riesgosSeleccionados?.includes('OTRO')
-
-  const gpxSizeError = gpxFile && gpxFile.size > MAX_GPX_BYTES
 
   return (
     <form
@@ -410,12 +323,8 @@ export function Step5Status({
         )}
       </div>
 
-      {/* GPX Upload */}
-      <GpxUploader
-        gpxFile={gpxFile}
-        isGuest={isGuest}
-        onFileChange={onFileChange}
-      />
+      {/* GPX Link */}
+      <GpxLinkInput value={gpxLink} onChange={onLinkChange} />
 
       {/* Navigation */}
       <div className="flex justify-between pt-2">
@@ -433,7 +342,7 @@ export function Step5Status({
           variant="primary"
           size="lg"
           loading={isSubmitting}
-          disabled={!!gpxSizeError}
+          disabled={isSubmitting}
         >
           <Send size={18} />
           Guardar salida

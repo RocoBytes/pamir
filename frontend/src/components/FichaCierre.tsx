@@ -22,8 +22,8 @@ import {
   ESTADO_CIERRE_LABELS,
   MOTIVO_ABANDONO_LABELS,
 } from '../types/salida'
-import { fetchSalidas } from '../lib/api'
-import { loadGuestSalidas, saveGuestCierre } from '../lib/storage'
+import { fetchSalidas, updateSalida } from '../lib/api'
+import { loadGuestSalidas, saveGuestCierre, deleteGuestSalida } from '../lib/storage'
 import { Button } from './ui/Button'
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
@@ -204,8 +204,12 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
           createdAt: new Date().toISOString(),
           userId: user.id,
         }
-        // For now, always save locally (API endpoint not yet implemented)
         saveGuestCierre(record)
+        if (isGuest) {
+          deleteGuestSalida(values.salidaId)
+        } else {
+          await updateSalida(values.salidaId, { status: 'COMPLETADA' })
+        }
         setSubmitSuccess(true)
         setTimeout(onDone, 1500)
       } catch (err) {

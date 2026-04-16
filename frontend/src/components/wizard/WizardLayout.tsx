@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { Mountain, Users, Radio, Map, ChevronLeft, X, Check } from 'lucide-react'
 import type { SalidaFormData, User, SalidaRecord } from '../../types/salida'
 import { saveDraft, loadDraft, loadDraftStep, clearDraft, saveDraftStep, saveGuestSalida } from '../../lib/storage'
-import { createSalida, uploadGpx } from '../../lib/api'
+import { createSalida } from '../../lib/api'
 import { Button } from '../ui/Button'
 import { Step1General } from './Step1General'
 import { Step2Participants } from './Step2Participants'
@@ -58,7 +58,7 @@ const EMPTY_FORM: Omit<SalidaFormData, 'gpxFile'> = {
   riesgosIdentificados: [],
   riesgosOtro: '',
   planEvacuacion: '',
-  status: 'BORRADOR',
+  status: 'EN_CURSO',
   incidentReport: '',
 }
 
@@ -70,7 +70,7 @@ function hasDraft(): boolean {
 export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegrante }: WizardLayoutProps) {
   const [currentStep, setCurrentStep] = useState<StepId>(1)
   const [formData, setFormData] = useState<Omit<SalidaFormData, 'gpxFile'>>(EMPTY_FORM)
-  const [gpxFile, setGpxFile] = useState<File | null>(null)
+  const [gpxLink, setGpxLink] = useState<string>('')
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set())
   // Initialize banner from localStorage directly in useState — no effect needed
   const [showDraftBanner, setShowDraftBanner] = useState<boolean>(hasDraft)
@@ -143,15 +143,7 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
       setSubmitError(null)
 
       try {
-        let gpxMeta: { gpxFileId?: string; gpxFileName?: string; gpxFileUrl?: string } = {}
-        if (!isGuest && gpxFile) {
-          const uploaded = await uploadGpx(gpxFile)
-          gpxMeta = {
-            gpxFileId: uploaded.fileId,
-            gpxFileName: uploaded.fileName,
-            gpxFileUrl: uploaded.fileUrl,
-          }
-        }
+        const gpxMeta = gpxLink ? { gpxFileUrl: gpxLink } : {}
 
         if (isGuest) {
           const localRecord: SalidaRecord = {
@@ -177,7 +169,7 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
         setIsSubmitting(false)
       }
     },
-    [formData, gpxFile, isGuest, user.id, onDone],
+    [formData, gpxLink, isGuest, user.id, onDone],
   )
 
   // Success screen
@@ -354,10 +346,9 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
               riesgosOtro: formData.riesgosOtro,
               planEvacuacion: formData.planEvacuacion,
             }}
-            gpxFile={gpxFile}
-            isGuest={isGuest}
+            gpxLink={gpxLink}
             isSubmitting={isSubmitting}
-            onFileChange={setGpxFile}
+            onLinkChange={setGpxLink}
             onSubmit={handleFinalSubmit}
             onBack={goBack}
           />
