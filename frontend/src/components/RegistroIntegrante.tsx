@@ -6,8 +6,7 @@ import { useState } from 'react'
 import { Input } from './ui/Input'
 import { Select } from './ui/Select'
 import { Button } from './ui/Button'
-import { saveIntegrante } from '../lib/storage'
-import type { IntegranteRecord } from '../types/salida'
+import { createIntegrante } from '../lib/api'
 
 // ─── RUT formatter ───────────────────────────────────────────────────────────
 
@@ -67,44 +66,69 @@ const GENEROS = [
 
 const RUT_REGEX = /^\d{1,2}\.\d{3}\.\d{3}-[\dKk]$/
 
-const schema = z.object({
-  // Sección I
-  nombreCompleto: z.string().min(1, 'Campo requerido').max(100, 'Máximo 100 caracteres'),
-  rut: z.string().regex(RUT_REGEX, 'Formato inválido. Ej: 12.345.678-K'),
-  nacionalidad: z.string().min(1, 'Campo requerido'),
-  genero: z.enum(['FEMENINO', 'MASCULINO', 'PREFIERO_NO_DECIRLO'], {
-    required_error: 'Selecciona una opción',
-  }),
-  fechaNacimiento: z.string().min(1, 'Selecciona tu fecha de nacimiento'),
-  direccion: z.string().min(1, 'Campo requerido').max(100, 'Máximo 100 caracteres'),
-  comuna: z.string().min(1, 'Campo requerido').max(100, 'Máximo 100 caracteres'),
-  region: z.string().min(1, 'Selecciona una región'),
-  telefonoCelular: z.string().min(1, 'Campo requerido').regex(/^\+?[\d\s\-()]{7,15}$/, 'Teléfono inválido'),
-  email: z.string().min(1, 'Campo requerido').email('Email inválido').max(100, 'Máximo 100 caracteres'),
-  previsionSalud: z.string().min(1, 'Selecciona tu previsión de salud'),
+const schema = z
+  .object({
+    // Sección I
+    nombreCompleto: z.string().min(1, 'Campo requerido').max(100, 'Máximo 100 caracteres'),
+    rut: z.string().regex(RUT_REGEX, 'Formato inválido. Ej: 12.345.678-K'),
+    nacionalidad: z.string().min(1, 'Campo requerido'),
+    genero: z.enum(['FEMENINO', 'MASCULINO', 'PREFIERO_NO_DECIRLO'], {
+      required_error: 'Selecciona una opción',
+    }),
+    fechaNacimiento: z.string().min(1, 'Selecciona tu fecha de nacimiento'),
+    direccion: z.string().min(1, 'Campo requerido').max(100, 'Máximo 100 caracteres'),
+    comuna: z.string().min(1, 'Campo requerido').max(100, 'Máximo 100 caracteres'),
+    region: z.string().min(1, 'Selecciona una región'),
+    telefonoCelular: z.string().min(1, 'Campo requerido').regex(/^\+?[\d\s\-()]{7,15}$/, 'Teléfono inválido'),
+    email: z.string().min(1, 'Campo requerido').email('Email inválido').max(100, 'Máximo 100 caracteres'),
+    previsionSalud: z.string().min(1, 'Selecciona tu previsión de salud'),
 
-  // Sección II
-  nombreContacto: z.string().min(1, 'Campo requerido').max(100, 'Máximo 100 caracteres'),
-  parentesco: z.string().min(1, 'Campo requerido').max(100, 'Máximo 100 caracteres'),
-  telefonoContacto: z.string().min(1, 'Campo requerido').regex(/^\+?[\d\s\-()]{7,15}$/, 'Teléfono inválido'),
+    // Sección II
+    nombreContacto: z.string().min(1, 'Campo requerido').max(100, 'Máximo 100 caracteres'),
+    parentesco: z.string().min(1, 'Campo requerido').max(100, 'Máximo 100 caracteres'),
+    telefonoContacto: z.string().min(1, 'Campo requerido').regex(/^\+?[\d\s\-()]{7,15}$/, 'Teléfono inválido'),
 
-  // Sección III
-  grupoSanguineo: z.string().min(1, 'Selecciona tu grupo sanguíneo'),
-  alergias: z.string().min(1, 'Campo requerido').max(1000, 'Máximo 1000 caracteres'),
-  enfermedadesCronicas: z.string().min(1, 'Campo requerido').max(1000, 'Máximo 1000 caracteres'),
-  medicamentos: z.string().min(1, 'Campo requerido').max(1000, 'Máximo 1000 caracteres'),
-  cirugiasLesiones: z.string().min(1, 'Campo requerido').max(1000, 'Máximo 1000 caracteres'),
-  fuma: z.boolean({ required_error: 'Selecciona una opción' }),
-  usaLentes: z.boolean({ required_error: 'Selecciona una opción' }),
+    // Sección III
+    grupoSanguineo: z.string().min(1, 'Selecciona tu grupo sanguíneo'),
+    alergiasTiene: z.boolean({ required_error: 'Selecciona una opción' }),
+    alergiasDetalle: z.string().max(200, 'Máximo 200 caracteres').optional(),
+    enfermedadesCronicasTiene: z.boolean({ required_error: 'Selecciona una opción' }),
+    enfermedadesCronicasDetalle: z.string().max(200, 'Máximo 200 caracteres').optional(),
+    medicamentosTiene: z.boolean({ required_error: 'Selecciona una opción' }),
+    medicamentosDetalle: z.string().max(200, 'Máximo 200 caracteres').optional(),
+    cirugiasLesionesTiene: z.boolean({ required_error: 'Selecciona una opción' }),
+    cirugiasLesionesDetalle: z.string().max(200, 'Máximo 200 caracteres').optional(),
+    fuma: z.boolean({ required_error: 'Selecciona una opción' }),
+    usaLentes: z.boolean({ required_error: 'Selecciona una opción' }),
 
-  // Sección IV
-  declaracionSalud: z.literal(true, {
-    errorMap: () => ({ message: 'Debes aceptar esta declaración para continuar' }),
-  }),
-  aceptacionRiesgo: z.literal(true, {
-    errorMap: () => ({ message: 'Debes aceptar esta cláusula para continuar' }),
-  }),
-})
+    // Sección IV
+    declaracionSalud: z.literal(true, {
+      errorMap: () => ({ message: 'Debes aceptar esta declaración para continuar' }),
+    }),
+    aceptacionRiesgo: z.literal(true, {
+      errorMap: () => ({ message: 'Debes aceptar esta cláusula para continuar' }),
+    }),
+    consentimientoDatos: z.literal(true, {
+      errorMap: () => ({ message: 'Debes aceptar el consentimiento de uso de datos para continuar' }),
+    }),
+    derechoImagen: z.literal(true, {
+      errorMap: () => ({ message: 'Debes aceptar esta cláusula para continuar' }),
+    }),
+  })
+  .superRefine((data, ctx) => {
+    if (data.alergiasTiene && !data.alergiasDetalle?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Describe las alergias conocidas', path: ['alergiasDetalle'] })
+    }
+    if (data.enfermedadesCronicasTiene && !data.enfermedadesCronicasDetalle?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Describe las enfermedades crónicas', path: ['enfermedadesCronicasDetalle'] })
+    }
+    if (data.medicamentosTiene && !data.medicamentosDetalle?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Indica el nombre y dosis del medicamento', path: ['medicamentosDetalle'] })
+    }
+    if (data.cirugiasLesionesTiene && !data.cirugiasLesionesDetalle?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Describe la cirugía o lesión', path: ['cirugiasLesionesDetalle'] })
+    }
+  })
 
 type IntegranteFormData = z.infer<typeof schema>
 
@@ -253,6 +277,81 @@ function YesNoField({ label, value, onChange, error }: YesNoFieldProps) {
   )
 }
 
+interface YesNoWithDetailProps {
+  label: string
+  tiene: boolean | undefined
+  detalle: string
+  onChangeTiene: (v: boolean) => void
+  onChangeDetalle: (v: string) => void
+  errorTiene?: string
+  errorDetalle?: string
+  placeholder?: string
+}
+
+function YesNoWithDetail({
+  label,
+  tiene,
+  detalle,
+  onChangeTiene,
+  onChangeDetalle,
+  errorTiene,
+  errorDetalle,
+  placeholder,
+}: YesNoWithDetailProps) {
+  return (
+    <div className="flex flex-col gap-2">
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-semibold text-[#4E805D]">
+          {label}
+          <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+        </legend>
+        <div className="flex gap-2">
+          {([true, false] as const).map((opt) => {
+            const selected = tiene === opt
+            return (
+              <button
+                key={String(opt)}
+                type="button"
+                onClick={() => onChangeTiene(opt)}
+                aria-pressed={selected}
+                className={[
+                  'px-6 py-2 rounded-xl text-sm font-medium border transition-all duration-150',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] focus-visible:ring-offset-1',
+                  selected
+                    ? 'bg-[#4E805D] text-white border-[#4E805D] shadow-sm'
+                    : 'bg-white text-slate-700 border-[#687C6B]/40 hover:border-[#4E805D] hover:text-[#4E805D]',
+                ].join(' ')}
+              >
+                {opt ? 'Sí' : 'No'}
+              </button>
+            )
+          })}
+        </div>
+        <FieldError message={errorTiene} />
+      </fieldset>
+      {tiene === true && (
+        <div className="flex flex-col gap-1">
+          <textarea
+            rows={3}
+            placeholder={placeholder}
+            maxLength={200}
+            value={detalle}
+            onChange={(e) => onChangeDetalle(e.target.value)}
+            className={[
+              'w-full rounded-xl border bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-[#757874]/50 resize-none',
+              'transition-colors duration-150',
+              'focus:outline-none focus:ring-2 focus:ring-[#4E805D] focus:border-[#4E805D]',
+              errorDetalle ? 'border-[#A4636E]' : 'border-[#687C6B]/40',
+            ].join(' ')}
+          />
+          <p className="text-xs text-[#757874] self-end">{detalle.length}/200</p>
+          <FieldError message={errorDetalle} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface RegistroIntegranteProps {
@@ -263,12 +362,14 @@ interface RegistroIntegranteProps {
 
 export function RegistroIntegrante({ onBack }: RegistroIntegranteProps) {
   const [success, setSuccess] = useState(false)
+  const [apiError, setApiError] = useState<string | null>(null)
 
   const {
     register,
     control,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<IntegranteFormData>({
     resolver: zodResolver(schema),
@@ -288,33 +389,71 @@ export function RegistroIntegrante({ onBack }: RegistroIntegranteProps) {
       parentesco: '',
       telefonoContacto: '',
       grupoSanguineo: '',
-      alergias: '',
-      enfermedadesCronicas: '',
-      medicamentos: '',
-      cirugiasLesiones: '',
-      fuma: false,
-      usaLentes: false,
+      alergiasTiene: undefined as unknown as boolean,
+      alergiasDetalle: '',
+      enfermedadesCronicasTiene: undefined as unknown as boolean,
+      enfermedadesCronicasDetalle: '',
+      medicamentosTiene: undefined as unknown as boolean,
+      medicamentosDetalle: '',
+      cirugiasLesionesTiene: undefined as unknown as boolean,
+      cirugiasLesionesDetalle: '',
+      fuma: undefined as unknown as boolean,
+      usaLentes: undefined as unknown as boolean,
       declaracionSalud: undefined as unknown as true,
       aceptacionRiesgo: undefined as unknown as true,
+      consentimientoDatos: undefined as unknown as true,
+      derechoImagen: undefined as unknown as true,
     },
   })
 
-  const alergias = watch('alergias')
-  const enfermedadesCronicas = watch('enfermedadesCronicas')
-  const medicamentos = watch('medicamentos')
-  const cirugiasLesiones = watch('cirugiasLesiones')
+  const alergiasTiene = watch('alergiasTiene')
+  const alergiasDetalle = watch('alergiasDetalle') ?? ''
+  const enfermedadesCronicasTiene = watch('enfermedadesCronicasTiene')
+  const enfermedadesCronicasDetalle = watch('enfermedadesCronicasDetalle') ?? ''
+  const medicamentosTiene = watch('medicamentosTiene')
+  const medicamentosDetalle = watch('medicamentosDetalle') ?? ''
+  const cirugiasLesionesTiene = watch('cirugiasLesionesTiene')
+  const cirugiasLesionesDetalle = watch('cirugiasLesionesDetalle') ?? ''
 
-  function onSubmit(data: IntegranteFormData) {
-    const record: IntegranteRecord = {
-      id: `integrante-${Date.now()}`,
-      nombreCompleto: data.nombreCompleto,
-      rut: data.rut,
-      email: data.email,
-      createdAt: new Date().toISOString(),
+  async function onSubmit(data: IntegranteFormData) {
+    setApiError(null)
+    try {
+      await createIntegrante({
+        nombreCompleto: data.nombreCompleto,
+        rut: data.rut,
+        nacionalidad: data.nacionalidad,
+        genero: data.genero,
+        fechaNacimiento: data.fechaNacimiento,
+        direccion: data.direccion,
+        comuna: data.comuna,
+        region: data.region,
+        telefonoCelular: data.telefonoCelular,
+        email: data.email,
+        previsionSalud: data.previsionSalud,
+        nombreContacto: data.nombreContacto,
+        parentesco: data.parentesco,
+        telefonoContacto: data.telefonoContacto,
+        grupoSanguineo: data.grupoSanguineo,
+        alergiasTiene: data.alergiasTiene,
+        alergiasDetalle: data.alergiasDetalle,
+        enfermedadesCronicasTiene: data.enfermedadesCronicasTiene,
+        enfermedadesCronicasDetalle: data.enfermedadesCronicasDetalle,
+        medicamentosTiene: data.medicamentosTiene,
+        medicamentosDetalle: data.medicamentosDetalle,
+        cirugiasLesionesTiene: data.cirugiasLesionesTiene,
+        cirugiasLesionesDetalle: data.cirugiasLesionesDetalle,
+        fuma: data.fuma,
+        usaLentes: data.usaLentes,
+        declaracionSalud: data.declaracionSalud,
+        aceptacionRiesgo: data.aceptacionRiesgo,
+        consentimientoDatos: data.consentimientoDatos,
+        derechoImagen: data.derechoImagen,
+      })
+      setSuccess(true)
+      setTimeout(onBack, 1800)
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Error al registrar el integrante')
     }
-    saveIntegrante(record)
-    setSuccess(true)
-    setTimeout(onBack, 1800)
   }
 
   if (success) {
@@ -533,64 +672,68 @@ export function RegistroIntegrante({ onBack }: RegistroIntegranteProps) {
 
             <Controller
               control={control}
-              name="alergias"
+              name="alergiasTiene"
               render={({ field }) => (
-                <TextareaField
+                <YesNoWithDetail
                   label="Alergias Conocidas"
-                  placeholder="Ej: Medicamentos, alimentos, picaduras, otros. Escriba 'Ninguna' si no aplica."
-                  maxLength={1000}
-                  error={errors.alergias?.message}
-                  required
-                  value={alergias}
-                  onChange={field.onChange}
+                  tiene={alergiasTiene}
+                  detalle={alergiasDetalle}
+                  onChangeTiene={field.onChange}
+                  onChangeDetalle={(v) => setValue('alergiasDetalle', v)}
+                  errorTiene={errors.alergiasTiene?.message}
+                  errorDetalle={errors.alergiasDetalle?.message}
+                  placeholder="Ej: Penicilina, mariscos, picaduras de abejas..."
                 />
               )}
             />
 
             <Controller
               control={control}
-              name="enfermedadesCronicas"
+              name="enfermedadesCronicasTiene"
               render={({ field }) => (
-                <TextareaField
+                <YesNoWithDetail
                   label="Enfermedades Crónicas"
-                  placeholder="Ej: Diabetes, hipertensión, asma, epilepsia, problemas cardíacos. Escriba 'Ninguna' si no aplica."
-                  maxLength={1000}
-                  error={errors.enfermedadesCronicas?.message}
-                  required
-                  value={enfermedadesCronicas}
-                  onChange={field.onChange}
+                  tiene={enfermedadesCronicasTiene}
+                  detalle={enfermedadesCronicasDetalle}
+                  onChangeTiene={field.onChange}
+                  onChangeDetalle={(v) => setValue('enfermedadesCronicasDetalle', v)}
+                  errorTiene={errors.enfermedadesCronicasTiene?.message}
+                  errorDetalle={errors.enfermedadesCronicasDetalle?.message}
+                  placeholder="Ej: Diabetes tipo 2, hipertensión, asma..."
                 />
               )}
             />
 
             <Controller
               control={control}
-              name="medicamentos"
+              name="medicamentosTiene"
               render={({ field }) => (
-                <TextareaField
+                <YesNoWithDetail
                   label="¿Toma medicamentos de forma regular?"
-                  placeholder="Ej: Indique nombre y dosis. Escriba 'No' si no aplica."
-                  maxLength={1000}
-                  error={errors.medicamentos?.message}
-                  required
-                  value={medicamentos}
-                  onChange={field.onChange}
+                  tiene={medicamentosTiene}
+                  detalle={medicamentosDetalle}
+                  onChangeTiene={field.onChange}
+                  onChangeDetalle={(v) => setValue('medicamentosDetalle', v)}
+                  errorTiene={errors.medicamentosTiene?.message}
+                  errorDetalle={errors.medicamentosDetalle?.message}
+                  placeholder="Ej: Metformina 500mg, Losartán 50mg..."
                 />
               )}
             />
 
             <Controller
               control={control}
-              name="cirugiasLesiones"
+              name="cirugiasLesionesTiene"
               render={({ field }) => (
-                <TextareaField
+                <YesNoWithDetail
                   label="Cirugías o Lesiones"
-                  placeholder="Ej: Indique cirugía o lesión y cuándo ocurrió (mes/año). Escriba 'Ninguna' si no aplica."
-                  maxLength={1000}
-                  error={errors.cirugiasLesiones?.message}
-                  required
-                  value={cirugiasLesiones}
-                  onChange={field.onChange}
+                  tiene={cirugiasLesionesTiene}
+                  detalle={cirugiasLesionesDetalle}
+                  onChangeTiene={field.onChange}
+                  onChangeDetalle={(v) => setValue('cirugiasLesionesDetalle', v)}
+                  errorTiene={errors.cirugiasLesionesTiene?.message}
+                  errorDetalle={errors.cirugiasLesionesDetalle?.message}
+                  placeholder="Ej: Meniscectomía rodilla derecha (03/2022), fractura tobillo (2019)..."
                 />
               )}
             />
@@ -709,10 +852,111 @@ export function RegistroIntegrante({ onBack }: RegistroIntegranteProps) {
               />
               <FieldError message={errors.aceptacionRiesgo?.message} />
             </div>
+
+            {/* Cláusula 3 */}
+            <div className="flex flex-col gap-3">
+              <div className="rounded-xl border border-[#687C6B]/20 bg-[#f2f0ec]/60 p-4">
+                <p className="text-xs font-semibold text-[#4E805D] uppercase tracking-wider mb-2">
+                  3. Consentimiento de Uso de Datos Personales (Ley 19.628)
+                </p>
+                <p className="text-sm text-slate-700 leading-relaxed mb-3">
+                  En cumplimiento con la Ley N° 19.628 sobre Protección de la Vida Privada, autorizo
+                  expresamente al Club para:
+                </p>
+                <ul className="flex flex-col gap-2 mb-3">
+                  <li className="text-sm text-slate-700 leading-relaxed pl-3 border-l-2 border-[#687C6B]/30">
+                    Tratar mis datos personales y sensibles (salud) con el fin exclusivo de gestionar mi
+                    participación en actividades y responder ante emergencias médicas.
+                  </li>
+                  <li className="text-sm text-slate-700 leading-relaxed pl-3 border-l-2 border-[#687C6B]/30">
+                    Almacenar de forma segura esta información, la cual solo será accesible por el cuerpo
+                    técnico o servicios de emergencia en caso de ser necesario.
+                  </li>
+                  <li className="text-sm text-slate-700 leading-relaxed pl-3 border-l-2 border-[#687C6B]/30">
+                    Comunicar estos datos a centros de salud o cuerpos de socorro en caso de rescate o
+                    atención urgente.
+                  </li>
+                </ul>
+                <p className="text-sm text-slate-700 leading-relaxed mb-2">
+                  Los datos serán utilizados exclusivamente para la gestión de seguridad en montaña,
+                  coordinación de rescates, registro estadístico de incidentes y cumplimiento de protocolos
+                  internos del club.
+                </p>
+                <p className="text-sm text-slate-700 leading-relaxed mb-2">
+                  El titular de los datos podrá ejercer en cualquier momento sus derechos de Acceso,
+                  Rectificación, Cancelación y Oposición mediante comunicación escrita a la directiva del Club.
+                </p>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  Los datos se conservarán durante el periodo necesario para la gestión de la actividad y el
+                  posterior análisis estadístico anónimo, tras lo cual serán eliminados o debidamente
+                  anonimizados.
+                </p>
+              </div>
+              <Controller
+                control={control}
+                name="consentimientoDatos"
+                render={({ field }) => (
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={field.value === true}
+                      onChange={(e) =>
+                        field.onChange(e.target.checked ? true : (undefined as unknown as true))
+                      }
+                      className="mt-0.5 w-4 h-4 rounded border-[#687C6B]/40 text-[#4E805D] focus:ring-[#4E805D]"
+                    />
+                    <span className="text-sm font-medium text-slate-700">
+                      He leído y estoy de acuerdo
+                      <span className="text-[#A4636E] ml-1">*</span>
+                    </span>
+                  </label>
+                )}
+              />
+              <FieldError message={errors.consentimientoDatos?.message} />
+            </div>
+
+            {/* Cláusula 4 */}
+            <div className="flex flex-col gap-3">
+              <div className="rounded-xl border border-[#687C6B]/20 bg-[#f2f0ec]/60 p-4">
+                <p className="text-xs font-semibold text-[#4E805D] uppercase tracking-wider mb-2">
+                  4. Derecho de Imagen
+                </p>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  Autorizo el uso de fotografías o videos capturados durante las salidas para fines
+                  promocionales o educativos del club, sin derecho a compensación económica.
+                </p>
+              </div>
+              <Controller
+                control={control}
+                name="derechoImagen"
+                render={({ field }) => (
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={field.value === true}
+                      onChange={(e) =>
+                        field.onChange(e.target.checked ? true : (undefined as unknown as true))
+                      }
+                      className="mt-0.5 w-4 h-4 rounded border-[#687C6B]/40 text-[#4E805D] focus:ring-[#4E805D]"
+                    />
+                    <span className="text-sm font-medium text-slate-700">
+                      He leído y estoy de acuerdo
+                      <span className="text-[#A4636E] ml-1">*</span>
+                    </span>
+                  </label>
+                )}
+              />
+              <FieldError message={errors.derechoImagen?.message} />
+            </div>
           </div>
 
           {/* Submit */}
-          <div className="pb-8">
+          <div className="flex flex-col gap-3 pb-8">
+            {apiError && (
+              <div className="rounded-xl border border-[#A4636E]/30 bg-[#f5e8ea] px-4 py-3 text-sm text-[#8b3a44]">
+                {apiError}
+              </div>
+            )}
             <Button
               type="submit"
               variant="primary"

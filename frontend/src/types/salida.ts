@@ -134,6 +134,9 @@ export interface SalidaRecord {
   planEvacuacion?: string
   status: SalidaStatus
   incidentReport?: string
+  leccionesAprendidas?: string
+  recomendacionesFuturos?: string
+  sugerenciasClub?: string
   createdAt: string
   updatedAt: string
   userId: string
@@ -239,11 +242,68 @@ export type MotivoAbandono =
   | 'ERROR_PLANIFICACION'
   | 'FALTA_TIEMPO'
 
+export type MotivoCambio =
+  | 'CLIMA_ADVERSO'
+  | 'ERROR_NAVEGACION'
+  | 'FATIGA_FISICA'
+  | 'FALTA_EQUIPO_TECNICO'
+  | 'FALTA_TIEMPO'
+  | 'OTRO'
+
+export type OcurrioIncidente =
+  | 'NADA'
+  | 'INCIDENTES_MENORES'
+  | 'ACCIDENTE_LESION'
+  | 'SUSTO'
+
+export type TipoIncidente =
+  | 'MEDICO'
+  | 'LESION'
+  | 'TECNICO'
+  | 'LOGISTICO'
+  | 'AMBIENTAL'
+
+export type GravedadLesion =
+  | 'LEVE'
+  | 'MODERADA'
+  | 'GRAVE'
+
+export type CausaRaiz =
+  | 'EXCESO_CONFIANZA'
+  | 'ERROR_TECNICO'
+  | 'FATIGA'
+  | 'EQUIPAMIENTO_INADECUADO'
+  | 'CONDICIONES_TERRENO'
+  | 'MALA_VISIBILIDAD'
+  | 'OTRO'
+
+export type DesempenoEquipo = 'TODO_FUNCIONO' | 'FALLO_EQUIPO'
+
 export interface FichaCierreFormData {
   salidaId: string
   fechaFinalizacionReal: string
   estadoCierre: EstadoCierre
   motivoAbandono?: MotivoAbandono
+  // Paso 2 – Evaluación de la planificación
+  huboCambios: 'SI' | 'NO'
+  motivosCambios?: MotivoCambio[]
+  motivosCambiosOtro?: string
+  // Paso 3 – Gestión de Incidentes y Sustos (Near-Miss)
+  ocurrioIncidente: OcurrioIncidente
+  tiposIncidente?: TipoIncidente[]
+  gravedadLesion?: GravedadLesion
+  descripcionSuceso?: string
+  causasRaiz?: CausaRaiz[]
+  causaRaizOtro?: string
+  // Paso 4 – Análisis Técnico y de Equipo
+  desempenoEquipo: DesempenoEquipo
+  detalleFallaEquipo?: string
+  observacionesRuta: string
+  precisionPronostico: number
+  // Paso 5 – Lecciones Aprendidas y Recomendaciones
+  leccionesAprendidas: string
+  recomendacionesFuturos?: string
+  sugerenciasClub?: string
 }
 
 export interface FichaCierreRecord extends FichaCierreFormData {
@@ -266,5 +326,50 @@ export const MOTIVO_ABANDONO_LABELS: Record<MotivoAbandono, string> = {
   FALLO_EQUIPO: 'Fallo de equipo',
   ERROR_PLANIFICACION: 'Error de planificación',
   FALTA_TIEMPO: 'Falta de tiempo',
+}
+
+export const MOTIVO_CAMBIO_LABELS: Record<MotivoCambio, string> = {
+  CLIMA_ADVERSO: 'Clima adverso',
+  ERROR_NAVEGACION: 'Error de navegación/ruta',
+  FATIGA_FISICA: 'Fatiga física de algún miembro',
+  FALTA_EQUIPO_TECNICO: 'Falta de equipo técnico',
+  FALTA_TIEMPO: 'Horario (falta de tiempo)',
+  OTRO: 'Otro',
+}
+
+export const OCURRIO_INCIDENTE_LABELS: Record<OcurrioIncidente, string> = {
+  NADA: 'No ocurrió nada',
+  INCIDENTES_MENORES: 'Hubo incidentes menores sin lesión',
+  ACCIDENTE_LESION: 'Hubo un accidente con lesión',
+  SUSTO: 'Hubo un "Susto" (Situación de alto riesgo sin consecuencias)',
+}
+
+export const TIPO_INCIDENTE_LABELS: Record<TipoIncidente, string> = {
+  MEDICO: 'Médico: Puna (MAM), agotamiento extremo, deshidratación, golpe de calor, etc.',
+  LESION: 'Lesión: Torcedura, caída, herida cortante, ampolla limitante, etc.',
+  TECNICO: 'Técnico: Pérdida de equipo, rotura de material crítico, etc.',
+  LOGISTICO: 'Logístico: Extravío temporal, vivac no planificado, etc.',
+  AMBIENTAL: 'Ambiental: Caída de rocas, encuentro con fauna, tormenta eléctrica, etc.',
+}
+
+export const GRAVEDAD_LESION_LABELS: Record<GravedadLesion, string> = {
+  LEVE: 'Leve (primeros auxilios básicos)',
+  MODERADA: 'Moderada (requiere atención médica)',
+  GRAVE: 'Grave (requiere rescate/evacuación)',
+}
+
+export const CAUSA_RAIZ_LABELS: Record<CausaRaiz, string> = {
+  EXCESO_CONFIANZA: 'Exceso de confianza',
+  ERROR_TECNICO: 'Error técnico',
+  FATIGA: 'Fatiga',
+  EQUIPAMIENTO_INADECUADO: 'Equipamiento inadecuado',
+  CONDICIONES_TERRENO: 'Condiciones objetivas del terreno',
+  MALA_VISIBILIDAD: 'Mala visibilidad',
+  OTRO: 'Otro',
+}
+
+export const DESEMPENO_EQUIPO_LABELS: Record<DesempenoEquipo, string> = {
+  TODO_FUNCIONO: 'Todo funcionó correctamente',
+  FALLO_EQUIPO: 'Algún equipo falló o se dañó',
 }
 

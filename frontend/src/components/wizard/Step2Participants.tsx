@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowRight, ChevronLeft } from 'lucide-react'
 import { Input } from '../ui/Input'
+import { TimeInput24 } from '../ui/TimeInput24'
 import { Button } from '../ui/Button'
 import type { AvisoExterno } from '../../types/salida'
 
@@ -152,19 +153,33 @@ export function Step2Participants({ defaultValues, onSubmit, onBack }: Step2Prop
 
       {/* Horas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Input
-          label="Hora Estimada de Retorno"
-          type="time"
-          required
-          error={errors.horaRetornoEstimada?.message}
-          {...register('horaRetornoEstimada')}
+        <Controller
+          name="horaRetornoEstimada"
+          control={control}
+          render={({ field }) => (
+            <TimeInput24
+              label="Hora Estimada de Retorno"
+              required
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.horaRetornoEstimada?.message}
+            />
+          )}
         />
-        <Input
-          label="Hora de Alerta"
-          type="time"
-          required
-          error={errors.horaAlerta?.message}
-          {...register('horaAlerta')}
+        <Controller
+          name="horaAlerta"
+          control={control}
+          render={({ field }) => (
+            <TimeInput24
+              label="Hora de Alerta"
+              required
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.horaAlerta?.message}
+            />
+          )}
         />
       </div>
 

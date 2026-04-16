@@ -1,4 +1,4 @@
-import type { SalidaFormData, SalidaRecord, GpxUploadResponse, User } from '../types/salida'
+import type { SalidaFormData, SalidaRecord, GpxUploadResponse, User, IntegranteRecord } from '../types/salida'
 
 // En desarrollo el proxy de Vite redirige /api → localhost:3000.
 // En producción (Vercel) no hay proxy: se usa VITE_API_URL apuntando a Render.com.
@@ -107,6 +107,60 @@ export async function uploadGpx(file: File): Promise<GpxUploadResponse> {
     body: formData,
   })
   return handleResponse<GpxUploadResponse>(res)
+}
+
+// ─── Integrantes ─────────────────────────────────────────────────────────────
+
+export interface CreateIntegrantePayload {
+  nombreCompleto: string
+  rut: string
+  nacionalidad: string
+  genero: string
+  fechaNacimiento: string
+  direccion: string
+  comuna: string
+  region: string
+  telefonoCelular: string
+  email: string
+  previsionSalud: string
+  nombreContacto: string
+  parentesco: string
+  telefonoContacto: string
+  grupoSanguineo: string
+  alergiasTiene: boolean
+  alergiasDetalle?: string
+  enfermedadesCronicasTiene: boolean
+  enfermedadesCronicasDetalle?: string
+  medicamentosTiene: boolean
+  medicamentosDetalle?: string
+  cirugiasLesionesTiene: boolean
+  cirugiasLesionesDetalle?: string
+  fuma: boolean
+  usaLentes: boolean
+  declaracionSalud: boolean
+  aceptacionRiesgo: boolean
+  consentimientoDatos: boolean
+  derechoImagen: boolean
+}
+
+export async function createIntegrante(
+  data: CreateIntegrantePayload,
+): Promise<IntegranteRecord> {
+  const res = await fetch(`${API_BASE}/integrantes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<IntegranteRecord>(res)
+}
+
+export async function getIntegranteByRut(rut: string): Promise<IntegranteRecord | null> {
+  const res = await fetch(
+    `${API_BASE}/integrantes/by-rut/${encodeURIComponent(rut)}`,
+    { headers: authHeaders() },
+  )
+  if (res.status === 404) return null
+  return handleResponse<IntegranteRecord>(res)
 }
 
 // ─── Health ───────────────────────────────────────────────────────────────────

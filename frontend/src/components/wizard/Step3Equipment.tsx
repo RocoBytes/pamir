@@ -1,10 +1,11 @@
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowRight, ChevronLeft, X, UserPlus } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
+import { ArrowRight, ChevronLeft, X, UserPlus, UserCheck, Loader2, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '../ui/Button'
-import { loadIntegrantes } from '../../lib/storage'
+import { getIntegranteByRut } from '../../lib/api'
+import type { IntegranteRecord } from '../../types/salida'
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -16,6 +17,19 @@ const step3Schema = z.object({
 })
 
 export type Step3Data = z.infer<typeof step3Schema>
+
+// ─── RUT formatter ────────────────────────────────────────────────────────────
+
+function formatRut(value: string): string {
+  const clean = value.replace(/[^0-9kK]/g, '').toUpperCase()
+  if (clean.length <= 1) return clean
+  const dv = clean.slice(-1)
+  const body = clean.slice(0, -1)
+  const bodyFormatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${bodyFormatted}-${dv}`
+}
+
+const RUT_COMPLETE_REGEX = /^\d{1,2}\.\d{3}\.\d{3}-[\dKk]$/
 
 // ─── Sí / No toggle ──────────────────────────────────────────────────────────
 
@@ -65,181 +79,197 @@ function YesNoField({ label, value, onChange, error }: YesNoFieldProps) {
   )
 }
 
-// ─── Shared dropdown shell ────────────────────────────────────────────────────
+// ─── Hook: buscar integrante por RUT con debounce ────────────────────────────
 
-interface DropdownListProps {
-  integrantes: ReturnType<typeof loadIntegrantes>
-  filtered: ReturnType<typeof loadIntegrantes>
-  query: string
-  emptyMessage: string
-  onSelect: (name: string, rut: string) => void
+function useRutLookup(rut: string) {
+  const [integrante, setIntegrante] = useState<IntegranteRecord | null | undefined>(undefined)
+  const [loading, setLoading] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isComplete = RUT_COMPLETE_REGEX.test(rut)
+
+  useEffect(() => {
+    if (!isComplete) {
+      setIntegrante(undefined)
+      return
+    }
+    if (timerRef.current) clearTimeout(timerRef.current)
+    setLoading(true)
+    timerRef.current = setTimeout(async () => {
+      try {
+        const result = await getIntegranteByRut(rut)
+        setIntegrante(result) // null si no existe, IntegranteRecord si existe
+      } catch {
+        setIntegrante(null)
+      } finally {
+        setLoading(false)
+      }
+    }, 400)
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [rut, isComplete])
+
+  return { integrante, loading, isComplete }
+}
+
+// ─── RUT lookup result card ───────────────────────────────────────────────────
+
+interface RutLookupResultProps {
+  rut: string
+  integrante: IntegranteRecord | null | undefined
+  loading: boolean
+  actionLabel: string
+  onSelect: (integrante: IntegranteRecord) => void
   onCreateIntegrante: () => void
 }
 
-function DropdownList({
-  integrantes,
-  filtered,
-  query,
-  emptyMessage,
-  onSelect,
-  onCreateIntegrante,
-}: DropdownListProps) {
-  return (
-    <div className="absolute z-20 left-0 right-0 mt-1 rounded-xl border border-[#687C6B]/20 bg-white shadow-lg overflow-hidden">
-      {integrantes.length === 0 ? (
-        <p className="px-4 py-3 text-sm text-[#757874]">
-          No hay integrantes registrados aún.
-        </p>
-      ) : filtered.length === 0 && query === '' ? (
-        <p className="px-4 py-3 text-sm text-[#757874]">{emptyMessage}</p>
-      ) : filtered.length === 0 ? (
-        <p className="px-4 py-3 text-sm text-[#757874]">
-          No se encontraron coincidencias para &ldquo;{query}&rdquo;.
-        </p>
-      ) : (
-        <ul role="listbox" className="max-h-52 overflow-y-auto divide-y divide-[#687C6B]/10">
-          {filtered.map((integrante) => (
-            <li key={integrante.id} role="option" aria-selected={false}>
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault()
-                  onSelect(integrante.nombreCompleto, integrante.rut)
-                }}
-                className="w-full text-left px-4 py-2.5 hover:bg-[#e8f0ea] transition-colors"
-              >
-                <span className="text-sm font-medium text-slate-800">
-                  {integrante.nombreCompleto}
-                </span>
-                <span className="text-xs text-[#757874] ml-2">{integrante.rut}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+function RutLookupResult({ rut, integrante, loading, actionLabel, onSelect, onCreateIntegrante }: RutLookupResultProps) {
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-[#687C6B]/20 bg-[#f2f0ec] text-sm text-[#757874]">
+        <Loader2 size={15} className="animate-spin shrink-0" />
+        Buscando integrante...
+      </div>
+    )
+  }
 
-      <div className="border-t border-[#687C6B]/10 p-2">
+  if (integrante) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#4E805D]/30 bg-[#e8f0ea]">
+        <UserCheck size={18} className="text-[#4E805D] shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-[#3d6b4a] truncate">{integrante.nombreCompleto}</p>
+          <p className="text-xs text-[#757874]">{integrante.rut}</p>
+        </div>
+        <Button type="button" size="sm" onClick={() => onSelect(integrante)}>
+          {actionLabel}
+        </Button>
+      </div>
+    )
+  }
+
+  if (integrante === null) {
+    return (
+      <div className="flex flex-col gap-2 px-4 py-3 rounded-xl border border-[#687C6B]/20 bg-[#f2f0ec]">
+        <p className="text-sm text-[#757874]">
+          Integrante no encontrado:{' '}
+          <span className="font-mono font-medium text-slate-700">{rut}</span>
+        </p>
         <button
           type="button"
-          onPointerDown={(e) => {
-            e.preventDefault()
-            onCreateIntegrante()
-          }}
-          className="flex items-center gap-1.5 text-sm text-[#4E805D] hover:text-[#3d6b4a] font-medium px-2 py-1.5 rounded-lg hover:bg-[#e8f0ea] transition-colors w-full"
+          onClick={onCreateIntegrante}
+          className="flex items-center gap-1.5 text-sm text-[#4E805D] hover:text-[#3d6b4a] font-medium self-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] rounded transition-colors"
         >
           <UserPlus size={15} />
-          Crear nuevo integrante
+          Crear integrante
         </button>
       </div>
-    </div>
-  )
+    )
+  }
+
+  return null
 }
 
-// ─── Líder picker (single-select) ─────────────────────────────────────────────
+// ─── Líder picker (single-select from participants list) ─────────────────────
 
 interface LiderPickerProps {
   value: string
+  participantes: string[]
   onChange: (name: string) => void
-  onCreateIntegrante: () => void
   error?: string
 }
 
-function LiderPicker({ value, onChange, onCreateIntegrante, error }: LiderPickerProps) {
-  const [query, setQuery] = useState('')
-  const [isOpen, setIsOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [integrantes] = useState(() => loadIntegrantes())
+function LiderPicker({ value, participantes, onChange, error }: LiderPickerProps) {
+  const [open, setOpen] = useState(false)
+  const hasParticipants = participantes.length > 0
 
-  const filtered = integrantes.filter((i) =>
-    i.nombreCompleto.toLowerCase().includes(query.toLowerCase()),
-  )
+  function handleSelect(name: string) {
+    onChange(name)
+    setOpen(false)
+  }
 
-  useEffect(() => {
-    function handlePointerDown(e: PointerEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
-        setQuery('')
-      }
-    }
-    document.addEventListener('pointerdown', handlePointerDown)
-    return () => document.removeEventListener('pointerdown', handlePointerDown)
-  }, [])
+  function handleClear() {
+    onChange('')
+  }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2">
       <label className="text-sm font-semibold text-[#4E805D]">
-        Nombre del Líder de Cordada
+        Líder de Cordada
         <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
       </label>
 
-      <div ref={containerRef} className="relative">
-        {value ? (
-          <div
+      {!hasParticipants ? (
+        <div className="px-4 py-3 rounded-xl border border-[#687C6B]/20 bg-[#f2f0ec] text-sm text-[#757874]">
+          Primero agrega al menos un participante a la nómina.
+        </div>
+      ) : value ? (
+        <div
+          className={[
+            'flex items-center gap-2 px-3 py-2.5 rounded-xl border',
+            error ? 'border-[#A4636E]' : 'border-[#4E805D]/40 bg-[#e8f0ea]',
+          ].join(' ')}
+        >
+          <UserCheck size={16} className="text-[#4E805D] shrink-0" />
+          <span className="text-sm font-medium text-[#3d6b4a] flex-1">{value}</span>
+          <button
+            type="button"
+            onClick={handleClear}
+            aria-label="Quitar líder de cordada"
+            className="text-[#4E805D] hover:text-[#A4636E] transition-colors leading-none"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ) : (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setOpen((prev) => !prev)}
+            aria-haspopup="listbox"
+            aria-expanded={open}
             className={[
-              'flex items-center gap-2 px-3 py-2.5 rounded-xl border',
-              error ? 'border-[#A4636E]' : 'border-[#4E805D]/40 bg-[#e8f0ea]',
+              'w-full flex items-center justify-between px-3 py-2.5 rounded-xl border bg-white text-sm text-left',
+              'focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+              error ? 'border-[#A4636E] text-[#A4636E]' : 'border-[#687C6B]/30 text-[#adb5ad]',
             ].join(' ')}
           >
-            <span className="text-sm font-medium text-[#3d6b4a] flex-1">{value}</span>
-            <button
-              type="button"
-              onClick={() => onChange('')}
-              aria-label="Quitar líder de cordada"
-              className="text-[#4E805D] hover:text-[#A4636E] transition-colors leading-none"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setIsOpen(true)}
-            placeholder="Buscar integrante registrado..."
-            aria-label="Buscar líder de cordada"
-            aria-expanded={isOpen}
-            aria-haspopup="listbox"
-            className={[
-              'w-full px-3 py-2.5 rounded-xl border bg-white text-sm text-slate-800 placeholder:text-[#adb5ad]',
-              'focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
-              error ? 'border-[#A4636E]' : 'border-[#687C6B]/30',
-            ].join(' ')}
-          />
-        )}
+            <span>Selecciona el líder de cordada</span>
+            <ChevronDown size={16} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+          </button>
 
-        {isOpen && !value && (
-          <DropdownList
-            integrantes={integrantes}
-            filtered={filtered}
-            query={query}
-            emptyMessage="No se encontraron integrantes."
-            onSelect={(name) => {
-              onChange(name)
-              setQuery('')
-              setIsOpen(false)
-            }}
-            onCreateIntegrante={() => {
-              setIsOpen(false)
-              onCreateIntegrante()
-            }}
-          />
-        )}
-      </div>
+          {open && (
+            <ul
+              role="listbox"
+              aria-label="Participantes disponibles"
+              className="absolute z-10 mt-1 w-full rounded-xl border border-[#687C6B]/20 bg-white shadow-lg overflow-hidden"
+            >
+              {participantes.map((name) => (
+                <li key={name}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    onClick={() => handleSelect(name)}
+                    className="w-full text-left px-4 py-2.5 text-sm text-slate-800 hover:bg-[#e8f0ea] hover:text-[#3d6b4a] transition-colors"
+                  >
+                    {name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {error && (
-        <p className="text-xs text-[#A4636E]" role="alert">
-          {error}
-        </p>
+        <p className="text-xs text-[#A4636E]" role="alert">{error}</p>
       )}
-      <p className="text-xs text-[#757874]">
-        Se conectará con la lista de usuarios registrados del club.
-      </p>
     </div>
   )
 }
 
-// ─── Participant picker (multi-select) ────────────────────────────────────────
+// ─── Participant picker (multi-select by RUT) ─────────────────────────────────
 
 interface ParticipantePickerProps {
   selected: string[]
@@ -248,62 +278,46 @@ interface ParticipantePickerProps {
 }
 
 function ParticipantePicker({ selected, onAdd, onCreateIntegrante }: ParticipantePickerProps) {
-  const [query, setQuery] = useState('')
-  const [isOpen, setIsOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [integrantes] = useState(() => loadIntegrantes())
+  const [rut, setRut] = useState('')
+  const { integrante, loading, isComplete } = useRutLookup(rut)
+  const alreadyAdded = integrante ? selected.includes(integrante.nombreCompleto) : false
 
-  const filtered = integrantes.filter(
-    (i) =>
-      i.nombreCompleto.toLowerCase().includes(query.toLowerCase()) &&
-      !selected.includes(i.nombreCompleto),
-  )
-
-  useEffect(() => {
-    function handlePointerDown(e: PointerEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
-        setQuery('')
-      }
+  function handleAdd(i: IntegranteRecord) {
+    if (!selected.includes(i.nombreCompleto)) {
+      onAdd(i.nombreCompleto)
     }
-    document.addEventListener('pointerdown', handlePointerDown)
-    return () => document.removeEventListener('pointerdown', handlePointerDown)
-  }, [])
+    setRut('')
+  }
 
   return (
-    <div ref={containerRef} className="relative">
+    <div className="flex flex-col gap-2">
       <input
         type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => setIsOpen(true)}
-        placeholder={
-          selected.length === 0
-            ? 'Buscar integrante registrado...'
-            : 'Agregar otro integrante...'
-        }
-        aria-label="Buscar participante"
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
+        value={rut}
+        onChange={(e) => setRut(formatRut(e.target.value))}
+        placeholder={selected.length === 0 ? 'Ingresa el RUT del participante' : 'Agregar otro participante por RUT'}
+        aria-label="RUT del participante"
         className="w-full px-3 py-2.5 rounded-xl border border-[#687C6B]/30 bg-white text-sm text-slate-800 placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow"
       />
 
-      {isOpen && (
-        <DropdownList
-          integrantes={integrantes}
-          filtered={filtered}
-          query={query}
-          emptyMessage="Todos los integrantes ya están seleccionados."
-          onSelect={(name) => {
-            onAdd(name)
-            setQuery('')
-            // keep open for multi-select
-          }}
+      {isComplete && !alreadyAdded && (
+        <RutLookupResult
+          rut={rut}
+          integrante={integrante}
+          loading={loading}
+          actionLabel="Agregar"
+          onSelect={handleAdd}
           onCreateIntegrante={() => {
-            setIsOpen(false)
+            setRut('')
             onCreateIntegrante()
           }}
         />
+      )}
+
+      {isComplete && !loading && alreadyAdded && (
+        <p className="text-xs text-[#757874] px-1">
+          Este integrante ya está en la nómina.
+        </p>
       )}
     </div>
   )
@@ -333,6 +347,7 @@ export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegr
   })
 
   const participantes = watch('participantes')
+  const liderCordada = watch('liderCordada')
 
   function addParticipante(name: string) {
     if (!participantes.includes(name)) {
@@ -341,29 +356,16 @@ export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegr
   }
 
   function removeParticipante(name: string) {
-    setValue(
-      'participantes',
-      participantes.filter((p) => p !== name),
-      { shouldValidate: true },
-    )
+    const updated = participantes.filter((p) => p !== name)
+    setValue('participantes', updated, { shouldValidate: true })
+    // If the removed participant was the líder, clear the líder field
+    if (liderCordada === name) {
+      setValue('liderCordada', '', { shouldValidate: true })
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
-      {/* Líder de Cordada */}
-      <Controller
-        control={control}
-        name="liderCordada"
-        render={({ field }) => (
-          <LiderPicker
-            value={field.value}
-            onChange={(name) => field.onChange(name)}
-            onCreateIntegrante={onCreateIntegrante}
-            error={errors.liderCordada?.message}
-          />
-        )}
-      />
-
       {/* Nómina de Participantes */}
       <div className="flex flex-col gap-2">
         <span className="text-sm font-semibold text-[#4E805D]">
@@ -409,6 +411,20 @@ export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegr
           </p>
         )}
       </div>
+
+      {/* Líder de Cordada */}
+      <Controller
+        control={control}
+        name="liderCordada"
+        render={({ field }) => (
+          <LiderPicker
+            value={field.value}
+            participantes={participantes}
+            onChange={(name) => field.onChange(name)}
+            error={errors.liderCordada?.message}
+          />
+        )}
+      />
 
       {/* Coordinación grupal */}
       <div className="rounded-2xl border border-[#687C6B]/15 bg-[#f2f0ec]/60 p-4">

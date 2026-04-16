@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Mountain, Users, Radio, Map, ChevronLeft, X, Check } from 'lucide-react'
+import { Mountain, Users, Radio, Map, X, Check } from 'lucide-react'
 import type { SalidaFormData, User, SalidaRecord } from '../../types/salida'
 import { saveDraft, loadDraft, loadDraftStep, clearDraft, saveDraftStep, saveGuestSalida } from '../../lib/storage'
 import { createSalida } from '../../lib/api'
@@ -355,15 +355,6 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
         )}
       </main>
 
-      {/* Back nav for step 2+ on mobile */}
-      {currentStep > 1 && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#687C6B]/10 px-4 py-3">
-          <Button variant="ghost" size="sm" onClick={goBack}>
-            <ChevronLeft size={16} />
-            Paso anterior
-          </Button>
-        </div>
-      )}
     </div>
   )
 }

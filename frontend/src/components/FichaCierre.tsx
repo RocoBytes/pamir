@@ -7,6 +7,8 @@ import {
   X,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   AlertCircle,
 } from 'lucide-react'
@@ -16,17 +18,29 @@ import type {
   SalidaRecord,
   EstadoCierre,
   MotivoAbandono,
+  MotivoCambio,
   FichaCierreRecord,
+  OcurrioIncidente,
+  TipoIncidente,
+  GravedadLesion,
+  CausaRaiz,
+  DesempenoEquipo,
 } from '../types/salida'
 import {
   ESTADO_CIERRE_LABELS,
   MOTIVO_ABANDONO_LABELS,
+  MOTIVO_CAMBIO_LABELS,
+  OCURRIO_INCIDENTE_LABELS,
+  TIPO_INCIDENTE_LABELS,
+  GRAVEDAD_LESION_LABELS,
+  CAUSA_RAIZ_LABELS,
+  DESEMPENO_EQUIPO_LABELS,
 } from '../types/salida'
 import { fetchSalidas, updateSalida } from '../lib/api'
 import { loadGuestSalidas, saveGuestCierre, deleteGuestSalida } from '../lib/storage'
 import { Button } from './ui/Button'
 
-// ─── Zod schema ───────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const ESTADOS = [
   'COMPLETADA_SEGUN_PLAN',
@@ -34,7 +48,7 @@ const ESTADOS = [
   'ABORTADA_INCOMPLETA',
 ] as const
 
-const MOTIVOS = [
+const MOTIVOS_ABANDONO = [
   'METEOROLOGIA',
   'SALUD_INTEGRANTE',
   'MAL_ESTADO_RUTA',
@@ -43,22 +57,130 @@ const MOTIVOS = [
   'FALTA_TIEMPO',
 ] as const
 
+const MOTIVOS_CAMBIO = [
+  'CLIMA_ADVERSO',
+  'ERROR_NAVEGACION',
+  'FATIGA_FISICA',
+  'FALTA_EQUIPO_TECNICO',
+  'FALTA_TIEMPO',
+  'OTRO',
+] as const
+
+const HUBO_CAMBIOS = ['SI', 'NO'] as const
+
+const OCURRIO_INCIDENTE_OPTIONS = [
+  'NADA',
+  'INCIDENTES_MENORES',
+  'ACCIDENTE_LESION',
+  'SUSTO',
+] as const
+
+const TIPOS_INCIDENTE = [
+  'MEDICO',
+  'LESION',
+  'TECNICO',
+  'LOGISTICO',
+  'AMBIENTAL',
+] as const
+
+const GRAVEDAD_LESION_OPTIONS = ['LEVE', 'MODERADA', 'GRAVE'] as const
+
+const CAUSAS_RAIZ = [
+  'EXCESO_CONFIANZA',
+  'ERROR_TECNICO',
+  'FATIGA',
+  'EQUIPAMIENTO_INADECUADO',
+  'CONDICIONES_TERRENO',
+  'MALA_VISIBILIDAD',
+  'OTRO',
+] as const
+
+const DESEMPENO_EQUIPO_OPTIONS = ['TODO_FUNCIONO', 'FALLO_EQUIPO'] as const
+
+// ─── Schema ───────────────────────────────────────────────────────────────────
+
 const cierreSchema = z
   .object({
+    // Paso 1
     salidaId: z.string().min(1, 'Selecciona una salida'),
     fechaFinalizacionReal: z.string().min(1, 'La fecha de finalización es obligatoria'),
     estadoCierre: z.enum(ESTADOS, { required_error: 'Selecciona el estado de la salida' }),
-    motivoAbandono: z.enum(MOTIVOS).optional(),
+    motivoAbandono: z.enum(MOTIVOS_ABANDONO).optional(),
+    // Paso 2
+    huboCambios: z.enum(HUBO_CAMBIOS).optional(),
+    motivosCambios: z.array(z.enum(MOTIVOS_CAMBIO)).optional(),
+    motivosCambiosOtro: z.string().max(100, 'Máximo 100 caracteres').optional(),
+    // Paso 3
+    ocurrioIncidente: z.enum(OCURRIO_INCIDENTE_OPTIONS, {
+      required_error: 'Selecciona una opción',
+    }),
+    tiposIncidente: z.array(z.enum(TIPOS_INCIDENTE)).optional(),
+    gravedadLesion: z.enum(GRAVEDAD_LESION_OPTIONS).optional(),
+    descripcionSuceso: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
+    causasRaiz: z.array(z.enum(CAUSAS_RAIZ)).optional(),
+    causaRaizOtro: z.string().max(100, 'Máximo 100 caracteres').optional(),
+    // Paso 4
+    desempenoEquipo: z.enum(DESEMPENO_EQUIPO_OPTIONS, { required_error: 'Selecciona una opción' }),
+    detalleFallaEquipo: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
+    observacionesRuta: z
+      .string()
+      .min(1, 'Las observaciones son obligatorias')
+      .max(1000, 'Máximo 1000 caracteres'),
+    precisionPronostico: z
+      .number({
+        required_error: 'Selecciona una calificación',
+        invalid_type_error: 'Selecciona una calificación',
+      })
+      .int()
+      .min(1)
+      .max(5),
+    // Paso 5
+    leccionesAprendidas: z
+      .string()
+      .min(1, 'Este campo es obligatorio')
+      .max(1000, 'Máximo 1000 caracteres'),
+    recomendacionesFuturos: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
+    sugerenciasClub: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
   })
   .refine(
-    (data) =>
-      data.estadoCierre !== 'ABORTADA_INCOMPLETA' || !!data.motivoAbandono,
+    (d) => d.estadoCierre !== 'ABORTADA_INCOMPLETA' || !!d.motivoAbandono,
     { message: 'Indica el motivo del abandono', path: ['motivoAbandono'] },
+  )
+  .refine(
+    (d) => !!d.huboCambios,
+    { message: 'Selecciona una opción', path: ['huboCambios'] },
+  )
+  .refine(
+    (d) => d.huboCambios !== 'SI' || (d.motivosCambios && d.motivosCambios.length > 0),
+    { message: 'Selecciona al menos un motivo', path: ['motivosCambios'] },
+  )
+  // Safe when ocurrioIncidente is still undefined (steps 1 & 2 nav)
+  .refine(
+    (d) =>
+      !d.ocurrioIncidente ||
+      d.ocurrioIncidente === 'NADA' ||
+      (d.tiposIncidente && d.tiposIncidente.length > 0),
+    { message: 'Selecciona al menos un tipo de incidente', path: ['tiposIncidente'] },
+  )
+  .refine(
+    (d) =>
+      !d.ocurrioIncidente ||
+      d.ocurrioIncidente === 'NADA' ||
+      !!d.descripcionSuceso?.trim(),
+    { message: 'Describe lo que ocurrió', path: ['descripcionSuceso'] },
+  )
+  .refine(
+    (d) => !d.tiposIncidente?.includes('LESION') || !!d.gravedadLesion,
+    { message: 'Indica la gravedad de la lesión', path: ['gravedadLesion'] },
+  )
+  .refine(
+    (d) => d.desempenoEquipo !== 'FALLO_EQUIPO' || !!d.detalleFallaEquipo?.trim(),
+    { message: 'Describe la falla del equipo', path: ['detalleFallaEquipo'] },
   )
 
 type CierreFormValues = z.infer<typeof cierreSchema>
 
-// ─── Radio group ──────────────────────────────────────────────────────────────
+// ─── RadioGroup ───────────────────────────────────────────────────────────────
 
 interface RadioGroupProps<T extends string> {
   label: string
@@ -112,14 +234,102 @@ function RadioGroup<T extends string>({
               <span
                 className={[
                   'flex items-center justify-center w-4 h-4 rounded-full border shrink-0 transition-colors',
-                  checked
-                    ? 'bg-[#4E805D] border-[#4E805D]'
-                    : 'bg-white border-[#687C6B]/50',
+                  checked ? 'bg-[#4E805D] border-[#4E805D]' : 'bg-white border-[#687C6B]/50',
+                ].join(' ')}
+                aria-hidden="true"
+              >
+                {checked && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
+              </span>
+              <span className="text-sm font-medium">{labels[opt]}</span>
+            </label>
+          )
+        })}
+      </div>
+      {error && (
+        <p className="text-xs text-[#A4636E]" role="alert">
+          {error}
+        </p>
+      )}
+    </fieldset>
+  )
+}
+
+// ─── CheckboxGroup ────────────────────────────────────────────────────────────
+
+interface CheckboxGroupProps<T extends string> {
+  label: string
+  required?: boolean
+  options: readonly T[]
+  labels: Record<T, string>
+  selected: T[]
+  onChange: (next: T[]) => void
+  error?: string
+}
+
+function CheckboxGroup<T extends string>({
+  label,
+  required,
+  options,
+  labels,
+  selected,
+  onChange,
+  error,
+}: CheckboxGroupProps<T>) {
+  function toggle(value: T) {
+    if (selected.includes(value)) {
+      onChange(selected.filter((v) => v !== value))
+    } else {
+      onChange([...selected, value])
+    }
+  }
+
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-sm font-semibold text-[#4E805D]">
+        {label}
+        {required && (
+          <span className="text-[#A4636E] ml-1" aria-hidden="true">
+            *
+          </span>
+        )}
+      </legend>
+      <div className="flex flex-col gap-1.5">
+        {options.map((opt) => {
+          const checked = selected.includes(opt)
+          return (
+            <label
+              key={opt}
+              className={[
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all duration-150 select-none',
+                'focus-within:ring-2 focus-within:ring-[#4E805D]/40',
+                checked
+                  ? 'bg-[#e8f0ea] border-[#4E805D]/40 text-[#3d6b4a]'
+                  : 'bg-white border-[#687C6B]/25 text-slate-700 hover:border-[#4E805D]/40 hover:bg-[#f5f8f5]',
+              ].join(' ')}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggle(opt)}
+                className="sr-only"
+              />
+              <span
+                className={[
+                  'flex items-center justify-center w-4 h-4 rounded border shrink-0 transition-colors',
+                  checked ? 'bg-[#4E805D] border-[#4E805D]' : 'bg-white border-[#687C6B]/50',
                 ].join(' ')}
                 aria-hidden="true"
               >
                 {checked && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-white block" />
+                  <svg viewBox="0 0 12 10" fill="none" className="w-2.5 h-2.5">
+                    <path
+                      d="M1 5l3.5 3.5L11 1"
+                      stroke="white"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 )}
               </span>
               <span className="text-sm font-medium">{labels[opt]}</span>
@@ -145,6 +355,14 @@ interface FichaCierreProps {
   onCancel: () => void
 }
 
+const STEP_LABELS = [
+  'Cierre de Actividad',
+  'Evaluación de la Planificación',
+  'Gestión de Incidentes',
+  'Análisis Técnico y de Equipo',
+  'Lecciones Aprendidas y Recomendaciones',
+]
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProps) {
@@ -154,18 +372,41 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1)
 
   const {
     register,
     control,
     handleSubmit,
+    trigger,
     watch,
     formState: { errors },
   } = useForm<CierreFormValues>({
     resolver: zodResolver(cierreSchema),
+    defaultValues: { motivosCambios: [], tiposIncidente: [], causasRaiz: [] },
   })
 
   const estadoSeleccionado = watch('estadoCierre')
+  const huboCambiosVal = watch('huboCambios')
+  const motivosCambiosVal = watch('motivosCambios') ?? []
+  const showOtroMotivo = motivosCambiosVal.includes('OTRO')
+  const ocurrioIncidenteVal = watch('ocurrioIncidente')
+  const tiposIncidenteVal = watch('tiposIncidente') ?? []
+  const causasRaizVal = watch('causasRaiz') ?? []
+  const descripcionSucesoVal = watch('descripcionSuceso') ?? ''
+  const incidenteActivo = !!ocurrioIncidenteVal && ocurrioIncidenteVal !== 'NADA'
+  const showGravedadLesion = tiposIncidenteVal.includes('LESION')
+  const showCausaRaizOtro = causasRaizVal.includes('OTRO')
+
+  const desempenoEquipoVal = watch('desempenoEquipo')
+  const observacionesRutaVal = watch('observacionesRuta') ?? ''
+  const detalleFallaEquipoVal = watch('detalleFallaEquipo') ?? ''
+  const precisionPronosticoVal = watch('precisionPronostico')
+  const showDetalleFalla = desempenoEquipoVal === 'FALLO_EQUIPO'
+
+  const leccionesAprendidasVal = watch('leccionesAprendidas') ?? ''
+  const recomendacionesFuturosVal = watch('recomendacionesFuturos') ?? ''
+  const sugerenciasClubVal = watch('sugerenciasClub') ?? ''
 
   const loadSalidas = useCallback(async () => {
     if (isGuest) {
@@ -188,6 +429,43 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
     void loadSalidas()
   }, [loadSalidas])
 
+  const goToStep2 = useCallback(async () => {
+    const valid = await trigger([
+      'salidaId',
+      'fechaFinalizacionReal',
+      'estadoCierre',
+      'motivoAbandono',
+    ])
+    if (valid) setCurrentStep(2)
+  }, [trigger])
+
+  const goToStep3 = useCallback(async () => {
+    const valid = await trigger(['huboCambios', 'motivosCambios', 'motivosCambiosOtro'])
+    if (valid) setCurrentStep(3)
+  }, [trigger])
+
+  const goToStep4 = useCallback(async () => {
+    const valid = await trigger([
+      'ocurrioIncidente',
+      'tiposIncidente',
+      'gravedadLesion',
+      'descripcionSuceso',
+      'causasRaiz',
+      'causaRaizOtro',
+    ])
+    if (valid) setCurrentStep(4)
+  }, [trigger])
+
+  const goToStep5 = useCallback(async () => {
+    const valid = await trigger([
+      'desempenoEquipo',
+      'detalleFallaEquipo',
+      'observacionesRuta',
+      'precisionPronostico',
+    ])
+    if (valid) setCurrentStep(5)
+  }, [trigger])
+
   const onSubmit = useCallback(
     async (values: CierreFormValues) => {
       const salida = salidas.find((s) => s.id === values.salidaId)
@@ -201,6 +479,22 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
           fechaFinalizacionReal: values.fechaFinalizacionReal,
           estadoCierre: values.estadoCierre,
           motivoAbandono: values.motivoAbandono,
+          huboCambios: values.huboCambios!,
+          motivosCambios: values.motivosCambios,
+          motivosCambiosOtro: values.motivosCambiosOtro,
+          ocurrioIncidente: values.ocurrioIncidente,
+          tiposIncidente: values.tiposIncidente,
+          gravedadLesion: values.gravedadLesion,
+          descripcionSuceso: values.descripcionSuceso,
+          causasRaiz: values.causasRaiz,
+          causaRaizOtro: values.causaRaizOtro,
+          desempenoEquipo: values.desempenoEquipo,
+          detalleFallaEquipo: values.detalleFallaEquipo,
+          observacionesRuta: values.observacionesRuta,
+          precisionPronostico: values.precisionPronostico,
+          leccionesAprendidas: values.leccionesAprendidas,
+          recomendacionesFuturos: values.recomendacionesFuturos,
+          sugerenciasClub: values.sugerenciasClub,
           createdAt: new Date().toISOString(),
           userId: user.id,
         }
@@ -217,7 +511,7 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
         setIsSubmitting(false)
       }
     },
-    [salidas, user.id, onDone],
+    [salidas, user.id, isGuest, onDone],
   )
 
   // ─── Success screen ─────────────────────────────────────────────────────────
@@ -255,15 +549,31 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
             <Mountain size={18} className="text-[#4E805D]" />
             <span className="font-semibold text-slate-800 text-sm">Cierre de Actividad</span>
           </div>
-          <div className="w-16" aria-hidden="true" />
+          <span className="text-xs text-[#757874] font-medium">{currentStep} / 5</span>
         </div>
       </header>
 
-      {/* Step label strip */}
+      {/* Progress bars + step label */}
       <div className="bg-white border-b border-[#687C6B]/10">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-2.5">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-3 pb-2">
+          <div className="flex gap-1.5 mb-2" role="list" aria-label="Progreso del formulario">
+            {([1, 2, 3, 4, 5] as const).map((s) => (
+              <div
+                key={s}
+                role="listitem"
+                className={[
+                  'flex-1 h-1 rounded-full transition-colors duration-300',
+                  s < currentStep
+                    ? 'bg-[#4E805D]'
+                    : s === currentStep
+                    ? 'bg-[#4E805D]/60'
+                    : 'bg-[#e2e5e2]',
+                ].join(' ')}
+              />
+            ))}
+          </div>
           <p className="text-xs font-semibold text-[#4E805D] uppercase tracking-wider">
-            Ficha de Cierre de Actividad (Post-Salida)
+            Paso {currentStep} &mdash; {STEP_LABELS[currentStep - 1]}
           </p>
         </div>
       </div>
@@ -271,13 +581,20 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
       {/* Content */}
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 py-6">
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-slate-900">Cierre de Actividad</h2>
+          <h2 className="text-xl font-bold text-slate-900">{STEP_LABELS[currentStep - 1]}</h2>
           <p className="text-sm text-[#757874] mt-1">
-            Registra cómo resultó la salida y cierra el expediente de la actividad.
+            {currentStep === 1
+              ? 'Registra cómo resultó la salida y cierra el expediente de la actividad.'
+              : currentStep === 2
+              ? 'Evalúa si la actividad se desarrolló según lo planificado.'
+              : currentStep === 3
+              ? 'Esta sección es el corazón del Catastro de Accidentes.'
+              : currentStep === 4
+              ? 'Evalúa el desempeño del equipo y las condiciones de la ruta.'
+              : 'Comparte lo aprendido para mejorar futuras salidas.'}
           </p>
         </div>
 
-        {/* Loading salidas */}
         {loadingSalidas && (
           <div className="flex items-center gap-2 text-sm text-[#757874] py-6 justify-center">
             <Loader2 className="animate-spin text-[#4E805D]" size={20} />
@@ -293,142 +610,725 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
         )}
 
         {!loadingSalidas && !loadError && (
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            noValidate
-            className="flex flex-col gap-6"
-          >
-            {/* Campo: Selección de Salida */}
-            <div className="flex flex-col gap-1">
-              <label
-                htmlFor="salidaId"
-                className="text-sm font-semibold text-[#4E805D]"
-              >
-                Formulario de Salida asociado
-                <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
-              </label>
-              <p className="text-xs text-[#757874] -mt-0.5">
-                Selecciona la salida que deseas cerrar.
-              </p>
-              <div className="relative">
-                <select
-                  id="salidaId"
-                  {...register('salidaId')}
-                  aria-invalid={errors.salidaId ? 'true' : undefined}
-                  className={[
-                    'w-full appearance-none rounded-xl border bg-white px-3 py-2 pr-9 text-sm text-slate-900',
-                    'transition-colors duration-150',
-                    'focus:outline-none focus:ring-2 focus:ring-[#4E805D] focus:border-[#4E805D]',
-                    errors.salidaId
-                      ? 'border-[#A4636E] focus:ring-[#A4636E] focus:border-[#A4636E]'
-                      : 'border-[#687C6B]/40',
-                  ].join(' ')}
-                >
-                  <option value="">— Selecciona una salida —</option>
-                  {salidas.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.nombreActividad} ({s.ubicacionGeografica})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#687C6B]/60 pointer-events-none"
-                  size={16}
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
+
+            {/* ── PASO 1: Cierre de Actividad ─────────────────────────── */}
+            {currentStep === 1 && (
+              <>
+                {/* Selección de Salida */}
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="salidaId" className="text-sm font-semibold text-[#4E805D]">
+                    Formulario de Salida asociado
+                    <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+                  </label>
+                  <p className="text-xs text-[#757874] -mt-0.5">
+                    Selecciona la salida que deseas cerrar.
+                  </p>
+                  <div className="relative">
+                    <select
+                      id="salidaId"
+                      {...register('salidaId')}
+                      aria-invalid={errors.salidaId ? 'true' : undefined}
+                      className={[
+                        'w-full appearance-none rounded-xl border bg-white px-3 py-2 pr-9 text-sm text-slate-900',
+                        'transition-colors duration-150',
+                        'focus:outline-none focus:ring-2 focus:ring-[#4E805D] focus:border-[#4E805D]',
+                        errors.salidaId
+                          ? 'border-[#A4636E] focus:ring-[#A4636E] focus:border-[#A4636E]'
+                          : 'border-[#687C6B]/40',
+                      ].join(' ')}
+                    >
+                      <option value="">— Selecciona una salida —</option>
+                      {salidas.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nombreActividad} ({s.ubicacionGeografica})
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#687C6B]/60 pointer-events-none"
+                      size={16}
+                    />
+                  </div>
+                  {errors.salidaId && (
+                    <p className="text-xs text-[#A4636E]" role="alert">
+                      {errors.salidaId.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Fecha de Finalización Real */}
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="fechaFinalizacionReal"
+                    className="text-sm font-semibold text-[#4E805D]"
+                  >
+                    Fecha de Finalización Real
+                    <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="fechaFinalizacionReal"
+                    type="date"
+                    {...register('fechaFinalizacionReal')}
+                    aria-invalid={errors.fechaFinalizacionReal ? 'true' : undefined}
+                    className={[
+                      'w-full rounded-xl border bg-white px-3 py-2 text-sm text-slate-900',
+                      'transition-colors duration-150',
+                      'focus:outline-none focus:ring-2 focus:ring-[#4E805D] focus:border-[#4E805D]',
+                      errors.fechaFinalizacionReal
+                        ? 'border-[#A4636E] focus:ring-[#A4636E] focus:border-[#A4636E]'
+                        : 'border-[#687C6B]/40',
+                    ].join(' ')}
+                  />
+                  {errors.fechaFinalizacionReal && (
+                    <p className="text-xs text-[#A4636E]" role="alert">
+                      {errors.fechaFinalizacionReal.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Estado de la Salida */}
+                <Controller
+                  control={control}
+                  name="estadoCierre"
+                  render={({ field }) => (
+                    <RadioGroup<EstadoCierre>
+                      label="Estado de la Salida"
+                      required
+                      options={ESTADOS}
+                      labels={ESTADO_CIERRE_LABELS}
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={errors.estadoCierre?.message}
+                    />
+                  )}
                 />
-              </div>
-              {errors.salidaId && (
-                <p className="text-xs text-[#A4636E]" role="alert">
-                  {errors.salidaId.message}
-                </p>
-              )}
-            </div>
 
-            {/* Campo: Fecha de Finalización Real */}
-            <div className="flex flex-col gap-1">
-              <label
-                htmlFor="fechaFinalizacionReal"
-                className="text-sm font-semibold text-[#4E805D]"
-              >
-                Fecha de Finalización Real
-                <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
-              </label>
-              <input
-                id="fechaFinalizacionReal"
-                type="date"
-                {...register('fechaFinalizacionReal')}
-                aria-invalid={errors.fechaFinalizacionReal ? 'true' : undefined}
-                className={[
-                  'w-full rounded-xl border bg-white px-3 py-2 text-sm text-slate-900',
-                  'transition-colors duration-150',
-                  'focus:outline-none focus:ring-2 focus:ring-[#4E805D] focus:border-[#4E805D]',
-                  errors.fechaFinalizacionReal
-                    ? 'border-[#A4636E] focus:ring-[#A4636E] focus:border-[#A4636E]'
-                    : 'border-[#687C6B]/40',
-                ].join(' ')}
-              />
-              {errors.fechaFinalizacionReal && (
-                <p className="text-xs text-[#A4636E]" role="alert">
-                  {errors.fechaFinalizacionReal.message}
-                </p>
-              )}
-            </div>
-
-            {/* Campo: Estado de la Salida */}
-            <Controller
-              control={control}
-              name="estadoCierre"
-              render={({ field }) => (
-                <RadioGroup<EstadoCierre>
-                  label="Estado de la Salida"
-                  required
-                  options={ESTADOS}
-                  labels={ESTADO_CIERRE_LABELS}
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={errors.estadoCierre?.message}
-                />
-              )}
-            />
-
-            {/* Campo condicional: Motivo de Abandono */}
-            {estadoSeleccionado === 'ABORTADA_INCOMPLETA' && (
-              <Controller
-                control={control}
-                name="motivoAbandono"
-                render={({ field }) => (
-                  <RadioGroup<MotivoAbandono>
-                    label="Si fue abortada, ¿cuál fue el motivo principal?"
-                    required
-                    options={MOTIVOS}
-                    labels={MOTIVO_ABANDONO_LABELS}
-                    value={field.value}
-                    onChange={field.onChange}
-                    error={errors.motivoAbandono?.message}
+                {/* Motivo de Abandono (condicional) */}
+                {estadoSeleccionado === 'ABORTADA_INCOMPLETA' && (
+                  <Controller
+                    control={control}
+                    name="motivoAbandono"
+                    render={({ field }) => (
+                      <RadioGroup<MotivoAbandono>
+                        label="Si fue abortada, ¿cuál fue el motivo principal?"
+                        required
+                        options={MOTIVOS_ABANDONO}
+                        labels={MOTIVO_ABANDONO_LABELS}
+                        value={field.value}
+                        onChange={field.onChange}
+                        error={errors.motivoAbandono?.message}
+                      />
+                    )}
                   />
                 )}
-              />
+
+                {/* Navegación */}
+                <div className="flex justify-end pt-2">
+                  <Button type="button" variant="primary" size="lg" onClick={goToStep2}>
+                    Siguiente
+                    <ChevronRight size={18} />
+                  </Button>
+                </div>
+              </>
             )}
 
-            {/* Submit error */}
-            {submitError && (
-              <div className="flex items-start gap-2 rounded-xl bg-[#f5e8ea] border border-[#A4636E]/30 p-3 text-sm text-[#8b3a44]">
-                <AlertCircle size={15} className="mt-0.5 shrink-0" />
-                <span>{submitError}</span>
-              </div>
+            {/* ── PASO 2: Evaluación de la Planificación ──────────────── */}
+            {currentStep === 2 && (
+              <>
+                {/* Pregunta 5: ¿Hubo cambios? */}
+                <Controller
+                  control={control}
+                  name="huboCambios"
+                  render={({ field }) => (
+                    <RadioGroup<'SI' | 'NO'>
+                      label="¿Hubo cambios significativos respecto a lo planificado?"
+                      required
+                      options={HUBO_CAMBIOS}
+                      labels={{ SI: 'Sí', NO: 'No' }}
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={errors.huboCambios?.message}
+                    />
+                  )}
+                />
+
+                {/* Pregunta 6: Motivos de cambio (condicional si huboCambios === 'SI') */}
+                {huboCambiosVal === 'SI' && (
+                  <>
+                    <Controller
+                      control={control}
+                      name="motivosCambios"
+                      render={({ field }) => (
+                        <CheckboxGroup<MotivoCambio>
+                          label="Si hubo cambios, ¿cuáles fueron los motivos?"
+                          required
+                          options={MOTIVOS_CAMBIO}
+                          labels={MOTIVO_CAMBIO_LABELS}
+                          selected={field.value ?? []}
+                          onChange={field.onChange}
+                          error={errors.motivosCambios?.message}
+                        />
+                      )}
+                    />
+
+                    {/* Campo "Otro" condicional */}
+                    {showOtroMotivo && (
+                      <div className="flex flex-col gap-1.5 pl-7">
+                        <label
+                          htmlFor="motivosCambiosOtro"
+                          className="text-xs font-semibold text-[#4E805D]"
+                        >
+                          Especifica el motivo
+                        </label>
+                        <input
+                          id="motivosCambiosOtro"
+                          type="text"
+                          maxLength={100}
+                          placeholder="Describe el motivo del cambio..."
+                          {...register('motivosCambiosOtro')}
+                          className={[
+                            'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800',
+                            'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                            errors.motivosCambiosOtro
+                              ? 'border-[#A4636E]'
+                              : 'border-[#687C6B]/30',
+                          ].join(' ')}
+                        />
+                        {errors.motivosCambiosOtro && (
+                          <p className="text-xs text-[#A4636E]" role="alert">
+                            {errors.motivosCambiosOtro.message}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Navegación */}
+                <div className="flex justify-between pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setCurrentStep(1)}
+                  >
+                    <ChevronLeft size={18} />
+                    Anterior
+                  </Button>
+                  <Button type="button" variant="primary" size="lg" onClick={goToStep3}>
+                    Siguiente
+                    <ChevronRight size={18} />
+                  </Button>
+                </div>
+              </>
             )}
 
-            {/* Actions */}
-            <div className="flex justify-end pt-2">
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                loading={isSubmitting}
-              >
-                <Check size={18} />
-                Registrar cierre
-              </Button>
-            </div>
+            {/* ── PASO 3: Gestión de Incidentes y "Sustos" (Near-Miss) ── */}
+            {currentStep === 3 && (
+              <>
+                {/* Q7: ¿Ocurrió algún incidente o accidente? */}
+                <Controller
+                  control={control}
+                  name="ocurrioIncidente"
+                  render={({ field }) => (
+                    <RadioGroup<OcurrioIncidente>
+                      label="¿Ocurrió algún incidente o accidente?"
+                      required
+                      options={OCURRIO_INCIDENTE_OPTIONS}
+                      labels={OCURRIO_INCIDENTE_LABELS}
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={errors.ocurrioIncidente?.message}
+                    />
+                  )}
+                />
+
+                {/* Q8, Q9, Q10 — solo visibles si hubo incidente */}
+                {incidenteActivo && (
+                  <>
+                    {/* Q8: Tipo de Incidente/Accidente */}
+                    <Controller
+                      control={control}
+                      name="tiposIncidente"
+                      render={({ field }) => (
+                        <CheckboxGroup<TipoIncidente>
+                          label="Tipo de Incidente/Accidente"
+                          required
+                          options={TIPOS_INCIDENTE}
+                          labels={TIPO_INCIDENTE_LABELS}
+                          selected={field.value ?? []}
+                          onChange={field.onChange}
+                          error={errors.tiposIncidente?.message}
+                        />
+                      )}
+                    />
+
+                    {/* Q8 sub: Gravedad de la lesión (solo si LESION está seleccionado) */}
+                    {showGravedadLesion && (
+                      <div className="pl-7 border-l-2 border-[#4E805D]/20">
+                        <Controller
+                          control={control}
+                          name="gravedadLesion"
+                          render={({ field }) => (
+                            <RadioGroup<GravedadLesion>
+                              label="Gravedad de la lesión"
+                              required
+                              options={GRAVEDAD_LESION_OPTIONS}
+                              labels={GRAVEDAD_LESION_LABELS}
+                              value={field.value}
+                              onChange={field.onChange}
+                              error={errors.gravedadLesion?.message}
+                            />
+                          )}
+                        />
+                      </div>
+                    )}
+
+                    {/* Q9: Descripción del suceso */}
+                    <div className="flex flex-col gap-1.5">
+                      <label
+                        htmlFor="descripcionSuceso"
+                        className="text-sm font-semibold text-[#4E805D]"
+                      >
+                        Descripción del suceso
+                        <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+                      </label>
+                      <p className="text-xs text-[#757874] -mt-0.5">
+                        Indicar qué pasó, en qué lugar exacto y quiénes se vieron involucrados.
+                      </p>
+                      <textarea
+                        id="descripcionSuceso"
+                        maxLength={1000}
+                        rows={4}
+                        placeholder="Describe el suceso con el mayor detalle posible..."
+                        {...register('descripcionSuceso')}
+                        aria-invalid={errors.descripcionSuceso ? 'true' : undefined}
+                        className={[
+                          'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
+                          'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                          errors.descripcionSuceso ? 'border-[#A4636E]' : 'border-[#687C6B]/30',
+                        ].join(' ')}
+                      />
+                      <div className="flex justify-between items-center">
+                        {errors.descripcionSuceso ? (
+                          <p className="text-xs text-[#A4636E]" role="alert">
+                            {errors.descripcionSuceso.message}
+                          </p>
+                        ) : (
+                          <span />
+                        )}
+                        <span
+                          className={[
+                            'text-xs tabular-nums',
+                            descripcionSucesoVal.length > 900
+                              ? 'text-[#A4636E]'
+                              : 'text-[#757874]',
+                          ].join(' ')}
+                        >
+                          {descripcionSucesoVal.length} / 1000
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Q10: Causa Raíz Percibida */}
+                    <Controller
+                      control={control}
+                      name="causasRaiz"
+                      render={({ field }) => (
+                        <CheckboxGroup<CausaRaiz>
+                          label="Causa Raíz Percibida"
+                          options={CAUSAS_RAIZ}
+                          labels={CAUSA_RAIZ_LABELS}
+                          selected={field.value ?? []}
+                          onChange={field.onChange}
+                          error={errors.causasRaiz?.message}
+                        />
+                      )}
+                    />
+
+                    {/* Q10 sub: Otro */}
+                    {showCausaRaizOtro && (
+                      <div className="flex flex-col gap-1.5 pl-7">
+                        <label
+                          htmlFor="causaRaizOtro"
+                          className="text-xs font-semibold text-[#4E805D]"
+                        >
+                          Especifica la causa
+                        </label>
+                        <input
+                          id="causaRaizOtro"
+                          type="text"
+                          maxLength={100}
+                          placeholder="Describe la causa raíz..."
+                          {...register('causaRaizOtro')}
+                          className={[
+                            'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800',
+                            'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                            errors.causaRaizOtro ? 'border-[#A4636E]' : 'border-[#687C6B]/30',
+                          ].join(' ')}
+                        />
+                        {errors.causaRaizOtro && (
+                          <p className="text-xs text-[#A4636E]" role="alert">
+                            {errors.causaRaizOtro.message}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Navegación */}
+                <div className="flex justify-between pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setCurrentStep(2)}
+                  >
+                    <ChevronLeft size={18} />
+                    Anterior
+                  </Button>
+                  <Button type="button" variant="primary" size="lg" onClick={goToStep4}>
+                    Siguiente
+                    <ChevronRight size={18} />
+                  </Button>
+                </div>
+              </>
+            )}
+            {/* ── PASO 4: Análisis Técnico y de Equipo ─────────────────── */}
+            {currentStep === 4 && (
+              <>
+                {/* Q12: Desempeño del Equipo */}
+                <Controller
+                  control={control}
+                  name="desempenoEquipo"
+                  render={({ field }) => (
+                    <RadioGroup<DesempenoEquipo>
+                      label="Desempeño del Equipo"
+                      required
+                      options={DESEMPENO_EQUIPO_OPTIONS}
+                      labels={DESEMPENO_EQUIPO_LABELS}
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={errors.desempenoEquipo?.message}
+                    />
+                  )}
+                />
+
+                {/* Q13: Detalle de falla (condicional) */}
+                {showDetalleFalla && (
+                  <div className="flex flex-col gap-1.5 pl-7 border-l-2 border-[#A4636E]/20">
+                    <label
+                      htmlFor="detalleFallaEquipo"
+                      className="text-sm font-semibold text-[#4E805D]"
+                    >
+                      Detalle de falla de equipo
+                      <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+                    </label>
+                    <p className="text-xs text-[#757874] -mt-0.5">
+                      Ej: Se rompió un crampón, la radio no tenía alcance, etc.
+                    </p>
+                    <textarea
+                      id="detalleFallaEquipo"
+                      maxLength={1000}
+                      rows={3}
+                      placeholder="Describe la falla o daño ocurrido..."
+                      {...register('detalleFallaEquipo')}
+                      aria-invalid={errors.detalleFallaEquipo ? 'true' : undefined}
+                      className={[
+                        'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
+                        'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                        errors.detalleFallaEquipo
+                          ? 'border-[#A4636E]'
+                          : 'border-[#687C6B]/30',
+                      ].join(' ')}
+                    />
+                    <div className="flex justify-between items-center">
+                      {errors.detalleFallaEquipo ? (
+                        <p className="text-xs text-[#A4636E]" role="alert">
+                          {errors.detalleFallaEquipo.message}
+                        </p>
+                      ) : (
+                        <span />
+                      )}
+                      <span
+                        className={[
+                          'text-xs tabular-nums',
+                          detalleFallaEquipoVal.length > 900
+                            ? 'text-[#A4636E]'
+                            : 'text-[#757874]',
+                        ].join(' ')}
+                      >
+                        {detalleFallaEquipoVal.length} / 1000
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Q14: Carga GPX — próximamente */}
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-sm font-semibold text-[#4E805D]">
+                    Carga la ruta real trazada (GPX)
+                  </p>
+                  <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-[#687C6B]/40 bg-[#f2f0ec] px-4 py-5 text-sm text-[#757874]">
+                    <span className="text-[#4E805D] font-semibold">Próximamente</span>
+                    <span>&mdash; integración con Google Drive en desarrollo</span>
+                  </div>
+                </div>
+
+                {/* Q15: Observaciones sobre la Ruta */}
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="observacionesRuta"
+                    className="text-sm font-semibold text-[#4E805D]"
+                  >
+                    Observaciones sobre la Ruta
+                    <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+                  </label>
+                  <p className="text-xs text-[#757874] -mt-0.5">
+                    Ej: &quot;Mucha más nieve de lo esperado&quot;, &quot;derrumbe&quot;,
+                    &quot;Sin agua en el campamento base&quot;
+                  </p>
+                  <textarea
+                    id="observacionesRuta"
+                    maxLength={1000}
+                    rows={4}
+                    placeholder="Describe las condiciones reales de la ruta..."
+                    {...register('observacionesRuta')}
+                    aria-invalid={errors.observacionesRuta ? 'true' : undefined}
+                    className={[
+                      'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
+                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                      errors.observacionesRuta
+                        ? 'border-[#A4636E]'
+                        : 'border-[#687C6B]/30',
+                    ].join(' ')}
+                  />
+                  <div className="flex justify-between items-center">
+                    {errors.observacionesRuta ? (
+                      <p className="text-xs text-[#A4636E]" role="alert">
+                        {errors.observacionesRuta.message}
+                      </p>
+                    ) : (
+                      <span />
+                    )}
+                    <span
+                      className={[
+                        'text-xs tabular-nums',
+                        observacionesRutaVal.length > 900
+                          ? 'text-[#A4636E]'
+                          : 'text-[#757874]',
+                      ].join(' ')}
+                    >
+                      {observacionesRutaVal.length} / 1000
+                    </span>
+                  </div>
+                </div>
+
+                {/* Q16: Precisión del Pronóstico Meteorológico */}
+                <Controller
+                  control={control}
+                  name="precisionPronostico"
+                  render={({ field }) => (
+                    <fieldset className="flex flex-col gap-2">
+                      <legend className="text-sm font-semibold text-[#4E805D]">
+                        Precisión del Pronóstico Meteorológico
+                        <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+                      </legend>
+                      <div className="flex items-center justify-between gap-1 text-xs text-[#757874] mb-1">
+                        <span>1 &mdash; Totalmente errado</span>
+                        <span>5 &mdash; Muy preciso</span>
+                      </div>
+                      <div className="flex gap-2">
+                        {([1, 2, 3, 4, 5] as const).map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => field.onChange(n)}
+                            className={[
+                              'flex-1 py-3 rounded-xl border text-sm font-bold transition-all duration-150',
+                              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D]/40',
+                              field.value === n
+                                ? 'bg-[#4E805D] border-[#4E805D] text-white'
+                                : 'bg-white border-[#687C6B]/30 text-slate-700 hover:border-[#4E805D]/40 hover:bg-[#f5f8f5]',
+                            ].join(' ')}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                      {errors.precisionPronostico && (
+                        <p className="text-xs text-[#A4636E]" role="alert">
+                          {errors.precisionPronostico.message}
+                        </p>
+                      )}
+                    </fieldset>
+                  )}
+                />
+
+                {/* Navegación */}
+                <div className="flex justify-between pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setCurrentStep(3)}
+                  >
+                    <ChevronLeft size={18} />
+                    Anterior
+                  </Button>
+                  <Button type="button" variant="primary" size="lg" onClick={goToStep5}>
+                    Siguiente
+                    <ChevronRight size={18} />
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* ── PASO 5: Lecciones Aprendidas y Recomendaciones ──────── */}
+            {currentStep === 5 && (
+              <>
+                {/* Q17: ¿Qué aprendió la cordada? */}
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="leccionesAprendidas"
+                    className="text-sm font-semibold text-[#4E805D]"
+                  >
+                    ¿Qué aprendió la cordada en esta salida?
+                    <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+                  </label>
+                  <textarea
+                    id="leccionesAprendidas"
+                    maxLength={1000}
+                    rows={4}
+                    placeholder="Describe los aprendizajes clave de la cordada..."
+                    {...register('leccionesAprendidas')}
+                    aria-invalid={errors.leccionesAprendidas ? 'true' : undefined}
+                    className={[
+                      'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
+                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                      errors.leccionesAprendidas ? 'border-[#A4636E]' : 'border-[#687C6B]/30',
+                    ].join(' ')}
+                  />
+                  <div className="flex justify-between items-center">
+                    {errors.leccionesAprendidas ? (
+                      <p className="text-xs text-[#A4636E]" role="alert">
+                        {errors.leccionesAprendidas.message}
+                      </p>
+                    ) : (
+                      <span />
+                    )}
+                    <span
+                      className={[
+                        'text-xs tabular-nums',
+                        leccionesAprendidasVal.length > 900 ? 'text-[#A4636E]' : 'text-[#757874]',
+                      ].join(' ')}
+                    >
+                      {leccionesAprendidasVal.length} / 1000
+                    </span>
+                  </div>
+                </div>
+
+                {/* Q18: Recomendaciones para futuros socios */}
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="recomendacionesFuturos"
+                    className="text-sm font-semibold text-[#4E805D]"
+                  >
+                    Recomendaciones para futuros socios que realicen esta ruta
+                  </label>
+                  <textarea
+                    id="recomendacionesFuturos"
+                    maxLength={1000}
+                    rows={4}
+                    placeholder="Consejos prácticos para quienes repitan esta ruta..."
+                    {...register('recomendacionesFuturos')}
+                    className={[
+                      'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
+                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                      'border-[#687C6B]/30',
+                    ].join(' ')}
+                  />
+                  <div className="flex justify-end">
+                    <span
+                      className={[
+                        'text-xs tabular-nums',
+                        recomendacionesFuturosVal.length > 900
+                          ? 'text-[#A4636E]'
+                          : 'text-[#757874]',
+                      ].join(' ')}
+                    >
+                      {recomendacionesFuturosVal.length} / 1000
+                    </span>
+                  </div>
+                </div>
+
+                {/* Q19: Sugerencias para el Club */}
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="sugerenciasClub"
+                    className="text-sm font-semibold text-[#4E805D]"
+                  >
+                    Sugerencias para el Club
+                  </label>
+                  <p className="text-xs text-[#757874] -mt-0.5">
+                    Ej: &quot;Se necesita renovar las cuerdas de 60m&quot;, &quot;Falta
+                    capacitación en uso de GPS&quot;.
+                  </p>
+                  <textarea
+                    id="sugerenciasClub"
+                    maxLength={1000}
+                    rows={4}
+                    placeholder="Comparte tus sugerencias con el Club..."
+                    {...register('sugerenciasClub')}
+                    className={[
+                      'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
+                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                      'border-[#687C6B]/30',
+                    ].join(' ')}
+                  />
+                  <div className="flex justify-end">
+                    <span
+                      className={[
+                        'text-xs tabular-nums',
+                        sugerenciasClubVal.length > 900 ? 'text-[#A4636E]' : 'text-[#757874]',
+                      ].join(' ')}
+                    >
+                      {sugerenciasClubVal.length} / 1000
+                    </span>
+                  </div>
+                </div>
+
+                {/* Error de envío */}
+                {submitError && (
+                  <div className="flex items-start gap-2 rounded-xl bg-[#f5e8ea] border border-[#A4636E]/30 p-3 text-sm text-[#8b3a44]">
+                    <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                    <span>{submitError}</span>
+                  </div>
+                )}
+
+                {/* Navegación */}
+                <div className="flex justify-between pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setCurrentStep(4)}
+                    disabled={isSubmitting}
+                  >
+                    <ChevronLeft size={18} />
+                    Anterior
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    loading={isSubmitting}
+                    disabled={isSubmitting}
+                  >
+                    <Check size={18} />
+                    Registrar cierre
+                  </Button>
+                </div>
+              </>
+            )}
           </form>
         )}
       </main>

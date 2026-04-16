@@ -82,3 +82,49 @@ model Salida {
 
   @@map("salidas")
 }
+
+model Integrante {
+  id String @id @default(uuid())
+
+  // Sección I – Información personal
+  nombreCompleto  String  @map("nombre_completo")
+  rut             String  @unique
+  nacionalidad    String
+  genero          String
+  fechaNacimiento DateTime @map("fecha_nacimiento")
+  direccion       String
+  comuna          String
+  region          String
+  telefonoCelular String   @map("telefono_celular")
+  email           String
+  previsionSalud  String   @map("prevision_salud")
+
+  // Sección II – Contacto de emergencia
+  nombreContacto   String @map("nombre_contacto")
+  parentesco       String
+  telefonoContacto String @map("telefono_contacto")
+
+  // Sección III – Perfil médico
+  grupoSanguineo              String   @map("grupo_sanguineo")
+  alergiasTiene               Boolean  @map("alergias_tiene")
+  alergiasDetalle             String?  @map("alergias_detalle")
+  enfermedadesCronicasTiene   Boolean  @map("enfermedades_cronicas_tiene")
+  enfermedadesCronicasDetalle String?  @map("enfermedades_cronicas_detalle")
+  medicamentosTiene           Boolean  @map("medicamentos_tiene")
+  medicamentosDetalle         String?  @map("medicamentos_detalle")
+  cirugiasLesionesTiene       Boolean  @map("cirugias_lesiones_tiene")
+  cirugiasLesionesDetalle     String?  @map("cirugias_lesiones_detalle")
+  fuma                        Boolean
+  usaLentes                   Boolean  @map("usa_lentes")
+
+  // Sección IV – Cláusulas legales
+  declaracionSalud    Boolean @map("declaracion_salud")
+  aceptacionRiesgo    Boolean @map("aceptacion_riesgo")
+  consentimientoDatos Boolean @map("consentimiento_datos")
+  derechoImagen       Boolean @map("derecho_imagen")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("integrantes")
+}
