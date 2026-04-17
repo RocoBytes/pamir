@@ -97,11 +97,11 @@ export async function deleteSalida(id: string): Promise<void> {
 
 // ─── GPX Upload ───────────────────────────────────────────────────────────────
 
-export async function uploadGpx(file: File): Promise<GpxUploadResponse> {
+export async function uploadGpx(salidaId: string, file: File): Promise<GpxUploadResponse> {
   const formData = new FormData()
-  formData.append('gpx', file)
+  formData.append('file', file)
 
-  const res = await fetch(`${API_BASE}/upload/gpx`, {
+  const res = await fetch(`${API_BASE}/salidas/${salidaId}/gpx`, {
     method: 'POST',
     headers: authHeaders(),
     body: formData,

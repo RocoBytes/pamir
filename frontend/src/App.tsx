@@ -31,21 +31,24 @@ export default function App() {
     )
   }
 
-  if (route === 'nuevo-integrante') {
+  // Keep WizardLayout mounted while creating an integrante so React Hook Form
+  // state (including mid-step participantes) is preserved in memory.
+  if ((route === 'nueva-salida' || route === 'nuevo-integrante') && user) {
     return (
-      <RegistroIntegrante onBack={() => setRoute('nueva-salida')} />
-    )
-  }
-
-  if (route === 'nueva-salida' && user) {
-    return (
-      <WizardLayout
-        user={user}
-        isGuest={isGuest}
-        onDone={() => setRoute('dashboard')}
-        onCancel={() => setRoute('dashboard')}
-        onCreateIntegrante={() => setRoute('nuevo-integrante')}
-      />
+      <>
+        <div className={route === 'nueva-salida' ? undefined : 'hidden'}>
+          <WizardLayout
+            user={user}
+            isGuest={isGuest}
+            onDone={() => setRoute('dashboard')}
+            onCancel={() => setRoute('dashboard')}
+            onCreateIntegrante={() => setRoute('nuevo-integrante')}
+          />
+        </div>
+        {route === 'nuevo-integrante' && (
+          <RegistroIntegrante onBack={() => setRoute('nueva-salida')} />
+        )}
+      </>
     )
   }
 

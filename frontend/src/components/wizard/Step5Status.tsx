@@ -1,7 +1,8 @@
+import React from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ChevronLeft, Send, Link } from 'lucide-react'
+import { ChevronLeft, Send, Paperclip, X } from 'lucide-react'
 import { Button } from '../ui/Button'
 import type { RiesgoIdentificado } from '../../types/salida'
 import { RIESGO_IDENTIFICADO_LABELS } from '../../types/salida'
@@ -127,47 +128,71 @@ function CheckboxGroup<T extends string>({
   )
 }
 
-// ─── GPX link input ───────────────────────────────────────────────────────────
+// ─── GPX file picker ──────────────────────────────────────────────────────────
 
-interface GpxLinkInputProps {
-  value: string
-  onChange: (link: string) => void
+const MAX_GPX_SIZE = 15 * 1024 * 1024 // 15 MB
+
+interface GpxFilePickerProps {
+  value: File | null
+  onChange: (file: File | null) => void
 }
 
-function GpxLinkInput({ value, onChange }: GpxLinkInputProps) {
-  const isValidUrl = value === '' || /^https?:\/\/.+/.test(value)
+function GpxFilePicker({ value, onChange }: GpxFilePickerProps) {
+  const [sizeError, setSizeError] = React.useState<string | null>(null)
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    if (file) {
+      if (file.size > MAX_GPX_SIZE) {
+        setSizeError('El archivo supera el límite de 15 MB')
+        e.target.value = ''
+        return
+      }
+      setSizeError(null)
+    }
+    onChange(file)
+  }
 
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor="gpxLink" className="text-sm font-semibold text-[#4E805D]">
-        Link de la Ruta GPX{' '}
+      <span className="text-sm font-semibold text-[#4E805D]">
+        Archivo de Ruta GPX{' '}
         <span className="text-[#757874] font-normal">(opcional)</span>
-      </label>
+      </span>
       <p className="text-xs text-[#757874]">
-        Sube tu archivo .gpx a Google Drive o OneDrive, compártelo con acceso
-        público y pega el link aquí.
+        Selecciona un archivo .gpx desde tu dispositivo. Se subirá automáticamente
+        a Google Drive al guardar la salida.
       </p>
-      <div className="relative">
-        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-          <Link size={15} className="text-[#687C6B]/60" />
+
+      {value ? (
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#4E805D]/40 bg-[#e8f0ea]">
+          <Paperclip size={15} className="text-[#4E805D] shrink-0" />
+          <span className="text-sm text-[#3d6b4a] flex-1 truncate">{value.name}</span>
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="shrink-0 text-[#687C6B] hover:text-[#A4636E] transition-colors"
+            aria-label="Quitar archivo"
+          >
+            <X size={15} />
+          </button>
         </div>
-        <input
-          id="gpxLink"
-          type="url"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="https://drive.google.com/file/d/..."
-          className={[
-            'w-full rounded-xl border pl-9 pr-3 py-2.5 text-sm text-slate-900 bg-white',
-            'placeholder:text-[#757874]/50',
-            'focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-colors',
-            !isValidUrl ? 'border-[#A4636E]' : 'border-[#687C6B]/40',
-          ].join(' ')}
-        />
-      </div>
-      {!isValidUrl && (
+      ) : (
+        <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-[#687C6B]/40 bg-white cursor-pointer hover:border-[#4E805D]/60 hover:bg-[#f5f8f5] transition-colors">
+          <Paperclip size={15} className="text-[#687C6B]/60" />
+          <span className="text-sm text-[#757874]">Seleccionar archivo .gpx…</span>
+          <input
+            type="file"
+            accept=".gpx"
+            className="sr-only"
+            onChange={handleFileChange}
+          />
+        </label>
+      )}
+
+      {sizeError && (
         <p className="text-xs text-[#A4636E]" role="alert">
-          Ingresa una URL válida (debe comenzar con http:// o https://)
+          {sizeError}
         </p>
       )}
     </div>
@@ -178,9 +203,9 @@ function GpxLinkInput({ value, onChange }: GpxLinkInputProps) {
 
 interface Step5TechnicalPlanProps {
   defaultValues: Step5Data
-  gpxLink: string
+  gpxFile: File | null
   isSubmitting: boolean
-  onLinkChange: (link: string) => void
+  onFileChange: (file: File | null) => void
   onSubmit: (data: Step5Data) => Promise<void>
   onBack: () => void
 }
@@ -189,9 +214,9 @@ interface Step5TechnicalPlanProps {
 
 export function Step5Status({
   defaultValues,
-  gpxLink,
+  gpxFile,
   isSubmitting,
-  onLinkChange,
+  onFileChange,
   onSubmit,
   onBack,
 }: Step5TechnicalPlanProps) {
@@ -323,8 +348,8 @@ export function Step5Status({
         )}
       </div>
 
-      {/* GPX Link */}
-      <GpxLinkInput value={gpxLink} onChange={onLinkChange} />
+      {/* GPX File */}
+      <GpxFilePicker value={gpxFile} onChange={onFileChange} />
 
       {/* Navigation */}
       <div className="flex justify-between pt-2">

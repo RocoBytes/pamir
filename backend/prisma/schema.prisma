@@ -69,7 +69,9 @@ model Salida {
   planEvacuacion          String? @map("plan_evacuacion")
 
   // GPX
-  gpxFileUrl String? @map("gpx_file_url")
+  gpxFileId   String? @map("gpx_file_id")
+  gpxFileName String? @map("gpx_file_name")
+  gpxFileUrl  String? @map("gpx_file_url")
 
   // Estado
   status         SalidaStatus @default(EN_CURSO)

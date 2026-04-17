@@ -143,9 +143,10 @@ export interface SalidaRecord {
 }
 
 export interface GpxUploadResponse {
-  fileId: string
-  fileName: string
-  fileUrl: string
+  message: string
+  gpxFileId: string
+  gpxFileName: string
+  gpxFileUrl: string
 }
 
 // ─── Integrante (registered club member) ─────────────────────────────────────

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { Mountain, Users, Radio, Map, X, Check } from 'lucide-react'
 import type { SalidaFormData, User, SalidaRecord } from '../../types/salida'
 import { saveDraft, loadDraft, loadDraftStep, clearDraft, saveDraftStep, saveGuestSalida } from '../../lib/storage'
-import { createSalida } from '../../lib/api'
+import { createSalida, uploadGpx } from '../../lib/api'
 import { Button } from '../ui/Button'
 import { Step1General } from './Step1General'
 import { Step2Participants } from './Step2Participants'
@@ -70,7 +70,7 @@ function hasDraft(): boolean {
 export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegrante }: WizardLayoutProps) {
   const [currentStep, setCurrentStep] = useState<StepId>(1)
   const [formData, setFormData] = useState<Omit<SalidaFormData, 'gpxFile'>>(EMPTY_FORM)
-  const [gpxLink, setGpxLink] = useState<string>('')
+  const [gpxFile, setGpxFile] = useState<File | null>(null)
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set())
   // Initialize banner from localStorage directly in useState — no effect needed
   const [showDraftBanner, setShowDraftBanner] = useState<boolean>(hasDraft)
@@ -143,20 +143,20 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
       setSubmitError(null)
 
       try {
-        const gpxMeta = gpxLink ? { gpxFileUrl: gpxLink } : {}
-
         if (isGuest) {
           const localRecord: SalidaRecord = {
             id: `guest-${Date.now()}`,
             ...finalData,
-            ...gpxMeta,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             userId: user.id,
           }
           saveGuestSalida(localRecord)
         } else {
-          await createSalida({ ...finalData, ...gpxMeta })
+          const salida = await createSalida(finalData)
+          if (gpxFile) {
+            await uploadGpx(salida.id, gpxFile)
+          }
         }
 
         clearDraft()
@@ -169,7 +169,7 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
         setIsSubmitting(false)
       }
     },
-    [formData, gpxLink, isGuest, user.id, onDone],
+    [formData, gpxFile, isGuest, user.id, onDone],
   )
 
   // Success screen
@@ -346,9 +346,9 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
               riesgosOtro: formData.riesgosOtro,
               planEvacuacion: formData.planEvacuacion,
             }}
-            gpxLink={gpxLink}
+            gpxFile={gpxFile}
             isSubmitting={isSubmitting}
-            onLinkChange={setGpxLink}
+            onFileChange={setGpxFile}
             onSubmit={handleFinalSubmit}
             onBack={goBack}
           />

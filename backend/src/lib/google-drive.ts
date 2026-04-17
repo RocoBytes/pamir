@@ -31,16 +31,16 @@ class SizeGuard extends Transform {
 // ─── Drive Client Factory ─────────────────────────────────────────────────────
 
 function createDriveClient() {
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      // Las claves privadas en variables de entorno tienen \n literales
-      private_key: process.env.GOOGLE_SERVICE_ACCOUNT_KEY?.replace(/\\n/g, '\n'),
-    },
-    scopes: ['https://www.googleapis.com/auth/drive.file'],
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+  );
+
+  oauth2Client.setCredentials({
+    refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
   });
 
-  return google.drive({ version: 'v3', auth });
+  return google.drive({ version: 'v3', auth: oauth2Client });
 }
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
