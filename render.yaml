@@ -24,13 +24,15 @@ services:
       # ── Añadir manualmente en el dashboard de Render ──────────────────────────
       - key: DATABASE_URL
         sync: false   # Neon.tech pooled endpoint
+      - key: CLERK_SECRET_KEY
+        sync: false   # Clerk Dashboard → API Keys → Secret key
       - key: GOOGLE_CLIENT_ID
-        sync: false   # Mismo Client ID que en Vercel
-      - key: GOOGLE_SERVICE_ACCOUNT_EMAIL
-        sync: false
-      - key: GOOGLE_SERVICE_ACCOUNT_KEY
-        sync: false   # Pega el contenido de "private_key" del JSON (con \n literales)
+        sync: false   # Google Cloud Console → Credenciales → OAuth 2.0
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false   # Google Cloud Console → Credenciales → OAuth 2.0
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false   # Generado con scripts/get-refresh-token.mjs
       - key: GOOGLE_DRIVE_FOLDER_ID
-        sync: false
+        sync: false   # ID de la carpeta en Drive
       - key: FRONTEND_URL
         sync: false   # URL de tu app en Vercel, ej: https://pamir.vercel.app

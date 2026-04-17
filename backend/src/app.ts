@@ -6,10 +6,19 @@ import apiRouter from './routes/index.js';
 const app: Application = express();
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-// En producción restringe el origen al dominio de Vercel (FRONTEND_URL).
-// En desarrollo permite cualquier origen para facilitar el trabajo local.
+const FRONTEND_URL = process.env.FRONTEND_URL;
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL ?? true,
+  origin: FRONTEND_URL
+    ? (origin, callback) => {
+        // Acepta el dominio de producción y cualquier preview de Vercel
+        const allowed =
+          !origin ||
+          origin === FRONTEND_URL ||
+          /^https:\/\/[a-z0-9-]+-[a-z0-9]+\.vercel\.app$/.test(origin);
+        callback(null, allowed ? origin : false);
+      }
+    : true,
   credentials: true,
 }));
 app.use(express.json());
