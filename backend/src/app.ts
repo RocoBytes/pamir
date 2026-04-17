@@ -10,7 +10,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL;
 
 app.use(cors({
   origin: FRONTEND_URL
-    ? (origin, callback) => {
+    ? (origin: string | undefined, callback: (err: Error | null, origin?: string | boolean) => void) => {
         // Acepta el dominio de producción y cualquier preview de Vercel
         const allowed =
           !origin ||
