@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
+  Paperclip,
 } from 'lucide-react'
 
 import type {
@@ -36,7 +37,7 @@ import {
   CAUSA_RAIZ_LABELS,
   DESEMPENO_EQUIPO_LABELS,
 } from '../types/salida'
-import { fetchSalidas, updateSalida } from '../lib/api'
+import { fetchSalidas, updateSalida, uploadGpx } from '../lib/api'
 import { loadGuestSalidas, saveGuestCierre, deleteGuestSalida } from '../lib/storage'
 import { Button } from './ui/Button'
 
@@ -104,7 +105,7 @@ const cierreSchema = z
     // Paso 1
     salidaId: z.string().min(1, 'Selecciona una salida'),
     fechaFinalizacionReal: z.string().min(1, 'La fecha de finalización es obligatoria'),
-    estadoCierre: z.enum(ESTADOS, { required_error: 'Selecciona el estado de la salida' }),
+    estadoCierre: z.enum(ESTADOS, { error: 'Selecciona el estado de la salida' }),
     motivoAbandono: z.enum(MOTIVOS_ABANDONO).optional(),
     // Paso 2
     huboCambios: z.enum(HUBO_CAMBIOS).optional(),
@@ -112,7 +113,7 @@ const cierreSchema = z
     motivosCambiosOtro: z.string().max(100, 'Máximo 100 caracteres').optional(),
     // Paso 3
     ocurrioIncidente: z.enum(OCURRIO_INCIDENTE_OPTIONS, {
-      required_error: 'Selecciona una opción',
+      error: 'Selecciona una opción',
     }),
     tiposIncidente: z.array(z.enum(TIPOS_INCIDENTE)).optional(),
     gravedadLesion: z.enum(GRAVEDAD_LESION_OPTIONS).optional(),
@@ -120,17 +121,14 @@ const cierreSchema = z
     causasRaiz: z.array(z.enum(CAUSAS_RAIZ)).optional(),
     causaRaizOtro: z.string().max(100, 'Máximo 100 caracteres').optional(),
     // Paso 4
-    desempenoEquipo: z.enum(DESEMPENO_EQUIPO_OPTIONS, { required_error: 'Selecciona una opción' }),
+    desempenoEquipo: z.enum(DESEMPENO_EQUIPO_OPTIONS, { error: 'Selecciona una opción' }),
     detalleFallaEquipo: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
     observacionesRuta: z
       .string()
       .min(1, 'Las observaciones son obligatorias')
       .max(1000, 'Máximo 1000 caracteres'),
     precisionPronostico: z
-      .number({
-        required_error: 'Selecciona una calificación',
-        invalid_type_error: 'Selecciona una calificación',
-      })
+      .number({ error: 'Selecciona una calificación' })
       .int()
       .min(1)
       .max(5),
@@ -346,6 +344,76 @@ function CheckboxGroup<T extends string>({
   )
 }
 
+// ─── GpxFilePicker ───────────────────────────────────────────────────────────
+
+const MAX_GPX_SIZE = 15 * 1024 * 1024 // 15 MB
+
+interface GpxFilePickerProps {
+  value: File | null
+  onChange: (file: File | null) => void
+}
+
+function GpxFilePicker({ value, onChange }: GpxFilePickerProps) {
+  const [sizeError, setSizeError] = useState<string | null>(null)
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    if (file) {
+      if (file.size > MAX_GPX_SIZE) {
+        setSizeError('El archivo supera el límite de 15 MB')
+        e.target.value = ''
+        return
+      }
+      setSizeError(null)
+    }
+    onChange(file)
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-semibold text-[#4E805D]">
+        Ruta real trazada (GPX){' '}
+        <span className="text-[#757874] font-normal">(opcional)</span>
+      </span>
+      <p className="text-xs text-[#757874]">
+        Adjunta el archivo .gpx registrado durante la actividad. Se subirá a Google Drive al guardar.
+      </p>
+
+      {value ? (
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#4E805D]/40 bg-[#e8f0ea]">
+          <Paperclip size={15} className="text-[#4E805D] shrink-0" />
+          <span className="text-sm text-[#3d6b4a] flex-1 truncate">{value.name}</span>
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="shrink-0 text-[#687C6B] hover:text-[#A4636E] transition-colors"
+            aria-label="Quitar archivo"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      ) : (
+        <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-[#687C6B]/40 bg-white cursor-pointer hover:border-[#4E805D]/60 hover:bg-[#f5f8f5] transition-colors">
+          <Paperclip size={15} className="text-[#687C6B]/60" />
+          <span className="text-sm text-[#757874]">Seleccionar archivo .gpx…</span>
+          <input
+            type="file"
+            accept=".gpx"
+            className="sr-only"
+            onChange={handleFileChange}
+          />
+        </label>
+      )}
+
+      {sizeError && (
+        <p className="text-xs text-[#A4636E]" role="alert">
+          {sizeError}
+        </p>
+      )}
+    </div>
+  )
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface FichaCierreProps {
@@ -373,6 +441,7 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1)
+  const [gpxFile, setGpxFile] = useState<File | null>(null)
 
   const {
     register,
@@ -401,7 +470,6 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
   const desempenoEquipoVal = watch('desempenoEquipo')
   const observacionesRutaVal = watch('observacionesRuta') ?? ''
   const detalleFallaEquipoVal = watch('detalleFallaEquipo') ?? ''
-  const precisionPronosticoVal = watch('precisionPronostico')
   const showDetalleFalla = desempenoEquipoVal === 'FALLO_EQUIPO'
 
   const leccionesAprendidasVal = watch('leccionesAprendidas') ?? ''
@@ -503,6 +571,9 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
           deleteGuestSalida(values.salidaId)
         } else {
           await updateSalida(values.salidaId, { status: 'COMPLETADA' })
+          if (gpxFile) {
+            await uploadGpx(values.salidaId, gpxFile)
+          }
         }
         setSubmitSuccess(true)
         setTimeout(onDone, 1500)
@@ -511,7 +582,7 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
         setIsSubmitting(false)
       }
     },
-    [salidas, user.id, isGuest, onDone],
+    [salidas, user.id, isGuest, onDone, gpxFile],
   )
 
   // ─── Success screen ─────────────────────────────────────────────────────────
@@ -1064,16 +1135,8 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
                   </div>
                 )}
 
-                {/* Q14: Carga GPX — próximamente */}
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-sm font-semibold text-[#4E805D]">
-                    Carga la ruta real trazada (GPX)
-                  </p>
-                  <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-[#687C6B]/40 bg-[#f2f0ec] px-4 py-5 text-sm text-[#757874]">
-                    <span className="text-[#4E805D] font-semibold">Próximamente</span>
-                    <span>&mdash; integración con Google Drive en desarrollo</span>
-                  </div>
-                </div>
+                {/* Q14: Carga GPX */}
+                <GpxFilePicker value={gpxFile} onChange={setGpxFile} />
 
                 {/* Q15: Observaciones sobre la Ruta */}
                 <div className="flex flex-col gap-1.5">

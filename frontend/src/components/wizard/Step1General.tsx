@@ -24,11 +24,11 @@ const DISCIPLINA_OPTIONS: { value: Disciplina; label: string }[] = [
 const step1Schema = z.object({
   tipoSalida: z.enum(
     ['OFICIAL_CLUB', 'NO_OFICIAL', 'EXPEDICION_PARTICULAR'],
-    { required_error: 'Selecciona el tipo de salida' },
+    { error: 'Selecciona el tipo de salida' },
   ),
   disciplina: z.enum(
     ['TREKKING', 'MEDIA_ALTA_MONTANA', 'ESCALADA_ROCA', 'ESCALADA_HIELO', 'ESQUI_MONTANA', 'TRAIL_SKY_RUNNING'],
-    { required_error: 'Selecciona la disciplina' },
+    { error: 'Selecciona la disciplina' },
   ),
   nombreActividad: z.string().min(2, 'Ingresa el nombre de la actividad o ruta (min. 2 caracteres)'),
   ubicacionGeografica: z.string().min(2, 'Ingresa la ubicación geográfica (min. 2 caracteres)'),

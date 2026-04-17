@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Mountain,
   Calendar,
   LogOut,
   Loader2,
@@ -14,6 +13,7 @@ import {
   ClipboardCheck,
   Lock,
 } from 'lucide-react'
+import logoPamir from '../assets/logo_PAMIR.png'
 
 import type { SalidaRecord, User } from '../types/salida'
 import {
@@ -129,9 +129,7 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onLogout }:
       <header className="bg-white border-b border-[#687C6B]/10 sticky top-0 z-10 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#4E805D]">
-              <Mountain className="text-white" size={16} />
-            </div>
+            <img src={logoPamir} alt="Pamir Andino Club" className="w-11 h-11 object-contain" />
             <span className="font-bold text-slate-900 text-lg">Pamir</span>
           </div>
 

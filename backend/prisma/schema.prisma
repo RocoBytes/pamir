@@ -29,6 +29,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   salidas Salida[]
+  cierres Cierre[]
 
   @@map("users")
 }
@@ -80,9 +81,53 @@ model Salida {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  cierres Cierre[]
 
   @@map("salidas")
+}
+
+model Cierre {
+  id      String @id @default(uuid())
+  salidaId String @map("salida_id")
+  userId   String? @map("user_id")
+
+  // Paso 1
+  fechaFinalizacionReal DateTime @map("fecha_finalizacion_real")
+  estadoCierre          String   @map("estado_cierre")
+  motivoAbandono        String?  @map("motivo_abandono")
+
+  // Paso 2
+  huboCambios        String  @map("hubo_cambios")
+  motivosCambios     Json    @default("[]") @map("motivos_cambios")
+  motivosCambiosOtro String? @map("motivos_cambios_otro")
+
+  // Paso 3
+  ocurrioIncidente  String  @map("ocurrio_incidente")
+  tiposIncidente    Json    @default("[]") @map("tipos_incidente")
+  gravedadLesion    String? @map("gravedad_lesion")
+  descripcionSuceso String? @map("descripcion_suceso")
+  causasRaiz        Json    @default("[]") @map("causas_raiz")
+  causaRaizOtro     String? @map("causa_raiz_otro")
+
+  // Paso 4
+  desempenoEquipo    String  @map("desempeno_equipo")
+  detalleFallaEquipo String? @map("detalle_falla_equipo")
+  observacionesRuta  String  @map("observaciones_ruta")
+  precisionPronostico Int    @map("precision_pronostico")
+
+  // Paso 5
+  leccionesAprendidas   String  @map("lecciones_aprendidas")
+  recomendacionesFuturos String? @map("recomendaciones_futuros")
+  sugerenciasClub       String? @map("sugerencias_club")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  salida Salida  @relation(fields: [salidaId], references: [id], onDelete: Cascade)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("cierres")
 }
 
 model Integrante {

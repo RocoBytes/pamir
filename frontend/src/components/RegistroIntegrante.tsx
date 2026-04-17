@@ -73,7 +73,7 @@ const schema = z
     rut: z.string().regex(RUT_REGEX, 'Formato inválido. Ej: 12.345.678-K'),
     nacionalidad: z.string().min(1, 'Campo requerido'),
     genero: z.enum(['FEMENINO', 'MASCULINO', 'PREFIERO_NO_DECIRLO'], {
-      required_error: 'Selecciona una opción',
+      error: 'Selecciona una opción',
     }),
     fechaNacimiento: z.string().min(1, 'Selecciona tu fecha de nacimiento'),
     direccion: z.string().min(1, 'Campo requerido').max(100, 'Máximo 100 caracteres'),
@@ -90,30 +90,22 @@ const schema = z
 
     // Sección III
     grupoSanguineo: z.string().min(1, 'Selecciona tu grupo sanguíneo'),
-    alergiasTiene: z.boolean({ required_error: 'Selecciona una opción' }),
+    alergiasTiene: z.boolean({ error: 'Selecciona una opción' }),
     alergiasDetalle: z.string().max(200, 'Máximo 200 caracteres').optional(),
-    enfermedadesCronicasTiene: z.boolean({ required_error: 'Selecciona una opción' }),
+    enfermedadesCronicasTiene: z.boolean({ error: 'Selecciona una opción' }),
     enfermedadesCronicasDetalle: z.string().max(200, 'Máximo 200 caracteres').optional(),
-    medicamentosTiene: z.boolean({ required_error: 'Selecciona una opción' }),
+    medicamentosTiene: z.boolean({ error: 'Selecciona una opción' }),
     medicamentosDetalle: z.string().max(200, 'Máximo 200 caracteres').optional(),
-    cirugiasLesionesTiene: z.boolean({ required_error: 'Selecciona una opción' }),
+    cirugiasLesionesTiene: z.boolean({ error: 'Selecciona una opción' }),
     cirugiasLesionesDetalle: z.string().max(200, 'Máximo 200 caracteres').optional(),
-    fuma: z.boolean({ required_error: 'Selecciona una opción' }),
-    usaLentes: z.boolean({ required_error: 'Selecciona una opción' }),
+    fuma: z.boolean({ error: 'Selecciona una opción' }),
+    usaLentes: z.boolean({ error: 'Selecciona una opción' }),
 
     // Sección IV
-    declaracionSalud: z.literal(true, {
-      errorMap: () => ({ message: 'Debes aceptar esta declaración para continuar' }),
-    }),
-    aceptacionRiesgo: z.literal(true, {
-      errorMap: () => ({ message: 'Debes aceptar esta cláusula para continuar' }),
-    }),
-    consentimientoDatos: z.literal(true, {
-      errorMap: () => ({ message: 'Debes aceptar el consentimiento de uso de datos para continuar' }),
-    }),
-    derechoImagen: z.literal(true, {
-      errorMap: () => ({ message: 'Debes aceptar esta cláusula para continuar' }),
-    }),
+    declaracionSalud: z.literal(true, { error: 'Debes aceptar esta declaración para continuar' }),
+    aceptacionRiesgo: z.literal(true, { error: 'Debes aceptar esta cláusula para continuar' }),
+    consentimientoDatos: z.literal(true, { error: 'Debes aceptar el consentimiento de uso de datos para continuar' }),
+    derechoImagen: z.literal(true, { error: 'Debes aceptar esta cláusula para continuar' }),
   })
   .superRefine((data, ctx) => {
     if (data.alergiasTiene && !data.alergiasDetalle?.trim()) {
@@ -154,43 +146,6 @@ function FieldError({ message }: { message?: string }) {
   )
 }
 
-interface TextareaFieldProps {
-  label: string
-  placeholder?: string
-  maxLength?: number
-  error?: string
-  required?: boolean
-  value: string
-  onChange: (v: string) => void
-}
-
-function TextareaField({ label, placeholder, maxLength, error, required, value, onChange }: TextareaFieldProps) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm font-semibold text-[#4E805D]">
-        {label}
-        {required && <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>}
-      </label>
-      <textarea
-        rows={3}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={[
-          'w-full rounded-xl border bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-[#757874]/50 resize-none',
-          'transition-colors duration-150',
-          'focus:outline-none focus:ring-2 focus:ring-[#4E805D] focus:border-[#4E805D]',
-          error ? 'border-[#A4636E]' : 'border-[#687C6B]/40',
-        ].join(' ')}
-      />
-      {maxLength && (
-        <p className="text-xs text-[#757874] self-end">{value.length}/{maxLength}</p>
-      )}
-      <FieldError message={error} />
-    </div>
-  )
-}
 
 interface SingleSelectChipProps {
   label: string

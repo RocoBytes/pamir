@@ -38,7 +38,9 @@ export function TimeInput24({
 
   useEffect(() => {
     const { h, m } = parseTime(value)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHours(h)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMinutes(m)
   }, [value])
 

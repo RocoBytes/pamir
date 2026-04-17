@@ -12,8 +12,8 @@ import type { IntegranteRecord } from '../../types/salida'
 const step3Schema = z.object({
   liderCordada: z.string().min(1, 'Selecciona el líder de cordada'),
   participantes: z.array(z.string()).min(1, 'Agrega al menos un participante'),
-  coordinacionGrupal: z.boolean({ required_error: 'Selecciona una opción' }),
-  matrizRiesgos: z.boolean({ required_error: 'Selecciona una opción' }),
+  coordinacionGrupal: z.boolean({ error: 'Selecciona una opción' }),
+  matrizRiesgos: z.boolean({ error: 'Selecciona una opción' }),
 })
 
 export type Step3Data = z.infer<typeof step3Schema>

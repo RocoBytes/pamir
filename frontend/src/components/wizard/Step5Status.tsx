@@ -28,8 +28,8 @@ const step5Schema = z.object({
   riesgosIdentificados: z
     .array(z.enum(RIESGOS))
     .min(1, 'Selecciona al menos un riesgo'),
-  riesgosOtro: z.string().max(100, 'Máximo 100 caracteres').default(''),
-  planEvacuacion: z.string().max(1000, 'Máximo 1000 caracteres').default(''),
+  riesgosOtro: z.string().max(100, 'Máximo 100 caracteres'),
+  planEvacuacion: z.string().max(1000, 'Máximo 1000 caracteres'),
 })
 
 export type Step5Data = z.infer<typeof step5Schema>

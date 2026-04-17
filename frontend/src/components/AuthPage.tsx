@@ -1,6 +1,7 @@
-import { Mountain, UserRound } from 'lucide-react'
+import { UserRound } from 'lucide-react'
 import { SignInButton } from '@clerk/clerk-react'
 import { Button } from './ui/Button'
+import logoPamir from '../assets/logo_PAMIR.png'
 
 interface AuthPageProps {
   onLoginAsGuest: () => void
@@ -28,12 +29,11 @@ export function AuthPage({ onLoginAsGuest, isLoading }: AuthPageProps) {
       <div className="relative w-full max-w-md">
         {/* Logo / Brand */}
         <div className="flex flex-col items-center mb-10">
-          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-[#4E805D] shadow-lg mb-4">
-            <Mountain className="text-white" size={32} />
-          </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight" style={{ fontFamily: "'Manrope', sans-serif" }}>
-            Pamir
-          </h1>
+          <img
+            src={logoPamir}
+            alt="Pamir Andino Club"
+            className="w-36 h-36 object-contain drop-shadow-lg mb-2"
+          />
           <p className="text-white/50 mt-1 text-center text-sm">
             Registro de salidas de montaña
           </p>

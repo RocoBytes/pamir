@@ -34,14 +34,11 @@ const step4Schema = z.object({
   mediosComunicacion: z
     .array(z.enum(MEDIOS))
     .min(1, 'Selecciona al menos un medio de comunicación'),
-  idDispositivoFrecuencia: z
-    .string()
-    .max(100, 'Máximo 100 caracteres')
-    .default(''),
+  idDispositivoFrecuencia: z.string().max(100, 'Máximo 100 caracteres'),
   equipoColectivo: z
     .array(z.enum(EQUIPOS))
     .min(1, 'Selecciona al menos una opción'),
-  equipoColectivoOtro: z.string().max(100, 'Máximo 100 caracteres').default(''),
+  equipoColectivoOtro: z.string().max(100, 'Máximo 100 caracteres'),
 })
 
 export type Step4Data = z.infer<typeof step4Schema>

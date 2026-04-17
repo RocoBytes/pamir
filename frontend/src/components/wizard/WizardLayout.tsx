@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
-import { Mountain, Users, Radio, Map, X, Check } from 'lucide-react'
+import { Users, Radio, Map, X, Check } from 'lucide-react'
+import logoPamir from '../../assets/logo_PAMIR.png'
 import type { SalidaFormData, User, SalidaRecord } from '../../types/salida'
 import { saveDraft, loadDraft, loadDraftStep, clearDraft, saveDraftStep, saveGuestSalida } from '../../lib/storage'
 import { createSalida, uploadGpx } from '../../lib/api'
@@ -29,7 +30,7 @@ interface StepMeta {
 
 
 const STEPS: StepMeta[] = [
-  { id: 1, label: 'Clasificacion de la Salida', shortLabel: 'Clasificacion', icon: <Mountain size={16} /> },
+  { id: 1, label: 'Clasificacion de la Salida', shortLabel: 'Clasificacion', icon: <Users size={16} /> },
   { id: 2, label: 'Cronologia y Seguridad', shortLabel: 'Cronologia', icon: <Users size={16} /> },
   { id: 3, label: 'Equipo Humano', shortLabel: 'Equipo', icon: <Users size={16} /> },
   { id: 4, label: 'Comunicaciones y Equipo Crítico', shortLabel: 'Comunicaciones', icon: <Radio size={16} /> },
@@ -206,7 +207,7 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
           </button>
 
           <div className="flex items-center gap-2">
-            <Mountain size={18} className="text-[#4E805D]" />
+            <img src={logoPamir} alt="Pamir Andino Club" className="w-10 h-10 object-contain" />
             <span className="font-semibold text-slate-800 text-sm">
               Nueva Salida
             </span>
