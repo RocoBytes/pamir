@@ -23,14 +23,36 @@ export function useAuth(): UseAuthReturn {
 
   const [clerkToken, setClerkToken] = useState<string | null>(null)
 
-  // Fetch Clerk token whenever the authenticated user becomes available
+  // Fetch Clerk token whenever the authenticated user becomes available, and refresh every 50 min
   useEffect(() => {
-    if (clerkUser) {
+    if (!clerkUser) {
+      setClerkToken(null)
+      return
+    }
+    const refresh = (): void => {
       getToken()
         .then(setClerkToken)
         .catch(() => setClerkToken(null))
     }
+    refresh()
+    const interval = setInterval(refresh, 50 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [clerkUser, getToken])
+
+  // Persist Clerk token to localStorage so api.ts authHeaders() can read it
+  useEffect(() => {
+    if (clerkUser && clerkToken) {
+      saveAuth({
+        user: {
+          id: clerkUser.id,
+          email: clerkUser.emailAddresses[0]?.emailAddress ?? '',
+          name: clerkUser.fullName ?? clerkUser.emailAddresses[0]?.emailAddress ?? clerkUser.id,
+        },
+        token: clerkToken,
+        isGuest: false,
+      })
+    }
+  }, [clerkUser, clerkToken])
 
   // Persist guest state to localStorage
   useEffect(() => {
