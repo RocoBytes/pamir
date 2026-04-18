@@ -163,6 +163,40 @@ export async function getIntegranteByRut(rut: string): Promise<IntegranteRecord 
   return handleResponse<IntegranteRecord>(res)
 }
 
+// ─── Cierres ──────────────────────────────────────────────────────────────────
+
+export interface CreateCierrePayload {
+  salidaId: string
+  fechaFinalizacionReal: string
+  estadoCierre: string
+  motivoAbandono?: string
+  huboCambios: string
+  motivosCambios?: string[]
+  motivosCambiosOtro?: string
+  ocurrioIncidente: string
+  tiposIncidente?: string[]
+  gravedadLesion?: string
+  descripcionSuceso?: string
+  causasRaiz?: string[]
+  causaRaizOtro?: string
+  desempenoEquipo: string
+  detalleFallaEquipo?: string
+  observacionesRuta: string
+  precisionPronostico: number
+  leccionesAprendidas: string
+  recomendacionesFuturos?: string
+  sugerenciasClub?: string
+}
+
+export async function createCierre(data: CreateCierrePayload): Promise<{ id: string }> {
+  const res = await fetch(`${API_BASE}/cierres`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<{ id: string }>(res)
+}
+
 // ─── Health ───────────────────────────────────────────────────────────────────
 
 export async function healthCheck(): Promise<{ status: string }> {

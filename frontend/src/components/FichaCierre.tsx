@@ -37,7 +37,7 @@ import {
   CAUSA_RAIZ_LABELS,
   DESEMPENO_EQUIPO_LABELS,
 } from '../types/salida'
-import { fetchSalidas, updateSalida, uploadGpx } from '../lib/api'
+import { fetchSalidas, updateSalida, uploadGpx, createCierre } from '../lib/api'
 import { loadGuestSalidas, saveGuestCierre, deleteGuestSalida } from '../lib/storage'
 import { Button } from './ui/Button'
 
@@ -566,10 +566,32 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
           createdAt: new Date().toISOString(),
           userId: user.id,
         }
-        saveGuestCierre(record)
         if (isGuest) {
+          saveGuestCierre(record)
           deleteGuestSalida(values.salidaId)
         } else {
+          await createCierre({
+            salidaId: values.salidaId,
+            fechaFinalizacionReal: values.fechaFinalizacionReal,
+            estadoCierre: values.estadoCierre,
+            motivoAbandono: values.motivoAbandono,
+            huboCambios: values.huboCambios!,
+            motivosCambios: values.motivosCambios,
+            motivosCambiosOtro: values.motivosCambiosOtro,
+            ocurrioIncidente: values.ocurrioIncidente,
+            tiposIncidente: values.tiposIncidente,
+            gravedadLesion: values.gravedadLesion,
+            descripcionSuceso: values.descripcionSuceso,
+            causasRaiz: values.causasRaiz,
+            causaRaizOtro: values.causaRaizOtro,
+            desempenoEquipo: values.desempenoEquipo,
+            detalleFallaEquipo: values.detalleFallaEquipo,
+            observacionesRuta: values.observacionesRuta,
+            precisionPronostico: values.precisionPronostico,
+            leccionesAprendidas: values.leccionesAprendidas,
+            recomendacionesFuturos: values.recomendacionesFuturos,
+            sugerenciasClub: values.sugerenciasClub,
+          })
           await updateSalida(values.salidaId, { status: 'COMPLETADA' })
           if (gpxFile) {
             await uploadGpx(values.salidaId, gpxFile)
