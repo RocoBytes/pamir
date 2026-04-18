@@ -66,9 +66,13 @@ export function TimeInput24({
   function handleHoursChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.replace(/\D/g, '').slice(0, 2)
     setHours(raw)
-    emit(raw, minutes)
-    // Auto-jump to minutes only if user typed 2 digits and value is valid hour
-    if (raw.length === 2 && parseInt(raw, 10) <= 23) {
+    // Only emit complete valid times while typing; blur handles clearing
+    const hNum = parseInt(raw, 10)
+    const mNum = parseInt(minutes, 10)
+    if (raw !== '' && minutes !== '' && !isNaN(hNum) && !isNaN(mNum) && hNum <= 23 && mNum <= 59) {
+      onChange?.(`${String(hNum).padStart(2, '0')}:${String(mNum).padStart(2, '0')}`)
+    }
+    if (raw.length === 2 && hNum <= 23) {
       minutesRef.current?.focus()
       minutesRef.current?.select()
     }
@@ -77,7 +81,12 @@ export function TimeInput24({
   function handleMinutesChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.replace(/\D/g, '').slice(0, 2)
     setMinutes(raw)
-    emit(hours, raw)
+    // Only emit complete valid times while typing; blur handles clearing
+    const hNum = parseInt(hours, 10)
+    const mNum = parseInt(raw, 10)
+    if (hours !== '' && raw !== '' && !isNaN(hNum) && !isNaN(mNum) && hNum <= 23 && mNum <= 59) {
+      onChange?.(`${String(hNum).padStart(2, '0')}:${String(mNum).padStart(2, '0')}`)
+    }
   }
 
   function handleHoursBlur() {
