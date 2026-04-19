@@ -12,6 +12,7 @@ import {
   Clock,
   ClipboardCheck,
   Lock,
+  UserPlus,
 } from 'lucide-react'
 import logoPamir from '../assets/logo_PAMIR.png'
 
@@ -22,7 +23,6 @@ import {
   DISCIPLINA_LABELS,
 } from '../types/salida'
 import { fetchSalidas } from '../lib/api'
-import { loadGuestSalidas } from '../lib/storage'
 import { Button } from './ui/Button'
 
 // Imagen de ruta alpinista en Chile — reemplazar por foto propia si se desea
@@ -38,6 +38,7 @@ interface DashboardProps {
   isGuest: boolean
   onNewSalida: () => void
   onNewCierre: () => void
+  onNewIntegrante: () => void
   onLogout: () => void
 }
 
@@ -95,16 +96,12 @@ function SalidaCard({ salida }: { salida: SalidaRecord }) {
   )
 }
 
-export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onLogout }: DashboardProps) {
+export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegrante, onLogout }: DashboardProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
-  const [isLoading, setIsLoading] = useState(!isGuest)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const loadSalidas = useCallback(async () => {
-    if (isGuest) {
-      setSalidas(loadGuestSalidas())
-      return
-    }
     setIsLoading(true)
     setError(null)
     try {
@@ -117,7 +114,7 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onLogout }:
     } finally {
       setIsLoading(false)
     }
-  }, [isGuest])
+  }, [])
 
   useEffect(() => {
     void loadSalidas()
@@ -262,6 +259,22 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onLogout }:
             </div>
           )}
         </div>
+
+        {/* Quick action: Registrar Integrante */}
+        <button
+          onClick={onNewIntegrante}
+          className="w-full flex items-center gap-4 bg-white rounded-2xl border border-[#687C6B]/15 shadow-sm hover:shadow-md transition-shadow duration-200 p-4 mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] focus-visible:ring-offset-2"
+          aria-label="Registrar nuevo integrante"
+        >
+          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#e8f0ea] flex items-center justify-center">
+            <UserPlus size={20} className="text-[#4E805D]" />
+          </div>
+          <div className="flex-1 text-left">
+            <p className="font-semibold text-slate-900 text-sm">Registrar Integrante</p>
+            <p className="text-xs text-[#757874]">Crear ficha sin necesidad de asociar una salida</p>
+          </div>
+          <ChevronRight size={16} className="text-[#757874]" />
+        </button>
 
         {/* Page header */}
         <div className="mb-5">

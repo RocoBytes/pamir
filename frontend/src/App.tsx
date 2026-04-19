@@ -6,7 +6,7 @@ import { WizardLayout } from './components/wizard/WizardLayout'
 import { RegistroIntegrante } from './components/RegistroIntegrante'
 import { FichaCierre } from './components/FichaCierre'
 
-type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre'
+type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone'
 
 export default function App() {
   const { user, token, isGuest, isLoading, loginAsGuest, logout } = useAuth()
@@ -52,6 +52,12 @@ export default function App() {
     )
   }
 
+  if (route === 'nuevo-integrante-standalone') {
+    return (
+      <RegistroIntegrante onBack={() => setRoute('dashboard')} />
+    )
+  }
+
   if (route === 'nueva-cierre' && user) {
     return (
       <FichaCierre
@@ -69,6 +75,7 @@ export default function App() {
       isGuest={isGuest}
       onNewSalida={() => setRoute('nueva-salida')}
       onNewCierre={() => setRoute('nueva-cierre')}
+      onNewIntegrante={() => setRoute('nuevo-integrante-standalone')}
       onLogout={logout}
     />
   )

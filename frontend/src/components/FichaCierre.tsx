@@ -20,7 +20,6 @@ import type {
   EstadoCierre,
   MotivoAbandono,
   MotivoCambio,
-  FichaCierreRecord,
   OcurrioIncidente,
   TipoIncidente,
   GravedadLesion,
@@ -38,7 +37,6 @@ import {
   DESEMPENO_EQUIPO_LABELS,
 } from '../types/salida'
 import { fetchSalidas, updateSalida, uploadGpx, createCierre } from '../lib/api'
-import { loadGuestSalidas, saveGuestCierre, deleteGuestSalida } from '../lib/storage'
 import { Button } from './ui/Button'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -435,7 +433,7 @@ const STEP_LABELS = [
 
 export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
-  const [loadingSalidas, setLoadingSalidas] = useState(!isGuest)
+  const [loadingSalidas, setLoadingSalidas] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -477,10 +475,6 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
   const sugerenciasClubVal = watch('sugerenciasClub') ?? ''
 
   const loadSalidas = useCallback(async () => {
-    if (isGuest) {
-      setSalidas(loadGuestSalidas())
-      return
-    }
     setLoadingSalidas(true)
     setLoadError(null)
     try {
@@ -491,7 +485,7 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
     } finally {
       setLoadingSalidas(false)
     }
-  }, [isGuest])
+  }, [])
 
   useEffect(() => {
     void loadSalidas()
@@ -536,41 +530,10 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
 
   const onSubmit = useCallback(
     async (values: CierreFormValues) => {
-      const salida = salidas.find((s) => s.id === values.salidaId)
       setIsSubmitting(true)
       setSubmitError(null)
       try {
-        const record: FichaCierreRecord = {
-          id: `cierre-${Date.now()}`,
-          salidaId: values.salidaId,
-          salidaNombre: salida?.nombreActividad ?? values.salidaId,
-          fechaFinalizacionReal: values.fechaFinalizacionReal,
-          estadoCierre: values.estadoCierre,
-          motivoAbandono: values.motivoAbandono,
-          huboCambios: values.huboCambios!,
-          motivosCambios: values.motivosCambios,
-          motivosCambiosOtro: values.motivosCambiosOtro,
-          ocurrioIncidente: values.ocurrioIncidente,
-          tiposIncidente: values.tiposIncidente,
-          gravedadLesion: values.gravedadLesion,
-          descripcionSuceso: values.descripcionSuceso,
-          causasRaiz: values.causasRaiz,
-          causaRaizOtro: values.causaRaizOtro,
-          desempenoEquipo: values.desempenoEquipo,
-          detalleFallaEquipo: values.detalleFallaEquipo,
-          observacionesRuta: values.observacionesRuta,
-          precisionPronostico: values.precisionPronostico,
-          leccionesAprendidas: values.leccionesAprendidas,
-          recomendacionesFuturos: values.recomendacionesFuturos,
-          sugerenciasClub: values.sugerenciasClub,
-          createdAt: new Date().toISOString(),
-          userId: user.id,
-        }
-        if (isGuest) {
-          saveGuestCierre(record)
-          deleteGuestSalida(values.salidaId)
-        } else {
-          await createCierre({
+        await createCierre({
             salidaId: values.salidaId,
             fechaFinalizacionReal: values.fechaFinalizacionReal,
             estadoCierre: values.estadoCierre,
@@ -596,7 +559,6 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
           if (gpxFile) {
             await uploadGpx(values.salidaId, gpxFile)
           }
-        }
         setSubmitSuccess(true)
         setTimeout(onDone, 1500)
       } catch (err) {
@@ -604,7 +566,7 @@ export function FichaCierre({ user, isGuest, onDone, onCancel }: FichaCierreProp
         setIsSubmitting(false)
       }
     },
-    [salidas, user.id, isGuest, onDone, gpxFile],
+    [salidas, onDone, gpxFile],
   )
 
   // ─── Success screen ─────────────────────────────────────────────────────────

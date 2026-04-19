@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react'
 import { Users, Radio, Map, X, Check } from 'lucide-react'
 import logoPamir from '../../assets/logo_PAMIR.png'
-import type { SalidaFormData, User, SalidaRecord } from '../../types/salida'
-import { saveDraft, loadDraft, loadDraftStep, clearDraft, saveDraftStep, saveGuestSalida } from '../../lib/storage'
+import type { SalidaFormData, User } from '../../types/salida'
+import { saveDraft, loadDraft, loadDraftStep, clearDraft, saveDraftStep } from '../../lib/storage'
 import { createSalida, uploadGpx } from '../../lib/api'
 import { Button } from '../ui/Button'
 import { Step1General } from './Step1General'
@@ -144,16 +144,7 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
       setSubmitError(null)
 
       try {
-        if (isGuest) {
-          const localRecord: SalidaRecord = {
-            id: `guest-${Date.now()}`,
-            ...finalData,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            userId: user.id,
-          }
-          saveGuestSalida(localRecord)
-        } else {
+        {
           const salida = await createSalida(finalData)
           if (gpxFile) {
             await uploadGpx(salida.id, gpxFile)
@@ -170,7 +161,7 @@ export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegran
         setIsSubmitting(false)
       }
     },
-    [formData, gpxFile, isGuest, user.id, onDone],
+    [formData, gpxFile, onDone],
   )
 
   // Success screen

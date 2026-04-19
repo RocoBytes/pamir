@@ -87,7 +87,7 @@ export async function getSalidas(req: Request, res: Response): Promise<void> {
     const salidas = await prisma.salida.findMany({
       where: userId
         ? { userId, status: 'EN_CURSO' }
-        : { status: 'EN_CURSO' },
+        : { userId: null, status: 'EN_CURSO' },
       orderBy: { createdAt: 'desc' },
     });
 

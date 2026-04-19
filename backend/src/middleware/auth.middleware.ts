@@ -15,16 +15,18 @@ export async function authMiddleware(
   const { userId } = getAuth(req);
 
   if (!userId) {
+    const hasHeader = !!req.headers.authorization;
+    if (hasHeader) {
+      console.warn('[authMiddleware] Authorization header present but Clerk returned no userId — verify CLERK_SECRET_KEY matches the frontend publishable key');
+    }
     req.user = null;
     return next();
   }
 
   try {
-    // Buscar en nuestra DB primero para evitar llamadas innecesarias a Clerk
     let user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
-      // Primera vez: obtener datos de Clerk y hacer upsert en nuestra DB
       const clerkUser = await clerkClient.users.getUser(userId);
       const email = clerkUser.emailAddresses[0]?.emailAddress ?? '';
       const firstName = clerkUser.firstName ?? '';
@@ -37,6 +39,7 @@ export async function authMiddleware(
         update: { name, picture },
         create: { id: userId, email, name, picture },
       });
+      console.log('[authMiddleware] New user created:', user.email);
     }
 
     req.user = { id: user.id, email: user.email, name: user.name };

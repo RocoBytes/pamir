@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react'
 import type { User, AuthState } from '../types/salida'
 import { saveAuth, loadAuth, clearAuth } from '../lib/storage'
+import { setAuthToken } from '../lib/auth-token'
 
 interface UseAuthReturn extends AuthState {
   loginAsGuest: () => void
@@ -27,32 +28,38 @@ export function useAuth(): UseAuthReturn {
   useEffect(() => {
     if (!clerkUser) {
       setClerkToken(null)
+      setAuthToken(null)
       return
     }
     const refresh = (): void => {
       getToken()
-        .then(setClerkToken)
-        .catch(() => setClerkToken(null))
+        .then((t) => {
+          setClerkToken(t)
+          setAuthToken(t)
+          if (t) {
+            saveAuth({
+              user: {
+                id: clerkUser.id,
+                email: clerkUser.emailAddresses[0]?.emailAddress ?? '',
+                name:
+                  clerkUser.fullName ??
+                  clerkUser.emailAddresses[0]?.emailAddress ??
+                  clerkUser.id,
+              },
+              token: t,
+              isGuest: false,
+            })
+          }
+        })
+        .catch(() => {
+          setClerkToken(null)
+          setAuthToken(null)
+        })
     }
     refresh()
     const interval = setInterval(refresh, 50 * 60 * 1000)
     return () => clearInterval(interval)
   }, [clerkUser, getToken])
-
-  // Persist Clerk token to localStorage so api.ts authHeaders() can read it
-  useEffect(() => {
-    if (clerkUser && clerkToken) {
-      saveAuth({
-        user: {
-          id: clerkUser.id,
-          email: clerkUser.emailAddresses[0]?.emailAddress ?? '',
-          name: clerkUser.fullName ?? clerkUser.emailAddresses[0]?.emailAddress ?? clerkUser.id,
-        },
-        token: clerkToken,
-        isGuest: false,
-      })
-    }
-  }, [clerkUser, clerkToken])
 
   // Persist guest state to localStorage
   useEffect(() => {
@@ -87,6 +94,7 @@ export function useAuth(): UseAuthReturn {
 
   const logout = useCallback((): void => {
     clearAuth()
+    setAuthToken(null)
     setGuestState({ isGuest: false, user: null })
     setClerkToken(null)
     if (clerkUser) {

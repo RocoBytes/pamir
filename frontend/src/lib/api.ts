@@ -1,4 +1,5 @@
 import type { SalidaFormData, SalidaRecord, GpxUploadResponse, User, IntegranteRecord } from '../types/salida'
+import { getAuthToken } from './auth-token'
 
 // En desarrollo el proxy de Vite redirige /api → localhost:3000.
 // En producción (Vercel) no hay proxy: se usa VITE_API_URL apuntando a Render.com.
@@ -6,19 +7,8 @@ const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api'
 
-function getToken(): string | null {
-  try {
-    const raw = localStorage.getItem('pamir_auth')
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as { token?: string }
-    return parsed.token ?? null
-  } catch {
-    return null
-  }
-}
-
 function authHeaders(): Record<string, string> {
-  const token = getToken()
+  const token = getAuthToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

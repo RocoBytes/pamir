@@ -1,11 +1,9 @@
-import type { SalidaFormData, AuthState, SalidaRecord, IntegranteRecord, FichaCierreRecord } from '../types/salida'
+import type { SalidaFormData, AuthState, IntegranteRecord } from '../types/salida'
 
 const KEYS = {
   AUTH: 'pamir_auth',
   DRAFT: 'pamir_draft',
   DRAFT_STEP: 'pamir_draft_step',
-  GUEST_SALIDAS: 'pamir_guest_salidas',
-  GUEST_CIERRES: 'pamir_guest_cierres',
   INTEGRANTES: 'pamir_integrantes',
 } as const
 
@@ -77,42 +75,6 @@ export function clearDraft(): void {
   localStorage.removeItem(KEYS.DRAFT_STEP)
 }
 
-// ─── Guest salidas ────────────────────────────────────────────────────────────
-
-export function saveGuestSalida(salida: SalidaRecord): void {
-  try {
-    const existing = loadGuestSalidas()
-    const idx = existing.findIndex((s) => s.id === salida.id)
-    if (idx >= 0) {
-      existing[idx] = salida
-    } else {
-      existing.unshift(salida)
-    }
-    localStorage.setItem(KEYS.GUEST_SALIDAS, JSON.stringify(existing))
-  } catch {
-    // ignore
-  }
-}
-
-export function loadGuestSalidas(): SalidaRecord[] {
-  try {
-    const raw = localStorage.getItem(KEYS.GUEST_SALIDAS)
-    if (!raw) return []
-    return JSON.parse(raw) as SalidaRecord[]
-  } catch {
-    return []
-  }
-}
-
-export function deleteGuestSalida(id: string): void {
-  try {
-    const existing = loadGuestSalidas().filter((s) => s.id !== id)
-    localStorage.setItem(KEYS.GUEST_SALIDAS, JSON.stringify(existing))
-  } catch {
-    // ignore
-  }
-}
-
 // ─── Integrantes (registered club members) ───────────────────────────────────
 
 export function saveIntegrante(integrante: IntegranteRecord): void {
@@ -140,29 +102,3 @@ export function loadIntegrantes(): IntegranteRecord[] {
   }
 }
 
-// ─── Guest cierres ────────────────────────────────────────────────────────────
-
-export function saveGuestCierre(cierre: FichaCierreRecord): void {
-  try {
-    const existing = loadGuestCierres()
-    const idx = existing.findIndex((c) => c.id === cierre.id)
-    if (idx >= 0) {
-      existing[idx] = cierre
-    } else {
-      existing.unshift(cierre)
-    }
-    localStorage.setItem(KEYS.GUEST_CIERRES, JSON.stringify(existing))
-  } catch {
-    // ignore
-  }
-}
-
-export function loadGuestCierres(): FichaCierreRecord[] {
-  try {
-    const raw = localStorage.getItem(KEYS.GUEST_CIERRES)
-    if (!raw) return []
-    return JSON.parse(raw) as FichaCierreRecord[]
-  } catch {
-    return []
-  }
-}
