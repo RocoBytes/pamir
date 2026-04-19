@@ -68,7 +68,7 @@ function hasDraft(): boolean {
   return !!(draft && Object.keys(draft).length > 0)
 }
 
-export function WizardLayout({ user, isGuest, onDone, onCancel, onCreateIntegrante }: WizardLayoutProps) {
+export function WizardLayout({ onDone, onCancel, onCreateIntegrante }: WizardLayoutProps) {
   const [currentStep, setCurrentStep] = useState<StepId>(1)
   const [formData, setFormData] = useState<Omit<SalidaFormData, 'gpxFile'>>(EMPTY_FORM)
   const [gpxFile, setGpxFile] = useState<File | null>(null)
