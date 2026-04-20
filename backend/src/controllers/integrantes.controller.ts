@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { sendEmail } from '../lib/google-gmail.js';
+import { buildConfirmationEmail } from '../lib/email-templates.js';
 
 interface CreateIntegranteBody {
   nombreCompleto: string;
@@ -84,6 +86,12 @@ export async function createIntegrante(req: Request, res: Response): Promise<voi
         createdAt: true,
       },
     });
+
+    sendEmail(
+      data.email,
+      'Confirmación de registro — Pamir',
+      buildConfirmationEmail(data),
+    ).catch((err) => console.error('[email] Error al enviar confirmación:', err));
 
     res.status(201).json(integrante);
   } catch (error) {
