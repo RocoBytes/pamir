@@ -76,7 +76,7 @@ function CheckboxGroup<T extends string>({
 
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm font-semibold text-[#4E805D]">
+      <legend className="text-sm font-semibold text-[#264c99]">
         {label}
         {required && (
           <span className="text-[#A4636E] ml-1" aria-hidden="true">
@@ -93,10 +93,10 @@ function CheckboxGroup<T extends string>({
               key={opt}
               className={[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all duration-150 select-none',
-                'focus-within:ring-2 focus-within:ring-[#4E805D]/40',
+                'focus-within:ring-2 focus-within:ring-[#264c99]/40',
                 checked
-                  ? 'bg-[#e8f0ea] border-[#4E805D]/40 text-[#3d6b4a]'
-                  : 'bg-white border-[#687C6B]/25 text-slate-700 hover:border-[#4E805D]/40 hover:bg-[#f5f8f5]',
+                  ? 'bg-[#e8eef7] border-[#264c99]/40 text-[#1e3c7a]'
+                  : 'bg-white border-[#4a6fad]/25 text-slate-700 hover:border-[#264c99]/40 hover:bg-[#f5f8f5]',
               ].join(' ')}
             >
               <input
@@ -110,8 +110,8 @@ function CheckboxGroup<T extends string>({
                 className={[
                   'flex items-center justify-center w-4 h-4 rounded border shrink-0 transition-colors',
                   checked
-                    ? 'bg-[#4E805D] border-[#4E805D]'
-                    : 'bg-white border-[#687C6B]/50',
+                    ? 'bg-[#264c99] border-[#264c99]'
+                    : 'bg-white border-[#4a6fad]/50',
                 ].join(' ')}
                 aria-hidden="true"
               >
@@ -197,7 +197,7 @@ export function Step4Communications({
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="idDispositivoFrecuencia"
-          className="text-sm font-semibold text-[#4E805D]"
+          className="text-sm font-semibold text-[#264c99]"
         >
           ID de Dispositivo / Frecuencia Radial{' '}
           <span className="text-[#757874] font-normal">(opcional)</span>
@@ -210,10 +210,10 @@ export function Step4Communications({
           {...register('idDispositivoFrecuencia')}
           className={[
             'w-full px-3 py-2.5 rounded-xl border bg-white text-sm text-slate-800',
-            'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+            'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
             errors.idDispositivoFrecuencia
               ? 'border-[#A4636E]'
-              : 'border-[#687C6B]/30',
+              : 'border-[#4a6fad]/30',
           ].join(' ')}
         />
         {errors.idDispositivoFrecuencia && (
@@ -246,7 +246,7 @@ export function Step4Communications({
           <div className="flex flex-col gap-1.5 pl-7">
             <label
               htmlFor="equipoColectivoOtro"
-              className="text-xs font-semibold text-[#4E805D]"
+              className="text-xs font-semibold text-[#264c99]"
             >
               Especifica el equipo adicional
             </label>
@@ -258,10 +258,10 @@ export function Step4Communications({
               {...register('equipoColectivoOtro')}
               className={[
                 'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800',
-                'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
                 errors.equipoColectivoOtro
                   ? 'border-[#A4636E]'
-                  : 'border-[#687C6B]/30',
+                  : 'border-[#4a6fad]/30',
               ].join(' ')}
             />
             {errors.equipoColectivoOtro && (

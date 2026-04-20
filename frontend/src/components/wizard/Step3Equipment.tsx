@@ -43,7 +43,7 @@ interface YesNoFieldProps {
 function YesNoField({ label, value, onChange, error }: YesNoFieldProps) {
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm font-semibold text-[#4E805D]">
+      <legend className="text-sm font-semibold text-[#264c99]">
         {label}
         <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
       </legend>
@@ -59,10 +59,10 @@ function YesNoField({ label, value, onChange, error }: YesNoFieldProps) {
               aria-pressed={selected}
               className={[
                 'px-6 py-2 rounded-xl text-sm font-medium border transition-all duration-150',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] focus-visible:ring-offset-1',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] focus-visible:ring-offset-1',
                 selected
-                  ? 'bg-[#4E805D] text-white border-[#4E805D] shadow-sm'
-                  : 'bg-white text-slate-700 border-[#687C6B]/40 hover:border-[#4E805D] hover:text-[#4E805D]',
+                  ? 'bg-[#264c99] text-white border-[#264c99] shadow-sm'
+                  : 'bg-white text-slate-700 border-[#4a6fad]/40 hover:border-[#264c99] hover:text-[#264c99]',
               ].join(' ')}
             >
               {btnLabel}
@@ -126,7 +126,7 @@ interface RutLookupResultProps {
 function RutLookupResult({ rut, integrante, loading, actionLabel, onSelect, onCreateIntegrante }: RutLookupResultProps) {
   if (loading) {
     return (
-      <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-[#687C6B]/20 bg-[#f2f0ec] text-sm text-[#757874]">
+      <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-[#4a6fad]/20 bg-[#f0f4fb] text-sm text-[#757874]">
         <Loader2 size={15} className="animate-spin shrink-0" />
         Buscando integrante...
       </div>
@@ -135,10 +135,10 @@ function RutLookupResult({ rut, integrante, loading, actionLabel, onSelect, onCr
 
   if (integrante) {
     return (
-      <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#4E805D]/30 bg-[#e8f0ea]">
-        <UserCheck size={18} className="text-[#4E805D] shrink-0" />
+      <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#264c99]/30 bg-[#e8eef7]">
+        <UserCheck size={18} className="text-[#264c99] shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[#3d6b4a] truncate">{integrante.nombreCompleto}</p>
+          <p className="text-sm font-semibold text-[#1e3c7a] truncate">{integrante.nombreCompleto}</p>
           <p className="text-xs text-[#757874]">{integrante.rut}</p>
         </div>
         <Button type="button" size="sm" onClick={() => onSelect(integrante)}>
@@ -150,7 +150,7 @@ function RutLookupResult({ rut, integrante, loading, actionLabel, onSelect, onCr
 
   if (integrante === null) {
     return (
-      <div className="flex flex-col gap-2 px-4 py-3 rounded-xl border border-[#687C6B]/20 bg-[#f2f0ec]">
+      <div className="flex flex-col gap-2 px-4 py-3 rounded-xl border border-[#4a6fad]/20 bg-[#f0f4fb]">
         <p className="text-sm text-[#757874]">
           Integrante no encontrado:{' '}
           <span className="font-mono font-medium text-slate-700">{rut}</span>
@@ -158,7 +158,7 @@ function RutLookupResult({ rut, integrante, loading, actionLabel, onSelect, onCr
         <button
           type="button"
           onClick={onCreateIntegrante}
-          className="flex items-center gap-1.5 text-sm text-[#4E805D] hover:text-[#3d6b4a] font-medium self-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] rounded transition-colors"
+          className="flex items-center gap-1.5 text-sm text-[#264c99] hover:text-[#1e3c7a] font-medium self-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] rounded transition-colors"
         >
           <UserPlus size={15} />
           Crear integrante
@@ -194,29 +194,29 @@ function LiderPicker({ value, participantes, onChange, error }: LiderPickerProps
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm font-semibold text-[#4E805D]">
+      <label className="text-sm font-semibold text-[#264c99]">
         Líder de Cordada
         <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
       </label>
 
       {!hasParticipants ? (
-        <div className="px-4 py-3 rounded-xl border border-[#687C6B]/20 bg-[#f2f0ec] text-sm text-[#757874]">
+        <div className="px-4 py-3 rounded-xl border border-[#4a6fad]/20 bg-[#f0f4fb] text-sm text-[#757874]">
           Primero agrega al menos un participante a la nómina.
         </div>
       ) : value ? (
         <div
           className={[
             'flex items-center gap-2 px-3 py-2.5 rounded-xl border',
-            error ? 'border-[#A4636E]' : 'border-[#4E805D]/40 bg-[#e8f0ea]',
+            error ? 'border-[#A4636E]' : 'border-[#264c99]/40 bg-[#e8eef7]',
           ].join(' ')}
         >
-          <UserCheck size={16} className="text-[#4E805D] shrink-0" />
-          <span className="text-sm font-medium text-[#3d6b4a] flex-1">{value}</span>
+          <UserCheck size={16} className="text-[#264c99] shrink-0" />
+          <span className="text-sm font-medium text-[#1e3c7a] flex-1">{value}</span>
           <button
             type="button"
             onClick={handleClear}
             aria-label="Quitar líder de cordada"
-            className="text-[#4E805D] hover:text-[#A4636E] transition-colors leading-none"
+            className="text-[#264c99] hover:text-[#A4636E] transition-colors leading-none"
           >
             <X size={14} />
           </button>
@@ -230,8 +230,8 @@ function LiderPicker({ value, participantes, onChange, error }: LiderPickerProps
             aria-expanded={open}
             className={[
               'w-full flex items-center justify-between px-3 py-2.5 rounded-xl border bg-white text-sm text-left',
-              'focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
-              error ? 'border-[#A4636E] text-[#A4636E]' : 'border-[#687C6B]/30 text-[#adb5ad]',
+              'focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
+              error ? 'border-[#A4636E] text-[#A4636E]' : 'border-[#4a6fad]/30 text-[#adb5ad]',
             ].join(' ')}
           >
             <span>Selecciona el líder de cordada</span>
@@ -242,7 +242,7 @@ function LiderPicker({ value, participantes, onChange, error }: LiderPickerProps
             <ul
               role="listbox"
               aria-label="Participantes disponibles"
-              className="absolute z-10 mt-1 w-full rounded-xl border border-[#687C6B]/20 bg-white shadow-lg overflow-hidden"
+              className="absolute z-10 mt-1 w-full rounded-xl border border-[#4a6fad]/20 bg-white shadow-lg overflow-hidden"
             >
               {participantes.map((name) => (
                 <li key={name}>
@@ -251,7 +251,7 @@ function LiderPicker({ value, participantes, onChange, error }: LiderPickerProps
                     role="option"
                     aria-selected={false}
                     onClick={() => handleSelect(name)}
-                    className="w-full text-left px-4 py-2.5 text-sm text-slate-800 hover:bg-[#e8f0ea] hover:text-[#3d6b4a] transition-colors"
+                    className="w-full text-left px-4 py-2.5 text-sm text-slate-800 hover:bg-[#e8eef7] hover:text-[#1e3c7a] transition-colors"
                   >
                     {name}
                   </button>
@@ -297,7 +297,7 @@ function ParticipantePicker({ selected, onAdd, onCreateIntegrante }: Participant
         onChange={(e) => setRut(formatRut(e.target.value))}
         placeholder={selected.length === 0 ? 'Ingresa el RUT del participante' : 'Agregar otro participante por RUT'}
         aria-label="RUT del participante"
-        className="w-full px-3 py-2.5 rounded-xl border border-[#687C6B]/30 bg-white text-sm text-slate-800 placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow"
+        className="w-full px-3 py-2.5 rounded-xl border border-[#4a6fad]/30 bg-white text-sm text-slate-800 placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow"
       />
 
       {isComplete && !alreadyAdded && (
@@ -368,7 +368,7 @@ export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegr
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
       {/* Nómina de Participantes */}
       <div className="flex flex-col gap-2">
-        <span className="text-sm font-semibold text-[#4E805D]">
+        <span className="text-sm font-semibold text-[#264c99]">
           Nómina de Participantes
           <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
         </span>
@@ -378,18 +378,18 @@ export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegr
 
         {/* Selected participant chips */}
         {participantes.length > 0 && (
-          <div className="flex flex-wrap gap-2 p-3 rounded-xl border border-[#687C6B]/20 bg-[#f2f0ec]/60">
+          <div className="flex flex-wrap gap-2 p-3 rounded-xl border border-[#4a6fad]/20 bg-[#f0f4fb]/60">
             {participantes.map((p) => (
               <span
                 key={p}
-                className="inline-flex items-center gap-1.5 bg-[#e8f0ea] text-[#3d6b4a] text-sm font-medium px-3 py-1 rounded-full border border-[#4E805D]/20"
+                className="inline-flex items-center gap-1.5 bg-[#e8eef7] text-[#1e3c7a] text-sm font-medium px-3 py-1 rounded-full border border-[#264c99]/20"
               >
                 {p}
                 <button
                   type="button"
                   onClick={() => removeParticipante(p)}
                   aria-label={`Quitar ${p}`}
-                  className="text-[#4E805D] hover:text-[#A4636E] transition-colors leading-none"
+                  className="text-[#264c99] hover:text-[#A4636E] transition-colors leading-none"
                 >
                   <X size={13} />
                 </button>
@@ -427,7 +427,7 @@ export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegr
       />
 
       {/* Coordinación grupal */}
-      <div className="rounded-2xl border border-[#687C6B]/15 bg-[#f2f0ec]/60 p-4">
+      <div className="rounded-2xl border border-[#4a6fad]/15 bg-[#f0f4fb]/60 p-4">
         <Controller
           control={control}
           name="coordinacionGrupal"
@@ -443,7 +443,7 @@ export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegr
       </div>
 
       {/* Matriz de riesgos */}
-      <div className="rounded-2xl border border-[#687C6B]/15 bg-[#f2f0ec]/60 p-4">
+      <div className="rounded-2xl border border-[#4a6fad]/15 bg-[#f0f4fb]/60 p-4">
         <Controller
           control={control}
           name="matrizRiesgos"

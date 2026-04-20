@@ -25,7 +25,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
       {label && (
         <label
           htmlFor={selectId}
-          className="text-sm font-semibold text-[#4E805D]"
+          className="text-sm font-semibold text-[#264c99]"
         >
           {label}
           {props.required && <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>}
@@ -38,11 +38,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
           className={[
             'w-full appearance-none rounded-xl border bg-white px-3 py-2 pr-9 text-sm text-slate-900',
             'transition-colors duration-150',
-            'focus:outline-none focus:ring-2 focus:ring-[#4E805D] focus:border-[#4E805D]',
-            'disabled:bg-[#f2f0ec] disabled:text-[#757874]/60 disabled:cursor-not-allowed',
+            'focus:outline-none focus:ring-2 focus:ring-[#264c99] focus:border-[#264c99]',
+            'disabled:bg-[#f0f4fb] disabled:text-[#757874]/60 disabled:cursor-not-allowed',
             error
               ? 'border-[#A4636E] focus:ring-[#A4636E] focus:border-[#A4636E]'
-              : 'border-[#687C6B]/40',
+              : 'border-[#4a6fad]/40',
             className,
           ]
             .filter(Boolean)
@@ -65,7 +65,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
           ))}
         </select>
         <ChevronDown
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#687C6B]/60 pointer-events-none"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a6fad]/60 pointer-events-none"
           size={16}
         />
       </div>

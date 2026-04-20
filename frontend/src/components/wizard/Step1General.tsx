@@ -58,7 +58,7 @@ function RadioChipGroup<T extends string>({
 }: RadioGroupProps<T>) {
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm font-semibold text-[#4E805D]">
+      <legend className="text-sm font-semibold text-[#264c99]">
         {label}
         <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
       </legend>
@@ -73,10 +73,10 @@ function RadioChipGroup<T extends string>({
               aria-pressed={selected}
               className={[
                 'px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-150',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] focus-visible:ring-offset-1',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] focus-visible:ring-offset-1',
                 selected
-                  ? 'bg-[#4E805D] text-white border-[#4E805D] shadow-sm'
-                  : 'bg-white text-slate-700 border-[#687C6B]/40 hover:border-[#4E805D] hover:text-[#4E805D]',
+                  ? 'bg-[#264c99] text-white border-[#264c99] shadow-sm'
+                  : 'bg-white text-slate-700 border-[#4a6fad]/40 hover:border-[#264c99] hover:text-[#264c99]',
               ].join(' ')}
             >
               {opt.label}

@@ -90,6 +90,176 @@ function clausulaBlock(number: string, title: string, body: string, accepted: bo
     </tr>`;
 }
 
+interface SalidaEmailData {
+  nombreActividad: string;
+  disciplina: string;
+  tipoSalida: string;
+  ubicacionGeografica: string;
+  fechaInicio: Date | string;
+  fechaRetornoEstimada: Date | string;
+  horaRetornoEstimada: string;
+  horaAlerta: string;
+  liderCordada: string;
+}
+
+interface CierreEmailData {
+  estadoCierre: string;
+  fechaFinalizacionReal: Date | string;
+  ocurrioIncidente: string;
+  descripcionSuceso?: string | null;
+  leccionesAprendidas: string;
+  recomendacionesFuturos?: string | null;
+}
+
+function formatTipoSalida(t: string): string {
+  const map: Record<string, string> = {
+    OFICIAL_CLUB: 'Oficial Club',
+    NO_OFICIAL: 'No oficial',
+    EXPEDICION_PARTICULAR: 'Expedición particular',
+  };
+  return map[t] ?? t;
+}
+
+function formatEstadoCierre(e: string): string {
+  const map: Record<string, string> = {
+    SEGUN_PLAN: 'Según el plan',
+    CON_CAMBIOS: 'Con cambios',
+    INCOMPLETA: 'Incompleta / Abortada',
+  };
+  return map[e] ?? e;
+}
+
+function formatIncidente(i: string): string {
+  const map: Record<string, string> = {
+    NADA: 'Sin incidentes',
+    INCIDENTE_MENOR: 'Incidente menor',
+    ACCIDENTE_CON_LESION: 'Accidente con lesión',
+    CASI_ACCIDENTE: 'Casi-accidente (near-miss)',
+  };
+  return map[i] ?? i;
+}
+
+export function buildSalidaNotificationEmail(nombreCompleto: string, salida: SalidaEmailData): string {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);max-width:600px;width:100%;">
+
+        <tr>
+          <td style="background:${GREEN};padding:28px 32px;">
+            <p style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Pamir</p>
+            <p style="margin:6px 0 0;color:#c8dccb;font-size:14px;">Registro en salida de montaña</p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:24px 32px 16px;">
+            <p style="margin:0;color:#1f2937;font-size:15px;">
+              Hola <strong>${nombreCompleto}</strong>, has sido registrado/a como integrante en la siguiente salida de montaña.
+              A continuación encontrarás el resumen de la actividad.
+            </p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:0 32px 24px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:6px;overflow:hidden;border-collapse:collapse;">
+              ${sectionHeader('Datos de la Salida')}
+              ${row('Actividad', salida.nombreActividad)}
+              ${row('Disciplina', salida.disciplina)}
+              ${row('Tipo de salida', formatTipoSalida(salida.tipoSalida))}
+              ${row('Ubicación', salida.ubicacionGeografica)}
+              ${row('Fecha de inicio', formatDate(String(salida.fechaInicio)))}
+              ${row('Fecha de retorno estimada', formatDate(String(salida.fechaRetornoEstimada)))}
+              ${row('Hora de retorno estimada', salida.horaRetornoEstimada)}
+              ${row('Hora de alerta', salida.horaAlerta)}
+              ${row('Líder de cordada', salida.liderCordada)}
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid ${BORDER};">
+            <p style="margin:0;color:${GRAY};font-size:12px;line-height:1.6;">
+              Este correo es una notificación automática del sistema PAMIR.<br>
+              Si tienes dudas, comunícate con: <strong>Susana Madrid</strong> al correo <a href="mailto:madridnawrathsusana@gmail.com" style="color:${GREEN};">madridnawrathsusana@gmail.com</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function buildCierreNotificationEmail(nombreCompleto: string, salida: SalidaEmailData, cierre: CierreEmailData): string {
+  const hayIncidente = cierre.ocurrioIncidente !== 'NADA';
+  return `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);max-width:600px;width:100%;">
+
+        <tr>
+          <td style="background:${GREEN};padding:28px 32px;">
+            <p style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Pamir</p>
+            <p style="margin:6px 0 0;color:#c8dccb;font-size:14px;">Cierre de salida de montaña</p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:24px 32px 16px;">
+            <p style="margin:0;color:#1f2937;font-size:15px;">
+              Hola <strong>${nombreCompleto}</strong>, la salida en la que participaste ha sido oficialmente cerrada.
+              A continuación encontrarás el resumen del cierre.
+            </p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:0 32px 24px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:6px;overflow:hidden;border-collapse:collapse;">
+              ${sectionHeader('Actividad')}
+              ${row('Nombre', salida.nombreActividad)}
+              ${row('Disciplina', salida.disciplina)}
+              ${row('Ubicación', salida.ubicacionGeografica)}
+
+              ${sectionHeader('Resultado del Cierre')}
+              ${row('Estado', formatEstadoCierre(cierre.estadoCierre))}
+              ${row('Fecha de finalización real', formatDate(String(cierre.fechaFinalizacionReal)))}
+              ${row('Incidentes', formatIncidente(cierre.ocurrioIncidente))}
+              ${hayIncidente && cierre.descripcionSuceso ? row('Descripción del suceso', cierre.descripcionSuceso) : ''}
+
+              ${sectionHeader('Aprendizajes')}
+              ${row('Lecciones aprendidas', cierre.leccionesAprendidas)}
+              ${cierre.recomendacionesFuturos ? row('Recomendaciones para futuros montañistas', cierre.recomendacionesFuturos) : ''}
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid ${BORDER};">
+            <p style="margin:0;color:${GRAY};font-size:12px;line-height:1.6;">
+              Este correo es una notificación automática del sistema PAMIR.<br>
+              Si tienes dudas, comunícate con: <strong>Susana Madrid</strong> al correo <a href="mailto:madridnawrathsusana@gmail.com" style="color:${GREEN};">madridnawrathsusana@gmail.com</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 export function buildConfirmationEmail(data: IntegranteEmailData): string {
   return `<!DOCTYPE html>
 <html lang="es">

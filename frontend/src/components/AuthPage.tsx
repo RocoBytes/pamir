@@ -12,7 +12,7 @@ export function AuthPage({ onLoginAsGuest, isLoading }: AuthPageProps) {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-4"
-      style={{ background: 'linear-gradient(135deg, #1a2420 0%, #2d3e30 100%)' }}
+      style={{ background: 'linear-gradient(135deg, #0f1f3d 0%, #1a3060 100%)' }}
     >
       {/* Subtle background pattern */}
       <div className="absolute inset-0 opacity-[0.04] pointer-events-none" aria-hidden="true">
@@ -55,7 +55,7 @@ export function AuthPage({ onLoginAsGuest, isLoading }: AuthPageProps) {
               <button
                 type="button"
                 disabled={isLoading}
-                className="flex items-center justify-center gap-3 w-full rounded-xl border border-[#687C6B]/20 bg-[#eef1ee] px-4 py-2.5 text-sm font-semibold text-[#687C6B] shadow-sm transition hover:bg-[#e2e7e2] hover:border-[#687C6B]/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#687C6B] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-3 w-full rounded-xl border border-[#4a6fad]/20 bg-[#edf2fb] px-4 py-2.5 text-sm font-semibold text-[#4a6fad] shadow-sm transition hover:bg-[#dde6f7] hover:border-[#4a6fad]/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4a6fad] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" aria-hidden="true">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -70,11 +70,11 @@ export function AuthPage({ onLoginAsGuest, isLoading }: AuthPageProps) {
 
           {/* Divider */}
           <div className="relative flex items-center my-5">
-            <div className="flex-1 border-t border-[#687C6B]/15" />
+            <div className="flex-1 border-t border-[#4a6fad]/15" />
             <span className="px-3 text-xs text-[#757874] uppercase tracking-wider">
               o
             </span>
-            <div className="flex-1 border-t border-[#687C6B]/15" />
+            <div className="flex-1 border-t border-[#4a6fad]/15" />
           </div>
 
           {/* Guest login */}

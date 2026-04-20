@@ -14,15 +14,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    'bg-[#4E805D] text-white hover:bg-[#3d6b4a] focus-visible:ring-[#4E805D] disabled:bg-[#4E805D]/40',
+    'bg-[#264c99] text-white hover:bg-[#1e3c7a] focus-visible:ring-[#264c99] disabled:bg-[#264c99]/40',
   secondary:
-    'bg-[#eef1ee] text-[#687C6B] hover:bg-[#e2e7e2] focus-visible:ring-[#687C6B] border border-[#687C6B]/20 disabled:bg-[#eef1ee]/60 disabled:text-[#687C6B]/50',
+    'bg-[#edf2fb] text-[#4a6fad] hover:bg-[#dde6f7] focus-visible:ring-[#4a6fad] border border-[#4a6fad]/20 disabled:bg-[#edf2fb]/60 disabled:text-[#4a6fad]/50',
   ghost:
-    'bg-transparent text-[#757874] hover:bg-[#f2f0ec] focus-visible:ring-[#757874] disabled:text-[#757874]/40',
+    'bg-transparent text-[#757874] hover:bg-[#f0f4fb] focus-visible:ring-[#757874] disabled:text-[#757874]/40',
   danger:
     'bg-[#A4636E] text-white hover:bg-[#8b3a44] focus-visible:ring-[#A4636E] disabled:bg-[#A4636E]/40',
   inverted:
-    'bg-[#1a2420] text-white hover:bg-[#2d3e30] focus-visible:ring-[#1a2420] disabled:bg-[#1a2420]/50',
+    'bg-[#0f1f3d] text-white hover:bg-[#1a3060] focus-visible:ring-[#0f1f3d] disabled:bg-[#0f1f3d]/50',
 }
 
 const sizeClasses: Record<Size, string> = {

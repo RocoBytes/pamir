@@ -56,7 +56,7 @@ function formatDate(iso: string): string {
 
 function SalidaCard({ salida }: { salida: SalidaRecord }) {
   return (
-    <article className="bg-white rounded-2xl border border-[#687C6B]/15 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+    <article className="bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
       <div className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
@@ -86,7 +86,7 @@ function SalidaCard({ salida }: { salida: SalidaRecord }) {
           </div>
           <div className="flex items-center gap-1.5 col-span-2">
             <Backpack size={13} className="text-[#757874]/60 shrink-0" />
-            <span className="font-medium text-[#687C6B]">
+            <span className="font-medium text-[#4a6fad]">
               {DISCIPLINA_LABELS[salida.disciplina]}
             </span>
           </div>
@@ -121,9 +121,9 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegr
   }, [loadSalidas])
 
   return (
-    <div className="min-h-screen bg-[#f2f0ec]">
+    <div className="min-h-screen bg-[#f0f4fb]">
       {/* Top nav */}
-      <header className="bg-white border-b border-[#687C6B]/10 sticky top-0 z-10 shadow-sm">
+      <header className="bg-white border-b border-[#4a6fad]/10 sticky top-0 z-10 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img src={logoPamir} alt="Pamir Andino Club" className="w-11 h-11 object-contain" />
@@ -166,7 +166,7 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegr
           {/* Card: Formulario de Salida */}
           <button
             onClick={onNewSalida}
-            className="relative w-full rounded-3xl overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] focus-visible:ring-offset-2"
+            className="relative w-full rounded-3xl overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] focus-visible:ring-offset-2"
             aria-label="Abrir formulario de salida"
             style={{ minHeight: '220px' }}
           >
@@ -174,7 +174,7 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegr
               className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
               style={{ backgroundImage: `url(${HERO_IMAGE})` }}
             />
-            <div className="absolute inset-0 bg-[#4E805D] opacity-60" />
+            <div className="absolute inset-0 bg-[#264c99] opacity-60" />
             <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 py-10 text-white text-center gap-3">
               <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-inner">
                 <ClipboardList size={24} className="text-white" />
@@ -198,7 +198,7 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegr
           {salidas.length > 0 ? (
             <button
               onClick={onNewCierre}
-              className="relative w-full rounded-3xl overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#687C6B] focus-visible:ring-offset-2"
+              className="relative w-full rounded-3xl overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4a6fad] focus-visible:ring-offset-2"
               aria-label="Abrir ficha de cierre de actividad"
               style={{ minHeight: '220px' }}
             >
@@ -208,7 +208,7 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegr
                 style={{ backgroundImage: `url(${CIERRE_IMAGE})` }}
               />
               {/* Overlay al 50% desbloqueado */}
-              <div className="absolute inset-0 bg-[#1a2e20] opacity-50" />
+              <div className="absolute inset-0 bg-[#0f2040] opacity-50" />
               <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 py-10 text-white text-center gap-3">
                 <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-inner">
                   <ClipboardCheck size={24} className="text-white" />
@@ -239,7 +239,7 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegr
                 style={{ backgroundImage: `url(${CIERRE_IMAGE})` }}
               />
               {/* Overlay al 75% bloqueado */}
-              <div className="absolute inset-0 bg-[#1a2e20] opacity-75" />
+              <div className="absolute inset-0 bg-[#0f2040] opacity-75" />
               <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 py-10 text-white text-center gap-3">
                 <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/10 border border-white/20">
                   <Lock size={20} className="text-white/70" />
@@ -263,11 +263,11 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegr
         {/* Quick action: Registrar Integrante */}
         <button
           onClick={onNewIntegrante}
-          className="w-full flex items-center gap-4 bg-white rounded-2xl border border-[#687C6B]/15 shadow-sm hover:shadow-md transition-shadow duration-200 p-4 mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] focus-visible:ring-offset-2"
+          className="w-full flex items-center gap-4 bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm hover:shadow-md transition-shadow duration-200 p-4 mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] focus-visible:ring-offset-2"
           aria-label="Registrar nuevo integrante"
         >
-          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#e8f0ea] flex items-center justify-center">
-            <UserPlus size={20} className="text-[#4E805D]" />
+          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#e8eef7] flex items-center justify-center">
+            <UserPlus size={20} className="text-[#264c99]" />
           </div>
           <div className="flex-1 text-left">
             <p className="font-semibold text-slate-900 text-sm">Registrar Integrante</p>
@@ -289,7 +289,7 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegr
         {/* States */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#757874]">
-            <Loader2 className="animate-spin text-[#4E805D]" size={28} />
+            <Loader2 className="animate-spin text-[#264c99]" size={28} />
             <p className="text-sm">Cargando salidas...</p>
           </div>
         )}
@@ -309,8 +309,8 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegr
 
         {!isLoading && !error && salidas.length === 0 && (
           <div className="flex flex-col items-center py-12 gap-3 text-center">
-            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-[#e8f0ea]">
-              <FileWarning size={24} className="text-[#4E805D]" />
+            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-[#e8eef7]">
+              <FileWarning size={24} className="text-[#264c99]" />
             </div>
             <div>
               <p className="font-semibold text-slate-700">Sin salidas aun</p>

@@ -199,7 +199,7 @@ function RadioGroup<T extends string>({
 }: RadioGroupProps<T>) {
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm font-semibold text-[#4E805D]">
+      <legend className="text-sm font-semibold text-[#264c99]">
         {label}
         {required && (
           <span className="text-[#A4636E] ml-1" aria-hidden="true">
@@ -215,10 +215,10 @@ function RadioGroup<T extends string>({
               key={opt}
               className={[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all duration-150 select-none',
-                'focus-within:ring-2 focus-within:ring-[#4E805D]/40',
+                'focus-within:ring-2 focus-within:ring-[#264c99]/40',
                 checked
-                  ? 'bg-[#e8f0ea] border-[#4E805D]/40 text-[#3d6b4a]'
-                  : 'bg-white border-[#687C6B]/25 text-slate-700 hover:border-[#4E805D]/40 hover:bg-[#f5f8f5]',
+                  ? 'bg-[#e8eef7] border-[#264c99]/40 text-[#1e3c7a]'
+                  : 'bg-white border-[#4a6fad]/25 text-slate-700 hover:border-[#264c99]/40 hover:bg-[#f5f8f5]',
               ].join(' ')}
             >
               <input
@@ -230,7 +230,7 @@ function RadioGroup<T extends string>({
               <span
                 className={[
                   'flex items-center justify-center w-4 h-4 rounded-full border shrink-0 transition-colors',
-                  checked ? 'bg-[#4E805D] border-[#4E805D]' : 'bg-white border-[#687C6B]/50',
+                  checked ? 'bg-[#264c99] border-[#264c99]' : 'bg-white border-[#4a6fad]/50',
                 ].join(' ')}
                 aria-hidden="true"
               >
@@ -281,7 +281,7 @@ function CheckboxGroup<T extends string>({
 
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm font-semibold text-[#4E805D]">
+      <legend className="text-sm font-semibold text-[#264c99]">
         {label}
         {required && (
           <span className="text-[#A4636E] ml-1" aria-hidden="true">
@@ -297,10 +297,10 @@ function CheckboxGroup<T extends string>({
               key={opt}
               className={[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all duration-150 select-none',
-                'focus-within:ring-2 focus-within:ring-[#4E805D]/40',
+                'focus-within:ring-2 focus-within:ring-[#264c99]/40',
                 checked
-                  ? 'bg-[#e8f0ea] border-[#4E805D]/40 text-[#3d6b4a]'
-                  : 'bg-white border-[#687C6B]/25 text-slate-700 hover:border-[#4E805D]/40 hover:bg-[#f5f8f5]',
+                  ? 'bg-[#e8eef7] border-[#264c99]/40 text-[#1e3c7a]'
+                  : 'bg-white border-[#4a6fad]/25 text-slate-700 hover:border-[#264c99]/40 hover:bg-[#f5f8f5]',
               ].join(' ')}
             >
               <input
@@ -312,7 +312,7 @@ function CheckboxGroup<T extends string>({
               <span
                 className={[
                   'flex items-center justify-center w-4 h-4 rounded border shrink-0 transition-colors',
-                  checked ? 'bg-[#4E805D] border-[#4E805D]' : 'bg-white border-[#687C6B]/50',
+                  checked ? 'bg-[#264c99] border-[#264c99]' : 'bg-white border-[#4a6fad]/50',
                 ].join(' ')}
                 aria-hidden="true"
               >
@@ -369,7 +369,7 @@ function GpxFilePicker({ value, onChange }: GpxFilePickerProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-sm font-semibold text-[#4E805D]">
+      <span className="text-sm font-semibold text-[#264c99]">
         Ruta real trazada (GPX){' '}
         <span className="text-[#757874] font-normal">(opcional)</span>
       </span>
@@ -378,21 +378,21 @@ function GpxFilePicker({ value, onChange }: GpxFilePickerProps) {
       </p>
 
       {value ? (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#4E805D]/40 bg-[#e8f0ea]">
-          <Paperclip size={15} className="text-[#4E805D] shrink-0" />
-          <span className="text-sm text-[#3d6b4a] flex-1 truncate">{value.name}</span>
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#264c99]/40 bg-[#e8eef7]">
+          <Paperclip size={15} className="text-[#264c99] shrink-0" />
+          <span className="text-sm text-[#1e3c7a] flex-1 truncate">{value.name}</span>
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="shrink-0 text-[#687C6B] hover:text-[#A4636E] transition-colors"
+            className="shrink-0 text-[#4a6fad] hover:text-[#A4636E] transition-colors"
             aria-label="Quitar archivo"
           >
             <X size={15} />
           </button>
         </div>
       ) : (
-        <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-[#687C6B]/40 bg-white cursor-pointer hover:border-[#4E805D]/60 hover:bg-[#f5f8f5] transition-colors">
-          <Paperclip size={15} className="text-[#687C6B]/60" />
+        <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-[#4a6fad]/40 bg-white cursor-pointer hover:border-[#264c99]/60 hover:bg-[#f5f8f5] transition-colors">
+          <Paperclip size={15} className="text-[#4a6fad]/60" />
           <span className="text-sm text-[#757874]">Seleccionar archivo .gpx…</span>
           <input
             type="file"
@@ -573,10 +573,10 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
 
   if (submitSuccess) {
     return (
-      <div className="min-h-screen bg-[#f2f0ec] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#f0f4fb] flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-[#e8f0ea] mx-auto mb-4">
-            <Check size={32} className="text-[#4E805D]" />
+          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-[#e8eef7] mx-auto mb-4">
+            <Check size={32} className="text-[#264c99]" />
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Cierre registrado</h2>
           <p className="text-[#757874] text-sm">Redirigiendo...</p>
@@ -588,20 +588,20 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
   // ─── Main render ────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#f2f0ec] flex flex-col">
+    <div className="min-h-screen bg-[#f0f4fb] flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-[#687C6B]/15 sticky top-0 z-10">
+      <header className="bg-white border-b border-[#4a6fad]/15 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <button
             onClick={onCancel}
-            className="flex items-center gap-1.5 text-sm text-[#757874] hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] rounded transition-colors"
+            className="flex items-center gap-1.5 text-sm text-[#757874] hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] rounded transition-colors"
             aria-label="Cancelar y volver"
           >
             <X size={18} />
             <span className="hidden sm:inline">Cancelar</span>
           </button>
           <div className="flex items-center gap-2">
-            <Mountain size={18} className="text-[#4E805D]" />
+            <Mountain size={18} className="text-[#264c99]" />
             <span className="font-semibold text-slate-800 text-sm">Cierre de Actividad</span>
           </div>
           <span className="text-xs text-[#757874] font-medium">{currentStep} / 5</span>
@@ -609,7 +609,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
       </header>
 
       {/* Progress bars + step label */}
-      <div className="bg-white border-b border-[#687C6B]/10">
+      <div className="bg-white border-b border-[#4a6fad]/10">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-3 pb-2">
           <div className="flex gap-1.5 mb-2" role="list" aria-label="Progreso del formulario">
             {([1, 2, 3, 4, 5] as const).map((s) => (
@@ -619,15 +619,15 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                 className={[
                   'flex-1 h-1 rounded-full transition-colors duration-300',
                   s < currentStep
-                    ? 'bg-[#4E805D]'
+                    ? 'bg-[#264c99]'
                     : s === currentStep
-                    ? 'bg-[#4E805D]/60'
-                    : 'bg-[#e2e5e2]',
+                    ? 'bg-[#264c99]/60'
+                    : 'bg-[#dde6f7]',
                 ].join(' ')}
               />
             ))}
           </div>
-          <p className="text-xs font-semibold text-[#4E805D] uppercase tracking-wider">
+          <p className="text-xs font-semibold text-[#264c99] uppercase tracking-wider">
             Paso {currentStep} &mdash; {STEP_LABELS[currentStep - 1]}
           </p>
         </div>
@@ -652,7 +652,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
 
         {loadingSalidas && (
           <div className="flex items-center gap-2 text-sm text-[#757874] py-6 justify-center">
-            <Loader2 className="animate-spin text-[#4E805D]" size={20} />
+            <Loader2 className="animate-spin text-[#264c99]" size={20} />
             Cargando salidas...
           </div>
         )}
@@ -672,7 +672,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
               <>
                 {/* Selección de Salida */}
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="salidaId" className="text-sm font-semibold text-[#4E805D]">
+                  <label htmlFor="salidaId" className="text-sm font-semibold text-[#264c99]">
                     Formulario de Salida asociado
                     <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
                   </label>
@@ -687,10 +687,10 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                       className={[
                         'w-full appearance-none rounded-xl border bg-white px-3 py-2 pr-9 text-sm text-slate-900',
                         'transition-colors duration-150',
-                        'focus:outline-none focus:ring-2 focus:ring-[#4E805D] focus:border-[#4E805D]',
+                        'focus:outline-none focus:ring-2 focus:ring-[#264c99] focus:border-[#264c99]',
                         errors.salidaId
                           ? 'border-[#A4636E] focus:ring-[#A4636E] focus:border-[#A4636E]'
-                          : 'border-[#687C6B]/40',
+                          : 'border-[#4a6fad]/40',
                       ].join(' ')}
                     >
                       <option value="">— Selecciona una salida —</option>
@@ -701,7 +701,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                       ))}
                     </select>
                     <ChevronDown
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#687C6B]/60 pointer-events-none"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a6fad]/60 pointer-events-none"
                       size={16}
                     />
                   </div>
@@ -716,7 +716,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                 <div className="flex flex-col gap-1">
                   <label
                     htmlFor="fechaFinalizacionReal"
-                    className="text-sm font-semibold text-[#4E805D]"
+                    className="text-sm font-semibold text-[#264c99]"
                   >
                     Fecha de Finalización Real
                     <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
@@ -729,10 +729,10 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                     className={[
                       'w-full rounded-xl border bg-white px-3 py-2 text-sm text-slate-900',
                       'transition-colors duration-150',
-                      'focus:outline-none focus:ring-2 focus:ring-[#4E805D] focus:border-[#4E805D]',
+                      'focus:outline-none focus:ring-2 focus:ring-[#264c99] focus:border-[#264c99]',
                       errors.fechaFinalizacionReal
                         ? 'border-[#A4636E] focus:ring-[#A4636E] focus:border-[#A4636E]'
-                        : 'border-[#687C6B]/40',
+                        : 'border-[#4a6fad]/40',
                     ].join(' ')}
                   />
                   {errors.fechaFinalizacionReal && (
@@ -832,7 +832,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                       <div className="flex flex-col gap-1.5 pl-7">
                         <label
                           htmlFor="motivosCambiosOtro"
-                          className="text-xs font-semibold text-[#4E805D]"
+                          className="text-xs font-semibold text-[#264c99]"
                         >
                           Especifica el motivo
                         </label>
@@ -844,10 +844,10 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                           {...register('motivosCambiosOtro')}
                           className={[
                             'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800',
-                            'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                            'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
                             errors.motivosCambiosOtro
                               ? 'border-[#A4636E]'
-                              : 'border-[#687C6B]/30',
+                              : 'border-[#4a6fad]/30',
                           ].join(' ')}
                         />
                         {errors.motivosCambiosOtro && (
@@ -920,7 +920,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
 
                     {/* Q8 sub: Gravedad de la lesión (solo si LESION está seleccionado) */}
                     {showGravedadLesion && (
-                      <div className="pl-7 border-l-2 border-[#4E805D]/20">
+                      <div className="pl-7 border-l-2 border-[#264c99]/20">
                         <Controller
                           control={control}
                           name="gravedadLesion"
@@ -943,7 +943,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                     <div className="flex flex-col gap-1.5">
                       <label
                         htmlFor="descripcionSuceso"
-                        className="text-sm font-semibold text-[#4E805D]"
+                        className="text-sm font-semibold text-[#264c99]"
                       >
                         Descripción del suceso
                         <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
@@ -960,8 +960,8 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                         aria-invalid={errors.descripcionSuceso ? 'true' : undefined}
                         className={[
                           'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
-                          'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
-                          errors.descripcionSuceso ? 'border-[#A4636E]' : 'border-[#687C6B]/30',
+                          'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
+                          errors.descripcionSuceso ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
                         ].join(' ')}
                       />
                       <div className="flex justify-between items-center">
@@ -1006,7 +1006,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                       <div className="flex flex-col gap-1.5 pl-7">
                         <label
                           htmlFor="causaRaizOtro"
-                          className="text-xs font-semibold text-[#4E805D]"
+                          className="text-xs font-semibold text-[#264c99]"
                         >
                           Especifica la causa
                         </label>
@@ -1018,8 +1018,8 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                           {...register('causaRaizOtro')}
                           className={[
                             'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800',
-                            'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
-                            errors.causaRaizOtro ? 'border-[#A4636E]' : 'border-[#687C6B]/30',
+                            'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
+                            errors.causaRaizOtro ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
                           ].join(' ')}
                         />
                         {errors.causaRaizOtro && (
@@ -1074,7 +1074,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                   <div className="flex flex-col gap-1.5 pl-7 border-l-2 border-[#A4636E]/20">
                     <label
                       htmlFor="detalleFallaEquipo"
-                      className="text-sm font-semibold text-[#4E805D]"
+                      className="text-sm font-semibold text-[#264c99]"
                     >
                       Detalle de falla de equipo
                       <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
@@ -1091,10 +1091,10 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                       aria-invalid={errors.detalleFallaEquipo ? 'true' : undefined}
                       className={[
                         'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
-                        'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                        'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
                         errors.detalleFallaEquipo
                           ? 'border-[#A4636E]'
-                          : 'border-[#687C6B]/30',
+                          : 'border-[#4a6fad]/30',
                       ].join(' ')}
                     />
                     <div className="flex justify-between items-center">
@@ -1126,7 +1126,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="observacionesRuta"
-                    className="text-sm font-semibold text-[#4E805D]"
+                    className="text-sm font-semibold text-[#264c99]"
                   >
                     Observaciones sobre la Ruta
                     <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
@@ -1144,10 +1144,10 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                     aria-invalid={errors.observacionesRuta ? 'true' : undefined}
                     className={[
                       'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
-                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
+                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
                       errors.observacionesRuta
                         ? 'border-[#A4636E]'
-                        : 'border-[#687C6B]/30',
+                        : 'border-[#4a6fad]/30',
                     ].join(' ')}
                   />
                   <div className="flex justify-between items-center">
@@ -1177,7 +1177,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                   name="precisionPronostico"
                   render={({ field }) => (
                     <fieldset className="flex flex-col gap-2">
-                      <legend className="text-sm font-semibold text-[#4E805D]">
+                      <legend className="text-sm font-semibold text-[#264c99]">
                         Precisión del Pronóstico Meteorológico
                         <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
                       </legend>
@@ -1193,10 +1193,10 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                             onClick={() => field.onChange(n)}
                             className={[
                               'flex-1 py-3 rounded-xl border text-sm font-bold transition-all duration-150',
-                              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D]/40',
+                              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99]/40',
                               field.value === n
-                                ? 'bg-[#4E805D] border-[#4E805D] text-white'
-                                : 'bg-white border-[#687C6B]/30 text-slate-700 hover:border-[#4E805D]/40 hover:bg-[#f5f8f5]',
+                                ? 'bg-[#264c99] border-[#264c99] text-white'
+                                : 'bg-white border-[#4a6fad]/30 text-slate-700 hover:border-[#264c99]/40 hover:bg-[#f5f8f5]',
                             ].join(' ')}
                           >
                             {n}
@@ -1237,7 +1237,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="leccionesAprendidas"
-                    className="text-sm font-semibold text-[#4E805D]"
+                    className="text-sm font-semibold text-[#264c99]"
                   >
                     ¿Qué aprendió la cordada en esta salida?
                     <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
@@ -1251,8 +1251,8 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                     aria-invalid={errors.leccionesAprendidas ? 'true' : undefined}
                     className={[
                       'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
-                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
-                      errors.leccionesAprendidas ? 'border-[#A4636E]' : 'border-[#687C6B]/30',
+                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
+                      errors.leccionesAprendidas ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
                     ].join(' ')}
                   />
                   <div className="flex justify-between items-center">
@@ -1278,7 +1278,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="recomendacionesFuturos"
-                    className="text-sm font-semibold text-[#4E805D]"
+                    className="text-sm font-semibold text-[#264c99]"
                   >
                     Recomendaciones para futuros socios que realicen esta ruta
                   </label>
@@ -1290,8 +1290,8 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                     {...register('recomendacionesFuturos')}
                     className={[
                       'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
-                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
-                      'border-[#687C6B]/30',
+                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
+                      'border-[#4a6fad]/30',
                     ].join(' ')}
                   />
                   <div className="flex justify-end">
@@ -1312,7 +1312,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="sugerenciasClub"
-                    className="text-sm font-semibold text-[#4E805D]"
+                    className="text-sm font-semibold text-[#264c99]"
                   >
                     Sugerencias para el Club
                   </label>
@@ -1328,8 +1328,8 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                     {...register('sugerenciasClub')}
                     className={[
                       'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
-                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
-                      'border-[#687C6B]/30',
+                      'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
+                      'border-[#4a6fad]/30',
                     ].join(' ')}
                   />
                   <div className="flex justify-end">

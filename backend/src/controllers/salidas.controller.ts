@@ -1,8 +1,29 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
-import { Prisma, SalidaStatus } from '../generated/prisma/client.js';
+import { Prisma, SalidaStatus, Salida } from '../generated/prisma/client.js';
+import { sendEmail } from '../lib/google-gmail.js';
+import { buildSalidaNotificationEmail } from '../lib/email-templates.js';
 
 const asJson = (v: unknown): Prisma.InputJsonValue => v as Prisma.InputJsonValue;
+
+async function sendSalidaParticipantEmails(participantRuts: string[], salida: Salida): Promise<void> {
+  const ruts = participantRuts.filter(Boolean);
+  if (ruts.length === 0) return;
+
+  const integrantes = await prisma.integrante.findMany({
+    where: { rut: { in: ruts } },
+    select: { email: true, nombreCompleto: true },
+  });
+
+  for (const i of integrantes) {
+    await sendEmail(
+      i.email,
+      `Has sido registrado en la salida "${salida.nombreActividad}" — Pamir`,
+      buildSalidaNotificationEmail(i.nombreCompleto, salida),
+    ).catch((err) => console.error(`[salida-email] Fallo al enviar a ${i.email}:`, err));
+    await new Promise((r) => setTimeout(r, 350));
+  }
+}
 
 interface CreateSalidaBody {
   // Paso 1
@@ -74,6 +95,11 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
     });
 
     res.status(201).json(salida);
+
+    sendSalidaParticipantEmails(
+      (data.participantes ?? []) as string[],
+      salida,
+    ).catch((err) => console.error('[salida-email]', err));
   } catch (error) {
     console.error('[createSalida]', error);
     res.status(500).json({ error: 'No se pudo crear la salida' });

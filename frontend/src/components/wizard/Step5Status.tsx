@@ -65,7 +65,7 @@ function CheckboxGroup<T extends string>({
 
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm font-semibold text-[#4E805D]">
+      <legend className="text-sm font-semibold text-[#264c99]">
         {label}
         {required && (
           <span className="text-[#A4636E] ml-1" aria-hidden="true">
@@ -81,10 +81,10 @@ function CheckboxGroup<T extends string>({
               key={opt}
               className={[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all duration-150 select-none',
-                'focus-within:ring-2 focus-within:ring-[#4E805D]/40',
+                'focus-within:ring-2 focus-within:ring-[#264c99]/40',
                 checked
-                  ? 'bg-[#e8f0ea] border-[#4E805D]/40 text-[#3d6b4a]'
-                  : 'bg-white border-[#687C6B]/25 text-slate-700 hover:border-[#4E805D]/40 hover:bg-[#f5f8f5]',
+                  ? 'bg-[#e8eef7] border-[#264c99]/40 text-[#1e3c7a]'
+                  : 'bg-white border-[#4a6fad]/25 text-slate-700 hover:border-[#264c99]/40 hover:bg-[#f5f8f5]',
               ].join(' ')}
             >
               <input
@@ -97,8 +97,8 @@ function CheckboxGroup<T extends string>({
                 className={[
                   'flex items-center justify-center w-4 h-4 rounded border shrink-0 transition-colors',
                   checked
-                    ? 'bg-[#4E805D] border-[#4E805D]'
-                    : 'bg-white border-[#687C6B]/50',
+                    ? 'bg-[#264c99] border-[#264c99]'
+                    : 'bg-white border-[#4a6fad]/50',
                 ].join(' ')}
                 aria-hidden="true"
               >
@@ -155,7 +155,7 @@ function GpxFilePicker({ value, onChange }: GpxFilePickerProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-sm font-semibold text-[#4E805D]">
+      <span className="text-sm font-semibold text-[#264c99]">
         Archivo de Ruta GPX{' '}
         <span className="text-[#757874] font-normal">(opcional)</span>
       </span>
@@ -165,21 +165,21 @@ function GpxFilePicker({ value, onChange }: GpxFilePickerProps) {
       </p>
 
       {value ? (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#4E805D]/40 bg-[#e8f0ea]">
-          <Paperclip size={15} className="text-[#4E805D] shrink-0" />
-          <span className="text-sm text-[#3d6b4a] flex-1 truncate">{value.name}</span>
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#264c99]/40 bg-[#e8eef7]">
+          <Paperclip size={15} className="text-[#264c99] shrink-0" />
+          <span className="text-sm text-[#1e3c7a] flex-1 truncate">{value.name}</span>
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="shrink-0 text-[#687C6B] hover:text-[#A4636E] transition-colors"
+            className="shrink-0 text-[#4a6fad] hover:text-[#A4636E] transition-colors"
             aria-label="Quitar archivo"
           >
             <X size={15} />
           </button>
         </div>
       ) : (
-        <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-[#687C6B]/40 bg-white cursor-pointer hover:border-[#4E805D]/60 hover:bg-[#f5f8f5] transition-colors">
-          <Paperclip size={15} className="text-[#687C6B]/60" />
+        <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-[#4a6fad]/40 bg-white cursor-pointer hover:border-[#264c99]/60 hover:bg-[#f5f8f5] transition-colors">
+          <Paperclip size={15} className="text-[#4a6fad]/60" />
           <span className="text-sm text-[#757874]">Seleccionar archivo .gpx…</span>
           <input
             type="file"
@@ -244,7 +244,7 @@ export function Step5Status({
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="pronosticoMeteorologico"
-          className="text-sm font-semibold text-[#4E805D]"
+          className="text-sm font-semibold text-[#264c99]"
         >
           Pronóstico Meteorológico
           <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
@@ -261,8 +261,8 @@ export function Step5Status({
           className={[
             'w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 bg-white',
             'placeholder:text-[#757874]/50 resize-y',
-            'focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-colors',
-            errors.pronosticoMeteorologico ? 'border-[#A4636E]' : 'border-[#687C6B]/40',
+            'focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-colors',
+            errors.pronosticoMeteorologico ? 'border-[#A4636E]' : 'border-[#4a6fad]/40',
           ].join(' ')}
         />
         {errors.pronosticoMeteorologico && (
@@ -294,7 +294,7 @@ export function Step5Status({
           <div className="flex flex-col gap-1.5 pl-7">
             <label
               htmlFor="riesgosOtro"
-              className="text-xs font-semibold text-[#4E805D]"
+              className="text-xs font-semibold text-[#264c99]"
             >
               Especifica el riesgo
             </label>
@@ -306,8 +306,8 @@ export function Step5Status({
               {...register('riesgosOtro')}
               className={[
                 'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800',
-                'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-shadow',
-                errors.riesgosOtro ? 'border-[#A4636E]' : 'border-[#687C6B]/30',
+                'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
+                errors.riesgosOtro ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
               ].join(' ')}
             />
             {errors.riesgosOtro && (
@@ -323,7 +323,7 @@ export function Step5Status({
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="planEvacuacion"
-          className="text-sm font-semibold text-[#4E805D]"
+          className="text-sm font-semibold text-[#264c99]"
         >
           Plan de Evacuación / Ruta Alternativa{' '}
           <span className="text-[#757874] font-normal">(opcional)</span>
@@ -337,8 +337,8 @@ export function Step5Status({
           className={[
             'w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 bg-white',
             'placeholder:text-[#757874]/50 resize-y',
-            'focus:outline-none focus:ring-2 focus:ring-[#4E805D]/40 focus:border-[#4E805D] transition-colors',
-            errors.planEvacuacion ? 'border-[#A4636E]' : 'border-[#687C6B]/40',
+            'focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-colors',
+            errors.planEvacuacion ? 'border-[#A4636E]' : 'border-[#4a6fad]/40',
           ].join(' ')}
         />
         {errors.planEvacuacion && (

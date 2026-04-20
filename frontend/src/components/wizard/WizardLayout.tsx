@@ -167,10 +167,10 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante }: WizardLay
   // Success screen
   if (submitSuccess) {
     return (
-      <div className="min-h-screen bg-[#f2f0ec] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#f0f4fb] flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-[#e8f0ea] mx-auto mb-4">
-            <Check size={32} className="text-[#4E805D]" />
+          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-[#e8eef7] mx-auto mb-4">
+            <Check size={32} className="text-[#264c99]" />
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">
             Salida registrada
@@ -184,13 +184,13 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante }: WizardLay
   const currentStepMeta = STEPS[currentStep - 1]
 
   return (
-    <div className="min-h-screen bg-[#f2f0ec] flex flex-col">
+    <div className="min-h-screen bg-[#f0f4fb] flex flex-col">
       {/* Top bar */}
-      <header className="bg-white border-b border-[#687C6B]/15 sticky top-0 z-10">
+      <header className="bg-white border-b border-[#4a6fad]/15 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <button
             onClick={onCancel}
-            className="flex items-center gap-1.5 text-sm text-[#757874] hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4E805D] rounded transition-colors"
+            className="flex items-center gap-1.5 text-sm text-[#757874] hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] rounded transition-colors"
             aria-label="Cancelar y volver"
           >
             <X size={18} />
@@ -211,7 +211,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante }: WizardLay
       </header>
 
       {/* Bar stepper */}
-      <div className="bg-white border-b border-[#687C6B]/10">
+      <div className="bg-white border-b border-[#4a6fad]/10">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-3 pb-2">
           {/* Progress bars */}
           <div className="flex gap-1.5 mb-2" role="list" aria-label="Progreso del formulario">
@@ -226,17 +226,17 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante }: WizardLay
                   className={[
                     'flex-1 h-1 rounded-full transition-colors duration-300',
                     isCompleted || (isActive && completedSteps.has(step.id))
-                      ? 'bg-[#4E805D]'
+                      ? 'bg-[#264c99]'
                       : isActive
-                      ? 'bg-[#4E805D]/60'
-                      : 'bg-[#e2e5e2]',
+                      ? 'bg-[#264c99]/60'
+                      : 'bg-[#dde6f7]',
                   ].join(' ')}
                 />
               )
             })}
           </div>
           {/* Current step label */}
-          <p className="text-xs font-semibold text-[#4E805D] uppercase tracking-wider">
+          <p className="text-xs font-semibold text-[#264c99] uppercase tracking-wider">
             Paso {currentStep} &mdash; {STEPS[currentStep - 1].label}
           </p>
         </div>
@@ -264,7 +264,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante }: WizardLay
       {/* Step content */}
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 py-6">
         <div className="mb-6">
-          <div className="flex items-center gap-2 text-[#4E805D] mb-1">
+          <div className="flex items-center gap-2 text-[#264c99] mb-1">
             {currentStepMeta.icon}
             <span className="text-xs font-semibold uppercase tracking-wider">
               Paso {currentStep} de {STEPS.length}

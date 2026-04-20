@@ -169,10 +169,10 @@ export const STATUS_LABELS: Record<SalidaStatus, string> = {
 }
 
 export const STATUS_COLORS: Record<SalidaStatus, string> = {
-  BORRADOR: 'bg-[#f2f0ec] text-[#757874]',
-  CONFIRMADA: 'bg-[#e8f0ea] text-[#4E805D]',
-  EN_CURSO: 'bg-[#e8f0ea] text-[#3d6b4a]',
-  COMPLETADA: 'bg-[#eef1ee] text-[#687C6B]',
+  BORRADOR: 'bg-[#f0f4fb] text-[#757874]',
+  CONFIRMADA: 'bg-[#e8eef7] text-[#264c99]',
+  EN_CURSO: 'bg-[#e8eef7] text-[#1e3c7a]',
+  COMPLETADA: 'bg-[#edf2fb] text-[#4a6fad]',
   CANCELADA: 'bg-[#f5e8ea] text-[#A4636E]',
   INCIDENTE: 'bg-[#f5e8ea] text-[#8b3a44]',
 }
