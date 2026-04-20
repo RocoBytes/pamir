@@ -6,8 +6,10 @@ import { buildSalidaNotificationEmail } from '../lib/email-templates.js';
 
 const asJson = (v: unknown): Prisma.InputJsonValue => v as Prisma.InputJsonValue;
 
-async function sendSalidaParticipantEmails(participantRuts: string[], salida: Salida): Promise<void> {
-  const ruts = participantRuts.filter(Boolean);
+async function sendSalidaParticipantEmails(participantObjs: unknown[], salida: Salida): Promise<void> {
+  const ruts = (participantObjs as { rut?: string }[])
+    .map((p) => p.rut)
+    .filter((r): r is string => Boolean(r));
   if (ruts.length === 0) return;
 
   const integrantes = await prisma.integrante.findMany({
@@ -97,7 +99,7 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
     res.status(201).json(salida);
 
     sendSalidaParticipantEmails(
-      (data.participantes ?? []) as string[],
+      (data.participantes ?? []) as unknown[],
       salida,
     ).catch((err) => console.error('[salida-email]', err));
   } catch (error) {

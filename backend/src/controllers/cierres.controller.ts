@@ -10,7 +10,9 @@ async function sendCierreParticipantEmails(salidaId: string, cierre: Cierre): Pr
   const salida = await prisma.salida.findUnique({ where: { id: salidaId } });
   if (!salida) return;
 
-  const ruts = (salida.participantes as string[]).filter(Boolean);
+  const ruts = (salida.participantes as { rut?: string }[])
+    .map((p) => p.rut)
+    .filter((r): r is string => Boolean(r));
   if (ruts.length === 0) return;
 
   const integrantes = await prisma.integrante.findMany({

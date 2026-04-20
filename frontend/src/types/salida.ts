@@ -83,7 +83,7 @@ export interface SalidaFormData {
 
   // Step 3 – Equipo Humano
   liderCordada: string
-  participantes: string[]
+  participantes: { rut: string; nombre: string }[]
   coordinacionGrupal: boolean
   matrizRiesgos: boolean
 
@@ -118,7 +118,7 @@ export interface SalidaRecord {
   horaAlerta: string
   avisosExternos: AvisoExterno[]
   liderCordada: string
-  participantes: string[]
+  participantes: { rut: string; nombre: string }[]
   coordinacionGrupal: boolean
   matrizRiesgos: boolean
   gpxFileId?: string

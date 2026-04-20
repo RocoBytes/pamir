@@ -11,7 +11,7 @@ import type { IntegranteRecord } from '../../types/salida'
 
 const step3Schema = z.object({
   liderCordada: z.string().min(1, 'Selecciona el líder de cordada'),
-  participantes: z.array(z.string()).min(1, 'Agrega al menos un participante'),
+  participantes: z.array(z.object({ rut: z.string(), nombre: z.string() })).min(1, 'Agrega al menos un participante'),
   coordinacionGrupal: z.boolean({ error: 'Selecciona una opción' }),
   matrizRiesgos: z.boolean({ error: 'Selecciona una opción' }),
 })
@@ -272,19 +272,19 @@ function LiderPicker({ value, participantes, onChange, error }: LiderPickerProps
 // ─── Participant picker (multi-select by RUT) ─────────────────────────────────
 
 interface ParticipantePickerProps {
-  selected: string[]
-  onAdd: (name: string) => void
+  selected: { rut: string; nombre: string }[]
+  onAdd: (p: { rut: string; nombre: string }) => void
   onCreateIntegrante: () => void
 }
 
 function ParticipantePicker({ selected, onAdd, onCreateIntegrante }: ParticipantePickerProps) {
   const [rut, setRut] = useState('')
   const { integrante, loading, isComplete } = useRutLookup(rut)
-  const alreadyAdded = integrante ? selected.includes(integrante.nombreCompleto) : false
+  const alreadyAdded = integrante ? selected.some((p) => p.rut === integrante.rut) : false
 
   function handleAdd(i: IntegranteRecord) {
-    if (!selected.includes(i.nombreCompleto)) {
-      onAdd(i.nombreCompleto)
+    if (!selected.some((p) => p.rut === i.rut)) {
+      onAdd({ rut: i.rut, nombre: i.nombreCompleto })
     }
     setRut('')
   }
@@ -349,17 +349,17 @@ export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegr
   const participantes = watch('participantes')
   const liderCordada = watch('liderCordada')
 
-  function addParticipante(name: string) {
-    if (!participantes.includes(name)) {
-      setValue('participantes', [...participantes, name], { shouldValidate: true })
+  function addParticipante(p: { rut: string; nombre: string }) {
+    if (!participantes.some((existing) => existing.rut === p.rut)) {
+      setValue('participantes', [...participantes, p], { shouldValidate: true })
     }
   }
 
-  function removeParticipante(name: string) {
-    const updated = participantes.filter((p) => p !== name)
+  function removeParticipante(rut: string) {
+    const removed = participantes.find((p) => p.rut === rut)
+    const updated = participantes.filter((p) => p.rut !== rut)
     setValue('participantes', updated, { shouldValidate: true })
-    // If the removed participant was the líder, clear the líder field
-    if (liderCordada === name) {
+    if (removed && liderCordada === removed.nombre) {
       setValue('liderCordada', '', { shouldValidate: true })
     }
   }
@@ -381,14 +381,14 @@ export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegr
           <div className="flex flex-wrap gap-2 p-3 rounded-xl border border-[#4a6fad]/20 bg-[#f0f4fb]/60">
             {participantes.map((p) => (
               <span
-                key={p}
+                key={p.rut}
                 className="inline-flex items-center gap-1.5 bg-[#e8eef7] text-[#1e3c7a] text-sm font-medium px-3 py-1 rounded-full border border-[#264c99]/20"
               >
-                {p}
+                {p.nombre}
                 <button
                   type="button"
-                  onClick={() => removeParticipante(p)}
-                  aria-label={`Quitar ${p}`}
+                  onClick={() => removeParticipante(p.rut)}
+                  aria-label={`Quitar ${p.nombre}`}
                   className="text-[#264c99] hover:text-[#A4636E] transition-colors leading-none"
                 >
                   <X size={13} />
@@ -419,7 +419,7 @@ export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegr
         render={({ field }) => (
           <LiderPicker
             value={field.value}
-            participantes={participantes}
+            participantes={participantes.map((p) => p.nombre)}
             onChange={(name) => field.onChange(name)}
             error={errors.liderCordada?.message}
           />
