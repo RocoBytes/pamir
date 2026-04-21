@@ -29,6 +29,7 @@ export type MedioComunicacion =
 export type EquipoColectivoSeguridad =
   | 'CUERDAS'
   | 'BOTIQUIN_AVANZADO'
+  | 'BOTIQUIN_GRUPAL'
   | 'GPS'
   | 'MAPA_BRUJULA'
   | 'RESCATE_GRIETAS'
@@ -53,7 +54,8 @@ export type TipoSalida =
 
 export type Disciplina =
   | 'TREKKING'
-  | 'MEDIA_ALTA_MONTANA'
+  | 'MEDIA_MONTANA'
+  | 'ALTA_MONTANA'
   | 'ESCALADA_ROCA'
   | 'ESCALADA_HIELO'
   | 'ESQUI_MONTANA'
@@ -80,6 +82,9 @@ export interface SalidaFormData {
   horaRetornoEstimada: string
   horaAlerta: string
   avisosExternos: AvisoExterno[]
+  retenCarabineros?: string
+  nombreFamiliar?: string
+  telefonoFamiliar?: string
 
   // Step 3 – Equipo Humano
   liderCordada: string
@@ -117,6 +122,9 @@ export interface SalidaRecord {
   horaRetornoEstimada: string
   horaAlerta: string
   avisosExternos: AvisoExterno[]
+  retenCarabineros?: string | null
+  nombreFamiliar?: string | null
+  telefonoFamiliar?: string | null
   liderCordada: string
   participantes: { rut: string; nombre: string }[]
   coordinacionGrupal: boolean
@@ -191,7 +199,8 @@ export const TIPO_SALIDA_LABELS: Record<TipoSalida, string> = {
 
 export const DISCIPLINA_LABELS: Record<Disciplina, string> = {
   TREKKING: 'Trekking',
-  MEDIA_ALTA_MONTANA: 'Media / Alta Montaña',
+  MEDIA_MONTANA: 'Media Montaña',
+  ALTA_MONTANA: 'Alta Montaña',
   ESCALADA_ROCA: 'Escalada en Roca',
   ESCALADA_HIELO: 'Escalada en Hielo',
   ESQUI_MONTANA: 'Esquí de Montaña',
@@ -220,6 +229,7 @@ export const RIESGO_IDENTIFICADO_LABELS: Record<RiesgoIdentificado, string> = {
 export const EQUIPO_COLECTIVO_LABELS: Record<EquipoColectivoSeguridad, string> = {
   CUERDAS: 'Cuerdas',
   BOTIQUIN_AVANZADO: 'Botiquín Avanzado',
+  BOTIQUIN_GRUPAL: 'Botiquín Grupal',
   GPS: 'GPS',
   MAPA_BRUJULA: 'Mapa y Brújula',
   RESCATE_GRIETAS: 'Equipo de Rescate en Grietas',

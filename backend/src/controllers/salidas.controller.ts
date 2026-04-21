@@ -39,6 +39,9 @@ interface CreateSalidaBody {
   horaRetornoEstimada: string;
   horaAlerta: string;
   avisosExternos?: string[];
+  retenCarabineros?: string;
+  nombreFamiliar?: string;
+  telefonoFamiliar?: string;
   // Paso 3
   liderCordada: string;
   participantes?: unknown[];
@@ -78,6 +81,9 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
         horaRetornoEstimada: data.horaRetornoEstimada,
         horaAlerta: data.horaAlerta,
         avisosExternos: asJson(data.avisosExternos ?? []),
+        retenCarabineros: data.retenCarabineros || null,
+        nombreFamiliar: data.nombreFamiliar || null,
+        telefonoFamiliar: data.telefonoFamiliar || null,
         liderCordada: data.liderCordada,
         participantes: asJson(data.participantes ?? []),
         coordinacionGrupal: data.coordinacionGrupal ?? false,

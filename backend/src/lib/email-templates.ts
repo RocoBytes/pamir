@@ -102,6 +102,9 @@ interface SalidaEmailData {
   horaRetornoEstimada: string;
   horaAlerta: string;
   avisosExternos: unknown;
+  retenCarabineros?: string | null;
+  nombreFamiliar?: string | null;
+  telefonoFamiliar?: string | null;
   liderCordada: string;
   participantes: unknown;
   coordinacionGrupal: boolean;
@@ -148,6 +151,8 @@ const TIPO_SALIDA_MAP: Record<string, string> = {
 
 const DISCIPLINA_MAP: Record<string, string> = {
   TREKKING: 'Trekking',
+  MEDIA_MONTANA: 'Media Montaña',
+  ALTA_MONTANA: 'Alta Montaña',
   MEDIA_ALTA_MONTANA: 'Media / Alta Montaña',
   ESCALADA_ROCA: 'Escalada en Roca',
   ESCALADA_HIELO: 'Escalada en Hielo',
@@ -172,6 +177,7 @@ const MEDIO_COM_MAP: Record<string, string> = {
 const EQUIPO_MAP: Record<string, string> = {
   CUERDAS: 'Cuerdas',
   BOTIQUIN_AVANZADO: 'Botiquín Avanzado',
+  BOTIQUIN_GRUPAL: 'Botiquín Grupal',
   GPS: 'GPS',
   MAPA_BRUJULA: 'Mapa y Brújula',
   RESCATE_GRIETAS: 'Equipo de Rescate en Grietas',
@@ -357,6 +363,9 @@ export function buildSalidaNotificationEmail(nombreCompleto: string, salida: Sal
     ${row('Hora de retorno estimada', salida.horaRetornoEstimada)}
     ${row('Hora de alerta', salida.horaAlerta)}
     ${listRow('Avisos externos', avisosArr.map((a) => AVISO_MAP[a] ?? a))}
+    ${avisosArr.includes('CARABINEROS') ? row('Retén de Carabineros', opt(salida.retenCarabineros)) : ''}
+    ${avisosArr.includes('FAMILIAR_OTRO') ? row('Nombre del familiar/contacto', opt(salida.nombreFamiliar)) : ''}
+    ${avisosArr.includes('FAMILIAR_OTRO') ? row('Teléfono del familiar/contacto', opt(salida.telefonoFamiliar)) : ''}
 
     ${sectionHeader('III. Equipo Humano')}
     ${listRow('Nómina de participantes', participantesArr.length ? participantesArr : [])}

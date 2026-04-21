@@ -29,11 +29,14 @@ const step2Schema = z
       .refine((d) => d >= todayString(), {
         message: 'No puedes seleccionar una fecha pasada',
       }),
-    horaRetornoEstimada: z.string().min(1, 'Ingresa la hora estimada de retorno'),
+    horaRetornoEstimada: z.string().min(1, 'Ingresa la hora de retorno'),
     horaAlerta: z.string().min(1, 'Ingresa la hora de alerta'),
     avisosExternos: z
       .array(z.enum(['CARABINEROS', 'SOCORRO_ANDINO', 'FAMILIAR_OTRO']))
       .min(1, 'Selecciona al menos una opción'),
+    retenCarabineros: z.string().max(200).optional(),
+    nombreFamiliar: z.string().max(200).optional(),
+    telefonoFamiliar: z.string().max(50).optional(),
   })
   .refine((d) => d.fechaRetornoEstimada >= d.fechaInicio, {
     message: 'La fecha de retorno debe ser igual o posterior a la de inicio',
@@ -123,11 +126,16 @@ export function Step2Participants({ defaultValues, onSubmit, onBack }: Step2Prop
     register,
     control,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<Step2Data>({
     resolver: zodResolver(step2Schema),
     defaultValues,
   })
+
+  const avisosSeleccionados = watch('avisosExternos') ?? []
+  const showCarabineros = avisosSeleccionados.includes('CARABINEROS')
+  const showFamiliar = avisosSeleccionados.includes('FAMILIAR_OTRO')
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
@@ -158,7 +166,7 @@ export function Step2Participants({ defaultValues, onSubmit, onBack }: Step2Prop
           control={control}
           render={({ field }) => (
             <TimeInput24
-              label="Hora Estimada de Retorno"
+              label="Hora de retorno al punto de inicio (Vehículos)"
               required
               value={field.value}
               onChange={field.onChange}
@@ -183,8 +191,8 @@ export function Step2Participants({ defaultValues, onSubmit, onBack }: Step2Prop
         />
       </div>
 
-      {/* Avisos externos — selección múltiple */}
-      <div className="rounded-2xl border border-[#4a6fad]/15 bg-[#f0f4fb]/60 p-4">
+      {/* Avisos externos — selección múltiple + campos condicionales */}
+      <div className="rounded-2xl border border-[#4a6fad]/15 bg-[#f0f4fb]/60 p-4 flex flex-col gap-4">
         <Controller
           name="avisosExternos"
           control={control}
@@ -198,6 +206,79 @@ export function Step2Participants({ defaultValues, onSubmit, onBack }: Step2Prop
             />
           )}
         />
+
+        {/* Retén Carabineros */}
+        {showCarabineros && (
+          <div className="flex flex-col gap-1.5 pl-1">
+            <label htmlFor="retenCarabineros" className="text-sm font-semibold text-[#264c99]">
+              Retén de Carabineros
+              <span className="text-[#757874] font-normal ml-1">(opcional)</span>
+            </label>
+            <input
+              id="retenCarabineros"
+              type="text"
+              maxLength={200}
+              placeholder="ej. Retén Lo Valdés, Retén Cajón del Maipo"
+              {...register('retenCarabineros')}
+              className={[
+                'w-full px-3 py-2.5 rounded-xl border bg-white text-sm text-slate-800',
+                'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
+                errors.retenCarabineros ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
+              ].join(' ')}
+            />
+            {errors.retenCarabineros && (
+              <p className="text-xs text-[#A4636E]" role="alert">{errors.retenCarabineros.message}</p>
+            )}
+          </div>
+        )}
+
+        {/* Contacto Familiar */}
+        {showFamiliar && (
+          <div className="flex flex-col gap-3 pl-1">
+            <p className="text-sm font-semibold text-[#264c99]">
+              Datos del familiar / contacto externo
+              <span className="text-[#757874] font-normal ml-1">(opcional)</span>
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="nombreFamiliar" className="text-xs font-semibold text-[#264c99]">Nombre</label>
+                <input
+                  id="nombreFamiliar"
+                  type="text"
+                  maxLength={200}
+                  placeholder="ej. María González"
+                  {...register('nombreFamiliar')}
+                  className={[
+                    'w-full px-3 py-2.5 rounded-xl border bg-white text-sm text-slate-800',
+                    'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
+                    errors.nombreFamiliar ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
+                  ].join(' ')}
+                />
+                {errors.nombreFamiliar && (
+                  <p className="text-xs text-[#A4636E]" role="alert">{errors.nombreFamiliar.message}</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="telefonoFamiliar" className="text-xs font-semibold text-[#264c99]">Teléfono</label>
+                <input
+                  id="telefonoFamiliar"
+                  type="tel"
+                  maxLength={50}
+                  placeholder="ej. +56 9 1234 5678"
+                  {...register('telefonoFamiliar')}
+                  className={[
+                    'w-full px-3 py-2.5 rounded-xl border bg-white text-sm text-slate-800',
+                    'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
+                    errors.telefonoFamiliar ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
+                  ].join(' ')}
+                />
+                {errors.telefonoFamiliar && (
+                  <p className="text-xs text-[#A4636E]" role="alert">{errors.telefonoFamiliar.message}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}

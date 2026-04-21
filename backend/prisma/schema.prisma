@@ -50,6 +50,9 @@ model Salida {
   horaRetornoEstimada  String   @map("hora_retorno_estimada")
   horaAlerta           String   @map("hora_alerta")
   avisosExternos       Json     @default("[]") @map("avisos_externos")
+  retenCarabineros     String?  @map("reten_carabineros")
+  nombreFamiliar       String?  @map("nombre_familiar")
+  telefonoFamiliar     String?  @map("telefono_familiar")
 
   // Paso 3 – Equipo humano
   liderCordada       String  @map("lider_cordada")

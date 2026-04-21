@@ -14,7 +14,8 @@ const TIPO_OPTIONS: { value: TipoSalida; label: string }[] = [
 
 const DISCIPLINA_OPTIONS: { value: Disciplina; label: string }[] = [
   { value: 'TREKKING', label: 'Trekking' },
-  { value: 'MEDIA_ALTA_MONTANA', label: 'Media / Alta Montaña' },
+  { value: 'MEDIA_MONTANA', label: 'Media Montaña' },
+  { value: 'ALTA_MONTANA', label: 'Alta Montaña' },
   { value: 'ESCALADA_ROCA', label: 'Escalada en Roca' },
   { value: 'ESCALADA_HIELO', label: 'Escalada en Hielo' },
   { value: 'ESQUI_MONTANA', label: 'Esquí de Montaña' },
@@ -27,7 +28,7 @@ const step1Schema = z.object({
     { error: 'Selecciona el tipo de salida' },
   ),
   disciplina: z.enum(
-    ['TREKKING', 'MEDIA_ALTA_MONTANA', 'ESCALADA_ROCA', 'ESCALADA_HIELO', 'ESQUI_MONTANA', 'TRAIL_SKY_RUNNING'],
+    ['TREKKING', 'MEDIA_MONTANA', 'ALTA_MONTANA', 'ESCALADA_ROCA', 'ESCALADA_HIELO', 'ESQUI_MONTANA', 'TRAIL_SKY_RUNNING'],
     { error: 'Selecciona la disciplina' },
   ),
   nombreActividad: z.string().min(2, 'Ingresa el nombre de la actividad o ruta (min. 2 caracteres)'),

@@ -47,6 +47,9 @@ const EMPTY_FORM: Omit<SalidaFormData, 'gpxFile'> = {
   horaRetornoEstimada: '',
   horaAlerta: '',
   avisosExternos: [],
+  retenCarabineros: '',
+  nombreFamiliar: '',
+  telefonoFamiliar: '',
   liderCordada: '',
   participantes: [],
   coordinacionGrupal: false,
@@ -300,6 +303,9 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante }: WizardLay
               horaRetornoEstimada: formData.horaRetornoEstimada,
               horaAlerta: formData.horaAlerta,
               avisosExternos: formData.avisosExternos,
+              retenCarabineros: formData.retenCarabineros ?? '',
+              nombreFamiliar: formData.nombreFamiliar ?? '',
+              telefonoFamiliar: formData.telefonoFamiliar ?? '',
             }}
             onSubmit={(data) => handleStepComplete(2, data)}
             onBack={goBack}
