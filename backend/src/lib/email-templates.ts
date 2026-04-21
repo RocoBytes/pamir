@@ -90,56 +90,210 @@ function clausulaBlock(number: string, title: string, body: string, accepted: bo
     </tr>`;
 }
 
+// ─── Interfaces ───────────────────────────────────────────────────────────────
+
 interface SalidaEmailData {
   nombreActividad: string;
-  disciplina: string;
   tipoSalida: string;
+  disciplina: string;
   ubicacionGeografica: string;
   fechaInicio: Date | string;
   fechaRetornoEstimada: Date | string;
   horaRetornoEstimada: string;
   horaAlerta: string;
+  avisosExternos: unknown;
   liderCordada: string;
+  participantes: unknown;
+  coordinacionGrupal: boolean;
+  matrizRiesgos: boolean;
+  mediosComunicacion: unknown;
+  idDispositivoFrecuencia?: string | null;
+  equipoColectivo: unknown;
+  equipoColectivoOtro?: string | null;
+  pronosticoMeteorologico?: string | null;
+  riesgosIdentificados: unknown;
+  riesgosOtro?: string | null;
+  planEvacuacion?: string | null;
 }
 
 interface CierreEmailData {
-  estadoCierre: string;
   fechaFinalizacionReal: Date | string;
+  estadoCierre: string;
+  motivoAbandono?: string | null;
+  huboCambios: string;
+  motivosCambios?: unknown;
+  motivosCambiosOtro?: string | null;
   ocurrioIncidente: string;
+  tiposIncidente?: unknown;
+  gravedadLesion?: string | null;
   descripcionSuceso?: string | null;
+  causasRaiz?: unknown;
+  causaRaizOtro?: string | null;
+  desempenoEquipo: string;
+  detalleFallaEquipo?: string | null;
+  observacionesRuta: string;
+  precisionPronostico: number;
   leccionesAprendidas: string;
   recomendacionesFuturos?: string | null;
+  sugerenciasClub?: string | null;
 }
 
-function formatTipoSalida(t: string): string {
-  const map: Record<string, string> = {
-    OFICIAL_CLUB: 'Oficial Club',
-    NO_OFICIAL: 'No oficial',
-    EXPEDICION_PARTICULAR: 'Expedición particular',
-  };
-  return map[t] ?? t;
+// ─── Label maps ───────────────────────────────────────────────────────────────
+
+const TIPO_SALIDA_MAP: Record<string, string> = {
+  OFICIAL_CLUB: 'Oficial del Club',
+  NO_OFICIAL: 'No Oficial',
+  EXPEDICION_PARTICULAR: 'Expedición Particular',
+};
+
+const DISCIPLINA_MAP: Record<string, string> = {
+  TREKKING: 'Trekking',
+  MEDIA_ALTA_MONTANA: 'Media / Alta Montaña',
+  ESCALADA_ROCA: 'Escalada en Roca',
+  ESCALADA_HIELO: 'Escalada en Hielo',
+  ESQUI_MONTANA: 'Esquí de Montaña',
+  TRAIL_SKY_RUNNING: 'Trail / Sky Running',
+};
+
+const AVISO_MAP: Record<string, string> = {
+  CARABINEROS: 'Carabineros',
+  SOCORRO_ANDINO: 'Socorro Andino',
+  FAMILIAR_OTRO: 'Familiar u otra persona',
+};
+
+const MEDIO_COM_MAP: Record<string, string> = {
+  RADIO_VHF_UHF: 'Radio VHF / UHF',
+  TELEFONO_SATELITAL: 'Teléfono Satelital',
+  INREACH_SPOT: 'Dispositivo inReach / Spot',
+  CELULAR: 'Celular',
+  NINGUNO: 'Ninguno',
+};
+
+const EQUIPO_MAP: Record<string, string> = {
+  CUERDAS: 'Cuerdas',
+  BOTIQUIN_AVANZADO: 'Botiquín Avanzado',
+  GPS: 'GPS',
+  MAPA_BRUJULA: 'Mapa y Brújula',
+  RESCATE_GRIETAS: 'Equipo de Rescate en Grietas',
+  ARVA_PALA_SONDA: 'ARVA / Pala / Sonda',
+  SIN_EQUIPO: 'Sin equipo colectivo',
+  OTRO: 'Otro',
+};
+
+const RIESGO_MAP: Record<string, string> = {
+  AVALANCHAS: 'Avalanchas',
+  DESPRENDIMIENTO_ROCAS: 'Desprendimiento de rocas',
+  CRUCE_RIOS: 'Cruce de ríos',
+  FRIO_EXTREMO: 'Frío extremo',
+  MAL_ALTURA: 'Mal de altura',
+  CAIDA_DISTINTO_NIVEL: 'Caída a distinto nivel',
+  CALOR_EXTREMO: 'Calor extremo',
+  OTRO: 'Otro',
+};
+
+const ESTADO_CIERRE_MAP: Record<string, string> = {
+  COMPLETADA_SEGUN_PLAN: 'Completada según lo previsto',
+  COMPLETADA_CON_VARIACIONES: 'Completada con variaciones',
+  ABORTADA_INCOMPLETA: 'Abortada / Incompleta',
+};
+
+const MOTIVO_ABANDONO_MAP: Record<string, string> = {
+  METEOROLOGIA: 'Meteorología adversa',
+  SALUD_INTEGRANTE: 'Salud de un integrante',
+  MAL_ESTADO_RUTA: 'Mal estado de la ruta',
+  FALLO_EQUIPO: 'Fallo de equipo',
+  ERROR_PLANIFICACION: 'Error de planificación',
+  FALTA_TIEMPO: 'Falta de tiempo',
+};
+
+const MOTIVO_CAMBIO_MAP: Record<string, string> = {
+  CLIMA_ADVERSO: 'Clima adverso',
+  ERROR_NAVEGACION: 'Error de navegación / ruta',
+  FATIGA_FISICA: 'Fatiga física',
+  FALTA_EQUIPO_TECNICO: 'Falta de equipo técnico',
+  FALTA_TIEMPO: 'Falta de tiempo',
+  OTRO: 'Otro',
+};
+
+const INCIDENTE_MAP: Record<string, string> = {
+  NADA: 'No ocurrió nada',
+  INCIDENTES_MENORES: 'Incidentes menores sin lesión',
+  ACCIDENTE_LESION: 'Accidente con lesión',
+  SUSTO: 'Situación de alto riesgo (near-miss)',
+};
+
+const TIPO_INCIDENTE_MAP: Record<string, string> = {
+  MEDICO: 'Médico',
+  LESION: 'Lesión',
+  TECNICO: 'Técnico',
+  LOGISTICO: 'Logístico',
+  AMBIENTAL: 'Ambiental',
+};
+
+const GRAVEDAD_MAP: Record<string, string> = {
+  LEVE: 'Leve (primeros auxilios básicos)',
+  MODERADA: 'Moderada (requiere atención médica)',
+  GRAVE: 'Grave (requiere rescate / evacuación)',
+};
+
+const CAUSA_RAIZ_MAP: Record<string, string> = {
+  EXCESO_CONFIANZA: 'Exceso de confianza',
+  ERROR_TECNICO: 'Error técnico',
+  FATIGA: 'Fatiga',
+  EQUIPAMIENTO_INADECUADO: 'Equipamiento inadecuado',
+  CONDICIONES_TERRENO: 'Condiciones del terreno',
+  MALA_VISIBILIDAD: 'Mala visibilidad',
+  OTRO: 'Otro',
+};
+
+const DESEMPENO_MAP: Record<string, string> = {
+  TODO_FUNCIONO: 'Todo funcionó correctamente',
+  FALLO_EQUIPO: 'Algún equipo falló o se dañó',
+};
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+
+function opt(value: string | null | undefined, fallback = 'No especificado'): string {
+  return value?.trim() ? value.trim() : fallback;
 }
 
-function formatEstadoCierre(e: string): string {
-  const map: Record<string, string> = {
-    SEGUN_PLAN: 'Según el plan',
-    CON_CAMBIOS: 'Con cambios',
-    INCOMPLETA: 'Incompleta / Abortada',
-  };
-  return map[e] ?? e;
+function safeStringArray(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((item): item is string => typeof item === 'string');
 }
 
-function formatIncidente(i: string): string {
-  const map: Record<string, string> = {
-    NADA: 'Sin incidentes',
-    INCIDENTE_MENOR: 'Incidente menor',
-    ACCIDENTE_CON_LESION: 'Accidente con lesión',
-    CASI_ACCIDENTE: 'Casi-accidente (near-miss)',
-  };
-  return map[i] ?? i;
+function safeParticipantNames(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.map((item) => {
+    if (typeof item === 'string') return item;
+    if (typeof item === 'object' && item !== null && 'nombre' in item) {
+      return String((item as { nombre: unknown }).nombre);
+    }
+    return '';
+  }).filter(Boolean);
 }
 
-export function buildSalidaNotificationEmail(nombreCompleto: string, salida: SalidaEmailData): string {
+function listRow(label: string, items: string[]): string {
+  if (!items.length) return row(label, 'Ninguno');
+  const bullets = items.map((i) => `<li style="margin-bottom:2px;">${i}</li>`).join('');
+  return `
+    <tr>
+      <td style="padding:8px 12px;color:${GRAY};font-size:13px;width:45%;border-bottom:1px solid ${BORDER};vertical-align:top;">${label}</td>
+      <td style="padding:8px 12px;color:#1f2937;font-size:13px;border-bottom:1px solid ${BORDER};">
+        <ul style="margin:0;padding-left:18px;">${bullets}</ul>
+      </td>
+    </tr>`;
+}
+
+function pronosticoRow(score: number): string {
+  const filled = '★'.repeat(Math.min(5, Math.max(0, score)));
+  const empty = '☆'.repeat(5 - Math.min(5, Math.max(0, score)));
+  return row('Precisión del pronóstico', `${filled}${empty} (${score}/5)`);
+}
+
+// ─── Email shell ──────────────────────────────────────────────────────────────
+
+function emailShell(subtitle: string, introHtml: string, tableHtml: string, footerNote: string): string {
   return `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -147,117 +301,150 @@ export function buildSalidaNotificationEmail(nombreCompleto: string, salida: Sal
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);max-width:600px;width:100%;">
-
         <tr>
           <td style="background:${GREEN};padding:28px 32px;">
             <p style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Pamir</p>
-            <p style="margin:6px 0 0;color:#c8dccb;font-size:14px;">Registro en salida de montaña</p>
+            <p style="margin:6px 0 0;color:#c8dccb;font-size:14px;">${subtitle}</p>
           </td>
         </tr>
-
-        <tr>
-          <td style="padding:24px 32px 16px;">
-            <p style="margin:0;color:#1f2937;font-size:15px;">
-              Hola <strong>${nombreCompleto}</strong>, has sido registrado/a como integrante en la siguiente salida de montaña.
-              A continuación encontrarás el resumen de la actividad.
-            </p>
-          </td>
-        </tr>
-
+        <tr><td style="padding:24px 32px 16px;">${introHtml}</td></tr>
         <tr>
           <td style="padding:0 32px 24px;">
             <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:6px;overflow:hidden;border-collapse:collapse;">
-              ${sectionHeader('Datos de la Salida')}
-              ${row('Actividad', salida.nombreActividad)}
-              ${row('Disciplina', salida.disciplina)}
-              ${row('Tipo de salida', formatTipoSalida(salida.tipoSalida))}
-              ${row('Ubicación', salida.ubicacionGeografica)}
-              ${row('Fecha de inicio', formatDate(String(salida.fechaInicio)))}
-              ${row('Fecha de retorno estimada', formatDate(String(salida.fechaRetornoEstimada)))}
-              ${row('Hora de retorno estimada', salida.horaRetornoEstimada)}
-              ${row('Hora de alerta', salida.horaAlerta)}
-              ${row('Líder de cordada', salida.liderCordada)}
+              ${tableHtml}
             </table>
           </td>
         </tr>
-
         <tr>
           <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid ${BORDER};">
             <p style="margin:0;color:${GRAY};font-size:12px;line-height:1.6;">
-              Este correo es una notificación automática del sistema PAMIR.<br>
+              ${footerNote}<br>
               Si tienes dudas, comunícate con: <strong>Susana Madrid</strong> al correo <a href="mailto:madridnawrathsusana@gmail.com" style="color:${GREEN};">madridnawrathsusana@gmail.com</a>
             </p>
           </td>
         </tr>
-
       </table>
     </td></tr>
   </table>
 </body>
 </html>`;
 }
+
+// ─── Salida notification ──────────────────────────────────────────────────────
+
+export function buildSalidaNotificationEmail(nombreCompleto: string, salida: SalidaEmailData): string {
+  const avisosArr = safeStringArray(salida.avisosExternos);
+  const participantesArr = safeParticipantNames(salida.participantes);
+  const mediosArr = safeStringArray(salida.mediosComunicacion);
+  const equipoArr = safeStringArray(salida.equipoColectivo);
+  const riesgosArr = safeStringArray(salida.riesgosIdentificados);
+
+  const intro = `<p style="margin:0;color:#1f2937;font-size:15px;">
+    Hola <strong>${nombreCompleto}</strong>, has sido registrado/a como integrante en la siguiente salida de montaña.
+    A continuación encontrarás el resumen completo de la actividad.
+  </p>`;
+
+  const tabla = `
+    ${sectionHeader('I. Clasificación de la Salida')}
+    ${row('Nombre de la actividad', salida.nombreActividad)}
+    ${row('Tipo de salida', TIPO_SALIDA_MAP[salida.tipoSalida] ?? salida.tipoSalida)}
+    ${row('Disciplina', DISCIPLINA_MAP[salida.disciplina] ?? salida.disciplina)}
+    ${row('Ubicación geográfica', salida.ubicacionGeografica)}
+
+    ${sectionHeader('II. Cronología y Seguridad')}
+    ${row('Fecha de inicio', formatDate(String(salida.fechaInicio)))}
+    ${row('Fecha de retorno estimada', formatDate(String(salida.fechaRetornoEstimada)))}
+    ${row('Hora de retorno estimada', salida.horaRetornoEstimada)}
+    ${row('Hora de alerta', salida.horaAlerta)}
+    ${listRow('Avisos externos', avisosArr.map((a) => AVISO_MAP[a] ?? a))}
+
+    ${sectionHeader('III. Equipo Humano')}
+    ${listRow('Nómina de participantes', participantesArr.length ? participantesArr : [])}
+    ${row('Líder de cordada', opt(salida.liderCordada))}
+    ${row('Coordinación grupal previa', salida.coordinacionGrupal ? 'Sí' : 'No')}
+    ${row('Matriz de riesgos completada', salida.matrizRiesgos ? 'Sí' : 'No')}
+
+    ${sectionHeader('IV. Comunicaciones y Equipo Crítico')}
+    ${listRow('Medios de comunicación', mediosArr.map((m) => MEDIO_COM_MAP[m] ?? m))}
+    ${row('ID dispositivo / frecuencia', opt(salida.idDispositivoFrecuencia))}
+    ${listRow('Equipo colectivo de seguridad', equipoArr.map((e) => EQUIPO_MAP[e] ?? e))}
+    ${row('Otro equipo', opt(salida.equipoColectivoOtro))}
+
+    ${sectionHeader('V. Planificación Técnica')}
+    ${row('Pronóstico meteorológico', opt(salida.pronosticoMeteorologico))}
+    ${listRow('Riesgos identificados', riesgosArr.map((r) => RIESGO_MAP[r] ?? r))}
+    ${row('Otros riesgos', opt(salida.riesgosOtro))}
+    ${row('Plan de evacuación', opt(salida.planEvacuacion))}
+  `;
+
+  return emailShell(
+    'Registro en salida de montaña',
+    intro,
+    tabla,
+    'Este correo es una notificación automática del sistema PAMIR.',
+  );
+}
+
+// ─── Cierre notification ──────────────────────────────────────────────────────
 
 export function buildCierreNotificationEmail(nombreCompleto: string, salida: SalidaEmailData, cierre: CierreEmailData): string {
   const hayIncidente = cierre.ocurrioIncidente !== 'NADA';
-  return `<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);max-width:600px;width:100%;">
+  const abortada = cierre.estadoCierre === 'ABORTADA_INCOMPLETA';
+  const huboCambios = cierre.huboCambios === 'SI';
+  const motivosCambiosArr = safeStringArray(cierre.motivosCambios);
+  const tiposIncidenteArr = safeStringArray(cierre.tiposIncidente);
+  const causasRaizArr = safeStringArray(cierre.causasRaiz);
 
-        <tr>
-          <td style="background:${GREEN};padding:28px 32px;">
-            <p style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Pamir</p>
-            <p style="margin:6px 0 0;color:#c8dccb;font-size:14px;">Cierre de salida de montaña</p>
-          </td>
-        </tr>
+  const intro = `<p style="margin:0;color:#1f2937;font-size:15px;">
+    Hola <strong>${nombreCompleto}</strong>, la salida en la que participaste ha sido oficialmente cerrada.
+    A continuación encontrarás el resumen completo del cierre.
+  </p>`;
 
-        <tr>
-          <td style="padding:24px 32px 16px;">
-            <p style="margin:0;color:#1f2937;font-size:15px;">
-              Hola <strong>${nombreCompleto}</strong>, la salida en la que participaste ha sido oficialmente cerrada.
-              A continuación encontrarás el resumen del cierre.
-            </p>
-          </td>
-        </tr>
+  const tabla = `
+    ${sectionHeader('I. Actividad')}
+    ${row('Nombre de la actividad', salida.nombreActividad)}
+    ${row('Tipo de salida', TIPO_SALIDA_MAP[salida.tipoSalida] ?? salida.tipoSalida)}
+    ${row('Disciplina', DISCIPLINA_MAP[salida.disciplina] ?? salida.disciplina)}
+    ${row('Ubicación geográfica', salida.ubicacionGeografica)}
+    ${row('Fecha de inicio', formatDate(String(salida.fechaInicio)))}
+    ${row('Fecha de retorno estimada', formatDate(String(salida.fechaRetornoEstimada)))}
 
-        <tr>
-          <td style="padding:0 32px 24px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:6px;overflow:hidden;border-collapse:collapse;">
-              ${sectionHeader('Actividad')}
-              ${row('Nombre', salida.nombreActividad)}
-              ${row('Disciplina', salida.disciplina)}
-              ${row('Ubicación', salida.ubicacionGeografica)}
+    ${sectionHeader('II. Resultado del Cierre')}
+    ${row('Estado', ESTADO_CIERRE_MAP[cierre.estadoCierre] ?? cierre.estadoCierre)}
+    ${row('Fecha de finalización real', formatDate(String(cierre.fechaFinalizacionReal)))}
+    ${abortada ? row('Motivo de abandono', MOTIVO_ABANDONO_MAP[cierre.motivoAbandono ?? ''] ?? opt(cierre.motivoAbandono)) : ''}
 
-              ${sectionHeader('Resultado del Cierre')}
-              ${row('Estado', formatEstadoCierre(cierre.estadoCierre))}
-              ${row('Fecha de finalización real', formatDate(String(cierre.fechaFinalizacionReal)))}
-              ${row('Incidentes', formatIncidente(cierre.ocurrioIncidente))}
-              ${hayIncidente && cierre.descripcionSuceso ? row('Descripción del suceso', cierre.descripcionSuceso) : ''}
+    ${sectionHeader('III. Evaluación de la Planificación')}
+    ${row('¿Hubo cambios significativos?', huboCambios ? 'Sí' : 'No')}
+    ${huboCambios ? listRow('Motivos de los cambios', motivosCambiosArr.map((m) => MOTIVO_CAMBIO_MAP[m] ?? m)) : ''}
+    ${huboCambios ? row('Otros motivos', opt(cierre.motivosCambiosOtro)) : ''}
 
-              ${sectionHeader('Aprendizajes')}
-              ${row('Lecciones aprendidas', cierre.leccionesAprendidas)}
-              ${cierre.recomendacionesFuturos ? row('Recomendaciones para futuros montañistas', cierre.recomendacionesFuturos) : ''}
-            </table>
-          </td>
-        </tr>
+    ${sectionHeader('IV. Gestión de Incidentes')}
+    ${row('¿Ocurrió un incidente?', INCIDENTE_MAP[cierre.ocurrioIncidente] ?? cierre.ocurrioIncidente)}
+    ${hayIncidente ? listRow('Tipos de incidente', tiposIncidenteArr.map((t) => TIPO_INCIDENTE_MAP[t] ?? t)) : ''}
+    ${hayIncidente && cierre.gravedadLesion ? row('Gravedad de la lesión', GRAVEDAD_MAP[cierre.gravedadLesion] ?? cierre.gravedadLesion) : ''}
+    ${hayIncidente ? row('Descripción del suceso', opt(cierre.descripcionSuceso)) : ''}
+    ${hayIncidente ? listRow('Causas raíz', causasRaizArr.map((c) => CAUSA_RAIZ_MAP[c] ?? c)) : ''}
+    ${hayIncidente ? row('Otra causa raíz', opt(cierre.causaRaizOtro)) : ''}
 
-        <tr>
-          <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid ${BORDER};">
-            <p style="margin:0;color:${GRAY};font-size:12px;line-height:1.6;">
-              Este correo es una notificación automática del sistema PAMIR.<br>
-              Si tienes dudas, comunícate con: <strong>Susana Madrid</strong> al correo <a href="mailto:madridnawrathsusana@gmail.com" style="color:${GREEN};">madridnawrathsusana@gmail.com</a>
-            </p>
-          </td>
-        </tr>
+    ${sectionHeader('V. Análisis Técnico y de Equipo')}
+    ${row('Desempeño del equipo', DESEMPENO_MAP[cierre.desempenoEquipo] ?? cierre.desempenoEquipo)}
+    ${cierre.desempenoEquipo === 'FALLO_EQUIPO' ? row('Detalle de la falla', opt(cierre.detalleFallaEquipo)) : ''}
+    ${row('Observaciones de la ruta', opt(cierre.observacionesRuta))}
+    ${pronosticoRow(cierre.precisionPronostico)}
 
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+    ${sectionHeader('VI. Lecciones Aprendidas')}
+    ${row('Lecciones aprendidas', opt(cierre.leccionesAprendidas))}
+    ${row('Recomendaciones para futuros montañistas', opt(cierre.recomendacionesFuturos))}
+    ${row('Sugerencias al club', opt(cierre.sugerenciasClub))}
+  `;
+
+  return emailShell(
+    'Cierre de salida de montaña',
+    intro,
+    tabla,
+    'Este correo es una notificación automática del sistema PAMIR.',
+  );
 }
 
 export function buildConfirmationEmail(data: IntegranteEmailData): string {
