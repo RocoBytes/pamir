@@ -109,6 +109,7 @@ model Cierre {
   ocurrioIncidente  String  @map("ocurrio_incidente")
   tiposIncidente    Json    @default("[]") @map("tipos_incidente")
   gravedadLesion    String? @map("gravedad_lesion")
+  patologiaMedica   String? @map("patologia_medica")
   descripcionSuceso String? @map("descripcion_suceso")
   causasRaiz        Json    @default("[]") @map("causas_raiz")
   causaRaizOtro     String? @map("causa_raiz_otro")

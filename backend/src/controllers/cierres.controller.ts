@@ -41,6 +41,7 @@ interface CreateCierreBody {
   ocurrioIncidente: string;
   tiposIncidente?: unknown[];
   gravedadLesion?: string;
+  patologiaMedica?: string;
   descripcionSuceso?: string;
   causasRaiz?: unknown[];
   causaRaizOtro?: string;
@@ -71,6 +72,7 @@ export async function createCierre(req: Request, res: Response): Promise<void> {
         ocurrioIncidente: data.ocurrioIncidente,
         tiposIncidente: asJson(data.tiposIncidente ?? []),
         gravedadLesion: data.gravedadLesion,
+        patologiaMedica: data.patologiaMedica || null,
         descripcionSuceso: data.descripcionSuceso,
         causasRaiz: asJson(data.causasRaiz ?? []),
         causaRaizOtro: data.causaRaizOtro,

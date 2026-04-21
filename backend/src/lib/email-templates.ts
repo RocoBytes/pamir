@@ -129,6 +129,7 @@ interface CierreEmailData {
   ocurrioIncidente: string;
   tiposIncidente?: unknown;
   gravedadLesion?: string | null;
+  patologiaMedica?: string | null;
   descripcionSuceso?: string | null;
   causasRaiz?: unknown;
   causaRaizOtro?: string | null;
@@ -432,6 +433,7 @@ export function buildCierreNotificationEmail(nombreCompleto: string, salida: Sal
     ${row('¿Ocurrió un incidente?', INCIDENTE_MAP[cierre.ocurrioIncidente] ?? cierre.ocurrioIncidente)}
     ${hayIncidente ? listRow('Tipos de incidente', tiposIncidenteArr.map((t) => TIPO_INCIDENTE_MAP[t] ?? t)) : ''}
     ${hayIncidente && cierre.gravedadLesion ? row('Gravedad de la lesión', GRAVEDAD_MAP[cierre.gravedadLesion] ?? cierre.gravedadLesion) : ''}
+    ${hayIncidente && tiposIncidenteArr.includes('MEDICO') && cierre.patologiaMedica ? row('Patología médica', cierre.patologiaMedica) : ''}
     ${hayIncidente ? row('Descripción del suceso', opt(cierre.descripcionSuceso)) : ''}
     ${hayIncidente ? listRow('Causas raíz', causasRaizArr.map((c) => CAUSA_RAIZ_MAP[c] ?? c)) : ''}
     ${hayIncidente ? row('Otra causa raíz', opt(cierre.causaRaizOtro)) : ''}

@@ -115,6 +115,7 @@ const cierreSchema = z
     }),
     tiposIncidente: z.array(z.enum(TIPOS_INCIDENTE)).optional(),
     gravedadLesion: z.enum(GRAVEDAD_LESION_OPTIONS).optional(),
+    patologiaMedica: z.string().max(100, 'Máximo 100 caracteres').optional(),
     descripcionSuceso: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
     causasRaiz: z.array(z.enum(CAUSAS_RAIZ)).optional(),
     causaRaizOtro: z.string().max(100, 'Máximo 100 caracteres').optional(),
@@ -463,6 +464,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
   const descripcionSucesoVal = watch('descripcionSuceso') ?? ''
   const incidenteActivo = !!ocurrioIncidenteVal && ocurrioIncidenteVal !== 'NADA'
   const showGravedadLesion = tiposIncidenteVal.includes('LESION')
+  const showPatologiaMedica = tiposIncidenteVal.includes('MEDICO')
   const showCausaRaizOtro = causasRaizVal.includes('OTRO')
 
   const desempenoEquipoVal = watch('desempenoEquipo')
@@ -544,6 +546,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
             ocurrioIncidente: values.ocurrioIncidente,
             tiposIncidente: values.tiposIncidente,
             gravedadLesion: values.gravedadLesion,
+            patologiaMedica: values.patologiaMedica,
             descripcionSuceso: values.descripcionSuceso,
             causasRaiz: values.causasRaiz,
             causaRaizOtro: values.causaRaizOtro,
@@ -936,6 +939,36 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                             />
                           )}
                         />
+                      </div>
+                    )}
+
+                    {/* Q8 sub: Patología médica (solo si MEDICO está seleccionado) */}
+                    {showPatologiaMedica && (
+                      <div className="flex flex-col gap-1.5 pl-7 border-l-2 border-[#264c99]/20">
+                        <label
+                          htmlFor="patologiaMedica"
+                          className="text-sm font-semibold text-[#264c99]"
+                        >
+                          Indique patología médica{' '}
+                          <span className="text-[#757874] font-normal">(opcional)</span>
+                        </label>
+                        <input
+                          id="patologiaMedica"
+                          type="text"
+                          maxLength={100}
+                          placeholder="Ej: MAM, agotamiento extremo, hipotermia..."
+                          {...register('patologiaMedica')}
+                          className={[
+                            'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800',
+                            'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
+                            errors.patologiaMedica ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
+                          ].join(' ')}
+                        />
+                        {errors.patologiaMedica && (
+                          <p className="text-xs text-[#A4636E]" role="alert">
+                            {errors.patologiaMedica.message}
+                          </p>
+                        )}
                       </div>
                     )}
 
