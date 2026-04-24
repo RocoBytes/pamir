@@ -311,11 +311,13 @@ function YesNoWithDetail({
 
 interface RegistroIntegranteProps {
   onBack: () => void
+  defaultEmail?: string
+  onComplete?: () => void
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function RegistroIntegrante({ onBack }: RegistroIntegranteProps) {
+export function RegistroIntegrante({ onBack, defaultEmail, onComplete }: RegistroIntegranteProps) {
   const [success, setSuccess] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
 
@@ -338,7 +340,7 @@ export function RegistroIntegrante({ onBack }: RegistroIntegranteProps) {
       comuna: '',
       region: '',
       telefonoCelular: '',
-      email: '',
+      email: defaultEmail ?? '',
       previsionSalud: '',
       nombreContacto: '',
       parentesco: '',
@@ -405,7 +407,11 @@ export function RegistroIntegrante({ onBack }: RegistroIntegranteProps) {
         derechoImagen: data.derechoImagen,
       })
       setSuccess(true)
-      setTimeout(onBack, 1800)
+      if (onComplete) {
+        setTimeout(onComplete, 1800)
+      } else {
+        setTimeout(onBack, 1800)
+      }
     } catch (err) {
       setApiError(err instanceof Error ? err.message : 'Error al registrar el integrante')
     }
@@ -419,7 +425,9 @@ export function RegistroIntegrante({ onBack }: RegistroIntegranteProps) {
             <Check size={32} className="text-[#264c99]" />
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Integrante registrado</h2>
-          <p className="text-[#757874] text-sm">Volviendo al formulario...</p>
+          <p className="text-[#757874] text-sm">
+            {onComplete ? '¡Todo listo! Accediendo al sistema...' : 'Volviendo al formulario...'}
+          </p>
         </div>
       </div>
     )
@@ -560,6 +568,9 @@ export function RegistroIntegrante({ onBack }: RegistroIntegranteProps) {
               required
               maxLength={100}
               error={errors.email?.message}
+              readOnly={!!defaultEmail}
+              title={defaultEmail ? 'Este email corresponde a tu cuenta de usuario' : undefined}
+              className={defaultEmail ? 'bg-slate-50 cursor-not-allowed' : undefined}
               {...register('email')}
             />
 

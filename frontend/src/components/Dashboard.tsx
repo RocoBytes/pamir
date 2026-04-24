@@ -35,6 +35,7 @@ const CIERRE_IMAGE =
 
 interface DashboardProps {
   user: User
+  locked?: boolean
   onNewSalida: () => void
   onNewCierre: () => void
   onNewIntegrante: () => void
@@ -95,7 +96,7 @@ function SalidaCard({ salida }: { salida: SalidaRecord }) {
   )
 }
 
-export function Dashboard({ user, onNewSalida, onNewCierre, onNewIntegrante, onLogout }: DashboardProps) {
+export function Dashboard({ user, locked = false, onNewSalida, onNewCierre, onNewIntegrante, onLogout }: DashboardProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -142,9 +143,57 @@ export function Dashboard({ user, onNewSalida, onNewCierre, onNewIntegrante, onL
       </header>
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6">
+        {/* Banner de alerta cuando no hay ficha de integrante */}
+        {locked && (
+          <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4">
+            <AlertCircle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-800">Completa tu registro</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Debes completar tu ficha de integrante para registrar salidas y cierres.
+              </p>
+            </div>
+            <button
+              onClick={onNewIntegrante}
+              className="shrink-0 text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-full transition-colors"
+            >
+              Completar
+            </button>
+          </div>
+        )}
+
         {/* Hero cards — formulario de salida + ficha de cierre */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {/* Card: Formulario de Salida */}
+          {locked ? (
+            <div
+              className="relative w-full rounded-3xl overflow-hidden"
+              aria-label="Formulario de salida bloqueado"
+              style={{ minHeight: '220px' }}
+            >
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(${HERO_IMAGE})` }}
+              />
+              <div className="absolute inset-0 bg-[#264c99] opacity-75" />
+              <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 py-10 text-white text-center gap-3">
+                <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/10 border border-white/20">
+                  <Lock size={20} className="text-white/70" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-1">
+                    Andino Club Pamir
+                  </p>
+                  <h2 className="text-xl font-bold leading-tight text-white/80">
+                    Formulario de Salida
+                  </h2>
+                </div>
+                <p className="text-xs text-white/50 max-w-[200px]">
+                  Completa tu ficha de integrante para desbloquear
+                </p>
+              </div>
+            </div>
+          ) : (
           <button
             onClick={onNewSalida}
             className="relative w-full rounded-3xl overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] focus-visible:ring-offset-2"
@@ -174,9 +223,10 @@ export function Dashboard({ user, onNewSalida, onNewCierre, onNewIntegrante, onL
               </span>
             </div>
           </button>
+          )}
 
           {/* Card: Ficha de Cierre */}
-          {salidas.length > 0 ? (
+          {!locked && salidas.length > 0 ? (
             <button
               onClick={onNewCierre}
               className="relative w-full rounded-3xl overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4a6fad] focus-visible:ring-offset-2"
@@ -251,8 +301,12 @@ export function Dashboard({ user, onNewSalida, onNewCierre, onNewIntegrante, onL
             <UserPlus size={20} className="text-[#264c99]" />
           </div>
           <div className="flex-1 text-left">
-            <p className="font-semibold text-slate-900 text-sm">Registrar Integrante</p>
-            <p className="text-xs text-[#757874]">Crear ficha sin necesidad de asociar una salida</p>
+            <p className="font-semibold text-slate-900 text-sm">
+              {locked ? 'Completar mi Ficha' : 'Registrar Integrante'}
+            </p>
+            <p className="text-xs text-[#757874]">
+              {locked ? 'Completa tu registro para usar la aplicación' : 'Crear ficha sin necesidad de asociar una salida'}
+            </p>
           </div>
           <ChevronRight size={16} className="text-[#757874]" />
         </button>

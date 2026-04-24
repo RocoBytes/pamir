@@ -100,6 +100,25 @@ export async function createIntegrante(req: Request, res: Response): Promise<voi
   }
 }
 
+// GET /api/integrantes/me
+export async function getMyIntegrante(req: Request, res: Response): Promise<void> {
+  try {
+    const email = req.user!.email;
+    const integrante = await prisma.integrante.findFirst({
+      where: { email },
+      select: { id: true, nombreCompleto: true, rut: true, email: true, createdAt: true },
+    });
+    if (!integrante) {
+      res.status(404).json({ error: 'Sin ficha de integrante' });
+      return;
+    }
+    res.json(integrante);
+  } catch (error) {
+    console.error('[getMyIntegrante]', error);
+    res.status(500).json({ error: 'Error al verificar integrante' });
+  }
+}
+
 // GET /api/integrantes/by-rut/:rut
 export async function getIntegranteByRut(req: Request, res: Response): Promise<void> {
   try {

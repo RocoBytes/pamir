@@ -196,6 +196,12 @@ export async function getIntegranteByRut(rut: string): Promise<IntegranteRecord 
   return handleResponse<IntegranteRecord>(res)
 }
 
+export async function fetchMyIntegrante(): Promise<IntegranteRecord | null> {
+  const res = await fetch(`${API_BASE}/integrantes/me`, { headers: authHeaders() })
+  if (res.status === 404) return null
+  return handleResponse<IntegranteRecord>(res)
+}
+
 // ─── Cierres ──────────────────────────────────────────────────────────────────
 
 export interface CreateCierrePayload {
