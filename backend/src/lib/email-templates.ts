@@ -30,22 +30,47 @@ interface IntegranteEmailData {
   derechoImagen: boolean;
 }
 
+const CONTACT_NAME = process.env.CONTACT_NAME ?? 'el equipo de Pamir';
+const CONTACT_EMAIL = process.env.CONTACT_EMAIL ?? '';
+
+function contactLine(): string {
+  if (CONTACT_EMAIL) {
+    return `comunícate con <strong>${escapeHtml(CONTACT_NAME)}</strong> al correo <a href="mailto:${CONTACT_EMAIL}" style="color:${GREEN};">${CONTACT_EMAIL}</a>`;
+  }
+  return `comunícate con <strong>${escapeHtml(CONTACT_NAME)}</strong>`;
+}
+
 const GREEN = '#264c99';
 const LIGHT_GREEN = '#e8eef7';
 const GRAY = '#757874';
 const BORDER = '#d1d5db';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 function row(label: string, value: string): string {
   return `
     <tr>
       <td style="padding:8px 12px;color:${GRAY};font-size:13px;width:45%;border-bottom:1px solid ${BORDER};">${label}</td>
-      <td style="padding:8px 12px;color:#1f2937;font-size:13px;border-bottom:1px solid ${BORDER};">${value}</td>
+      <td style="padding:8px 12px;color:#1f2937;font-size:13px;border-bottom:1px solid ${BORDER};">${escapeHtml(value)}</td>
     </tr>`;
 }
 
 function boolRow(label: string, value: boolean, detail?: string): string {
-  const display = value ? `Sí${detail ? ` — ${detail}` : ''}` : 'No';
-  return row(label, display);
+  const safeDetail = detail ? escapeHtml(detail) : undefined;
+  const display = value ? `Sí${safeDetail ? ` — ${safeDetail}` : ''}` : 'No';
+  // display ya está escapado — pasarlo sin doble-escape a row() requiere una variante raw
+  return `
+    <tr>
+      <td style="padding:8px 12px;color:${GRAY};font-size:13px;width:45%;border-bottom:1px solid ${BORDER};">${label}</td>
+      <td style="padding:8px 12px;color:#1f2937;font-size:13px;border-bottom:1px solid ${BORDER};">${display}</td>
+    </tr>`;
 }
 
 function sectionHeader(title: string): string {
@@ -282,7 +307,7 @@ function safeParticipantNames(v: unknown): string[] {
 
 function listRow(label: string, items: string[]): string {
   if (!items.length) return row(label, 'Ninguno');
-  const bullets = items.map((i) => `<li style="margin-bottom:2px;">${i}</li>`).join('');
+  const bullets = items.map((i) => `<li style="margin-bottom:2px;">${escapeHtml(i)}</li>`).join('');
   return `
     <tr>
       <td style="padding:8px 12px;color:${GRAY};font-size:13px;width:45%;border-bottom:1px solid ${BORDER};vertical-align:top;">${label}</td>
@@ -326,7 +351,7 @@ function emailShell(subtitle: string, introHtml: string, tableHtml: string, foot
           <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid ${BORDER};">
             <p style="margin:0;color:${GRAY};font-size:12px;line-height:1.6;">
               ${footerNote}<br>
-              Si tienes dudas, comunícate con: <strong>Susana Madrid</strong> al correo <a href="mailto:madridnawrathsusana@gmail.com" style="color:${GREEN};">madridnawrathsusana@gmail.com</a>
+              Si tienes dudas, ${contactLine()}
             </p>
           </td>
         </tr>
@@ -347,7 +372,7 @@ export function buildSalidaNotificationEmail(nombreCompleto: string, salida: Sal
   const riesgosArr = safeStringArray(salida.riesgosIdentificados);
 
   const intro = `<p style="margin:0;color:#1f2937;font-size:15px;">
-    Hola <strong>${nombreCompleto}</strong>, has sido registrado/a como integrante en la siguiente salida de montaña.
+    Hola <strong>${escapeHtml(nombreCompleto)}</strong>, has sido registrado/a como integrante en la siguiente salida de montaña.
     A continuación encontrarás el resumen completo de la actividad.
   </p>`;
 
@@ -406,7 +431,7 @@ export function buildCierreNotificationEmail(nombreCompleto: string, salida: Sal
   const causasRaizArr = safeStringArray(cierre.causasRaiz);
 
   const intro = `<p style="margin:0;color:#1f2937;font-size:15px;">
-    Hola <strong>${nombreCompleto}</strong>, la salida en la que participaste ha sido oficialmente cerrada.
+    Hola <strong>${escapeHtml(nombreCompleto)}</strong>, la salida en la que participaste ha sido oficialmente cerrada.
     A continuación encontrarás el resumen completo del cierre.
   </p>`;
 
@@ -479,7 +504,7 @@ export function buildConfirmationEmail(data: IntegranteEmailData): string {
         <tr>
           <td style="padding:24px 32px 16px;">
             <p style="margin:0;color:#1f2937;font-size:15px;">
-              Hola <strong>${data.nombreCompleto}</strong>, tu registro en el sistema Pamir se completó exitosamente.
+              Hola <strong>${escapeHtml(data.nombreCompleto)}</strong>, tu registro en el sistema Pamir se completó exitosamente.
               A continuación encontrarás el resumen de los datos ingresados.
             </p>
           </td>
@@ -546,11 +571,74 @@ export function buildConfirmationEmail(data: IntegranteEmailData): string {
           <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid ${BORDER};">
             <p style="margin:0;color:${GRAY};font-size:12px;line-height:1.6;">
               Este correo es un comprobante automático de tu registro en la aplicación de PAMIR.<br>
-              Si no realizaste este registro o tienes dudas, por favor, comunícate con: <strong>Susana Madrid</strong> al correo <a href="mailto:madridnawrathsusana@gmail.com" style="color:${GREEN};">madridnawrathsusana@gmail.com</a>
+              Si no realizaste este registro o tienes dudas, ${contactLine()}
             </p>
           </td>
         </tr>
 
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function buildVerificationEmail(name: string, verificationUrl: string): string {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f4fb;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4fb;padding:40px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <tr><td style="background:${GREEN};padding:28px 32px;">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Pamir — Confirma tu cuenta</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <p style="color:#374151;font-size:15px;margin:0 0 16px;">Hola <strong>${escapeHtml(name)}</strong>,</p>
+          <p style="color:#374151;font-size:15px;margin:0 0 24px;">Gracias por registrarte en Pamir. Para activar tu cuenta haz clic en el botón de abajo:</p>
+          <div style="text-align:center;margin:0 0 24px;">
+            <a href="${verificationUrl}" style="display:inline-block;background:${GREEN};color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 32px;border-radius:8px;">Verificar mi cuenta</a>
+          </div>
+          <p style="color:#6b7280;font-size:13px;margin:0 0 8px;">Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:</p>
+          <p style="color:#4a6fad;font-size:12px;word-break:break-all;margin:0 0 24px;">${verificationUrl}</p>
+          <p style="color:#9ca3af;font-size:12px;margin:0;">Este enlace es de un solo uso. Si no creaste esta cuenta, ignora este correo.</p>
+        </td></tr>
+        <tr><td style="background:${LIGHT_GREEN};padding:16px 32px;text-align:center;">
+          <p style="margin:0;color:${GRAY};font-size:12px;">Sistema de registro alpino — Pamir Andino Club</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function buildPasswordResetEmail(name: string, resetUrl: string): string {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f4fb;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4fb;padding:40px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <tr><td style="background:${GREEN};padding:28px 32px;">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Pamir — Restablece tu contraseña</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <p style="color:#374151;font-size:15px;margin:0 0 16px;">Hola <strong>${escapeHtml(name)}</strong>,</p>
+          <p style="color:#374151;font-size:15px;margin:0 0 24px;">Recibimos una solicitud para restablecer la contraseña de tu cuenta. Haz clic en el botón de abajo:</p>
+          <div style="text-align:center;margin:0 0 24px;">
+            <a href="${resetUrl}" style="display:inline-block;background:${GREEN};color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 32px;border-radius:8px;">Restablecer contraseña</a>
+          </div>
+          <p style="color:#6b7280;font-size:13px;margin:0 0 8px;">Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:</p>
+          <p style="color:#4a6fad;font-size:12px;word-break:break-all;margin:0 0 24px;">${resetUrl}</p>
+          <p style="color:#ef4444;font-size:13px;font-weight:600;margin:0 0 8px;">⚠ Este enlace expira en 1 hora.</p>
+          <p style="color:#9ca3af;font-size:12px;margin:0;">Si no solicitaste restablecer tu contraseña, ignora este correo. Tu contraseña no cambiará.</p>
+        </td></tr>
+        <tr><td style="background:${LIGHT_GREEN};padding:16px 32px;text-align:center;">
+          <p style="margin:0;color:${GRAY};font-size:12px;">Sistema de registro alpino — Pamir Andino Club</p>
+        </td></tr>
       </table>
     </td></tr>
   </table>

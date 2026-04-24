@@ -42,6 +42,31 @@ const step2Schema = z
     message: 'La fecha de retorno debe ser igual o posterior a la de inicio',
     path: ['fechaRetornoEstimada'],
   })
+  .superRefine((data, ctx) => {
+    if (data.avisosExternos.includes('CARABINEROS') && !data.retenCarabineros?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'El retén de Carabineros es obligatorio',
+        path: ['retenCarabineros'],
+      })
+    }
+    if (data.avisosExternos.includes('FAMILIAR_OTRO')) {
+      if (!data.nombreFamiliar?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'El nombre del familiar es obligatorio',
+          path: ['nombreFamiliar'],
+        })
+      }
+      if (!data.telefonoFamiliar?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'El teléfono del familiar es obligatorio',
+          path: ['telefonoFamiliar'],
+        })
+      }
+    }
+  })
 
 type Step2Data = z.infer<typeof step2Schema>
 
@@ -212,7 +237,7 @@ export function Step2Participants({ defaultValues, onSubmit, onBack }: Step2Prop
           <div className="flex flex-col gap-1.5 pl-1">
             <label htmlFor="retenCarabineros" className="text-sm font-semibold text-[#264c99]">
               Retén de Carabineros
-              <span className="text-[#757874] font-normal ml-1">(opcional)</span>
+              <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
             </label>
             <input
               id="retenCarabineros"
@@ -237,11 +262,14 @@ export function Step2Participants({ defaultValues, onSubmit, onBack }: Step2Prop
           <div className="flex flex-col gap-3 pl-1">
             <p className="text-sm font-semibold text-[#264c99]">
               Datos del familiar / contacto externo
-              <span className="text-[#757874] font-normal ml-1">(opcional)</span>
+              <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="nombreFamiliar" className="text-xs font-semibold text-[#264c99]">Nombre</label>
+                <label htmlFor="nombreFamiliar" className="text-xs font-semibold text-[#264c99]">
+                  Nombre
+                  <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+                </label>
                 <input
                   id="nombreFamiliar"
                   type="text"
@@ -259,7 +287,10 @@ export function Step2Participants({ defaultValues, onSubmit, onBack }: Step2Prop
                 )}
               </div>
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="telefonoFamiliar" className="text-xs font-semibold text-[#264c99]">Teléfono</label>
+                <label htmlFor="telefonoFamiliar" className="text-xs font-semibold text-[#264c99]">
+                  Teléfono
+                  <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+                </label>
                 <input
                   id="telefonoFamiliar"
                   type="tel"

@@ -1,6 +1,10 @@
 import { google } from 'googleapis';
 
-function createGmailClient() {
+let gmailClient: ReturnType<typeof google.gmail> | null = null;
+
+function getGmailClient(): ReturnType<typeof google.gmail> {
+  if (gmailClient) return gmailClient;
+
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
@@ -10,7 +14,8 @@ function createGmailClient() {
     refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
   });
 
-  return google.gmail({ version: 'v1', auth: oauth2Client });
+  gmailClient = google.gmail({ version: 'v1', auth: oauth2Client });
+  return gmailClient;
 }
 
 function buildRawEmail(to: string, subject: string, html: string): string {
@@ -27,7 +32,7 @@ function buildRawEmail(to: string, subject: string, html: string): string {
 }
 
 export async function sendEmail(to: string, subject: string, htmlBody: string): Promise<void> {
-  const gmail = createGmailClient();
+  const gmail = getGmailClient();
   const raw = buildRawEmail(to, subject, htmlBody);
   await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
 }

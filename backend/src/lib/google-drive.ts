@@ -18,13 +18,12 @@ class SizeGuard extends Transform {
     this.bytes += chunk.length;
 
     if (this.bytes > this.maxBytes) {
-      this.destroy(
-        Object.assign(new Error('FILE_TOO_LARGE'), { code: 'FILE_TOO_LARGE' }),
-      );
-    } else {
-      this.push(chunk);
-      callback();
+      callback(Object.assign(new Error('FILE_TOO_LARGE'), { code: 'FILE_TOO_LARGE' }));
+      return;
     }
+
+    this.push(chunk);
+    callback();
   }
 }
 

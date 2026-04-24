@@ -13,7 +13,6 @@ import { Step5Status, type Step5Data } from './Step5Status'
 
 interface WizardLayoutProps {
   user: User
-  isGuest: boolean
   onDone: () => void
   onCancel: () => void
   onCreateIntegrante: () => void
@@ -136,7 +135,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante }: WizardLay
 
   const handleFinalSubmit = useCallback(
     async (step5Data: Step5Data) => {
-      const finalData: Omit<SalidaFormData, never> = {
+      const finalData: Omit<SalidaFormData, 'gpxFile'> = {
         ...formData,
         pronosticoMeteorologico: step5Data.pronosticoMeteorologico,
         riesgosIdentificados: step5Data.riesgosIdentificados,

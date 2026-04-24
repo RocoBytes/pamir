@@ -1,113 +1,65 @@
 import { useState, useCallback, useEffect } from 'react'
-import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react'
 import type { User, AuthState } from '../types/salida'
 import { saveAuth, loadAuth, clearAuth } from '../lib/storage'
 import { setAuthToken } from '../lib/auth-token'
+import { loginWithCredentials, registerUser } from '../lib/api'
 
 interface UseAuthReturn extends AuthState {
-  loginAsGuest: () => void
+  loginWithCredentials: (email: string, password: string) => Promise<void>
+  register: (name: string, email: string, password: string) => Promise<void>
   logout: () => void
 }
 
+function buildInitialState(): { user: User | null; token: string | null } {
+  const saved = loadAuth()
+  if (!saved) return { user: null, token: null }
+  return {
+    user: saved.user,
+    token: saved.token,
+  }
+}
+
 export function useAuth(): UseAuthReturn {
-  const { user: clerkUser, isLoaded: userLoaded } = useUser()
-  const { getToken } = useClerkAuth()
-  const { signOut } = useClerk()
+  const [state, setState] = useState(buildInitialState)
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Guest mode state (persisted in localStorage).
-  // When a Clerk user is present it takes precedence and guest is ignored.
-  const [guestState, setGuestState] = useState<{ isGuest: boolean; user: User | null }>(() => {
-    const saved = loadAuth()
-    if (saved?.isGuest) return { isGuest: true, user: saved.user }
-    return { isGuest: false, user: null }
-  })
-
-  const [clerkToken, setClerkToken] = useState<string | null>(null)
-
-  // Fetch Clerk token whenever the authenticated user becomes available, and refresh every 50 min
   useEffect(() => {
-    if (!clerkUser) {
-      setClerkToken(null)
-      setAuthToken(null)
-      return
+    if (state.token) setAuthToken(state.token)
+  }, [state.token])
+
+  const login = useCallback(async (email: string, password: string): Promise<void> => {
+    setIsLoading(true)
+    try {
+      const { user, token } = await loginWithCredentials(email, password)
+      setAuthToken(token)
+      saveAuth({ user, token })
+      setState({ user, token })
+    } finally {
+      setIsLoading(false)
     }
-    const refresh = (): void => {
-      getToken()
-        .then((t) => {
-          setClerkToken(t)
-          setAuthToken(t)
-          if (t) {
-            saveAuth({
-              user: {
-                id: clerkUser.id,
-                email: clerkUser.emailAddresses[0]?.emailAddress ?? '',
-                name:
-                  clerkUser.fullName ??
-                  clerkUser.emailAddresses[0]?.emailAddress ??
-                  clerkUser.id,
-              },
-              token: t,
-              isGuest: false,
-            })
-          }
-        })
-        .catch(() => {
-          setClerkToken(null)
-          setAuthToken(null)
-        })
+  }, [])
+
+  const register = useCallback(async (name: string, email: string, password: string): Promise<void> => {
+    setIsLoading(true)
+    try {
+      await registerUser(name, email, password)
+    } finally {
+      setIsLoading(false)
     }
-    refresh()
-    const interval = setInterval(refresh, 50 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [clerkUser, getToken])
-
-  // Persist guest state to localStorage
-  useEffect(() => {
-    if (guestState.isGuest && guestState.user) {
-      saveAuth({ user: guestState.user, token: null, isGuest: true })
-    }
-  }, [guestState])
-
-  const isLoading = !userLoaded
-
-  // Clerk user takes precedence over guest state
-  const isGuest = clerkUser ? false : guestState.isGuest
-
-  // Token is only meaningful when there is a Clerk user
-  const token = clerkUser ? clerkToken : null
-
-  // Build a User object compatible with the rest of the app
-  const user: User | null = clerkUser
-    ? {
-        id: clerkUser.id,
-        email: clerkUser.emailAddresses[0]?.emailAddress ?? '',
-        name: clerkUser.fullName ?? clerkUser.emailAddresses[0]?.emailAddress ?? clerkUser.id,
-        picture: clerkUser.imageUrl,
-        avatar: clerkUser.imageUrl,
-      }
-    : guestState.user
-
-  const loginAsGuest = useCallback((): void => {
-    const guestUser: User = { id: 'guest', name: 'Invitado', email: '' }
-    setGuestState({ isGuest: true, user: guestUser })
   }, [])
 
   const logout = useCallback((): void => {
     clearAuth()
     setAuthToken(null)
-    setGuestState({ isGuest: false, user: null })
-    setClerkToken(null)
-    if (clerkUser) {
-      void signOut()
-    }
-  }, [clerkUser, signOut])
+    setState({ user: null, token: null })
+  }, [])
 
   return {
-    user,
-    token,
-    isGuest,
+    user: state.user,
+    token: state.token,
     isLoading,
-    loginAsGuest,
+    loginWithCredentials: login,
+    register,
     logout,
   }
 }

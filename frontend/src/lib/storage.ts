@@ -9,7 +9,7 @@ const KEYS = {
 
 // ─── Auth persistence ─────────────────────────────────────────────────────────
 
-export function saveAuth(state: Pick<AuthState, 'user' | 'token' | 'isGuest'>): void {
+export function saveAuth(state: Pick<AuthState, 'user' | 'token'>): void {
   try {
     localStorage.setItem(KEYS.AUTH, JSON.stringify(state))
   } catch {
@@ -17,11 +17,11 @@ export function saveAuth(state: Pick<AuthState, 'user' | 'token' | 'isGuest'>): 
   }
 }
 
-export function loadAuth(): Pick<AuthState, 'user' | 'token' | 'isGuest'> | null {
+export function loadAuth(): Pick<AuthState, 'user' | 'token'> | null {
   try {
     const raw = localStorage.getItem(KEYS.AUTH)
     if (!raw) return null
-    return JSON.parse(raw) as Pick<AuthState, 'user' | 'token' | 'isGuest'>
+    return JSON.parse(raw) as Pick<AuthState, 'user' | 'token'>
   } catch {
     return null
   }

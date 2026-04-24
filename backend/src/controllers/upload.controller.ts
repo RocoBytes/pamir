@@ -6,6 +6,15 @@ import { prisma } from '../lib/prisma.js';
 const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
 const ALLOWED_EXT = /\.gpx$/i;
 
+function sanitizeGpxFilename(raw: string): string {
+  const base = raw
+    .replace(/[/\\]/g, '')
+    .replace(/[^\w\s.\-]/g, '_')
+    .trim()
+    .slice(0, 200);
+  return base.toLowerCase().endsWith('.gpx') ? base : `${base}.gpx`;
+}
+
 /**
  * POST /api/salidas/:id/gpx
  *
@@ -31,11 +40,21 @@ export async function uploadGpx(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // ── 2. Verificar ownership (solo si el usuario está autenticado) ─────────────
-  if (req.user && salida.userId && salida.userId !== req.user.id) {
-    res.status(403).json({ error: 'No tienes permiso para modificar esta salida' });
-    return;
+  // ── 2. Verificar ownership — política deny-by-default ───────────────────────
+  // Si la salida tiene dueño registrado, sólo ese dueño puede subir el GPX.
+  const salidaOwner = salida.userId;
+  const requesterId = req.user?.id ?? null;
+  if (salidaOwner !== null) {
+    if (requesterId === null) {
+      res.status(401).json({ error: 'Debes iniciar sesión para subir archivos a esta salida' });
+      return;
+    }
+    if (requesterId !== salidaOwner) {
+      res.status(403).json({ error: 'No tienes permiso para modificar esta salida' });
+      return;
+    }
   }
+  // Salidas sin dueño (creadas como invitado) admiten upload sin autenticación
 
   // ── 3. Parsear multipart con busboy ─────────────────────────────────────────
   let responded = false;
@@ -56,10 +75,11 @@ export async function uploadGpx(req: Request, res: Response): Promise<void> {
   });
 
   busboy.on('file', async (_fieldname, fileStream, info) => {
-    const { filename, mimeType } = info;
+    const { filename: rawFilename, mimeType } = info;
+    const filename = sanitizeGpxFilename(rawFilename);
 
     // Validar extensión
-    if (!ALLOWED_EXT.test(filename)) {
+    if (!ALLOWED_EXT.test(rawFilename)) {
       fileStream.resume(); // drenar para evitar backpressure
       safeRespond(400, { error: 'Solo se permiten archivos .gpx' });
       return;

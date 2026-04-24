@@ -1,33 +1,62 @@
-import express, { Application } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
-import { clerkMiddleware } from '@clerk/express';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import apiRouter from './routes/index.js';
 
 const app: Application = express();
 
-// ─── Middleware ───────────────────────────────────────────────────────────────
+// ─── Security headers ─────────────────────────────────────────────────────────
+app.use(helmet());
+
+// ─── CORS — fail-secure ───────────────────────────────────────────────────────
+// Si FRONTEND_URL no está configurada sólo permite localhost (nunca origen abierto).
+// Para deploys de preview de Vercel, añade sus URLs en ADDITIONAL_ORIGINS (separadas por coma).
 const FRONTEND_URL = process.env.FRONTEND_URL;
+const DEV_ORIGINS = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+const ADDITIONAL_ORIGINS = process.env.ADDITIONAL_ORIGINS
+  ? process.env.ADDITIONAL_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+  : [];
 
 app.use(cors({
-  origin: FRONTEND_URL
-    ? (origin: string | undefined, callback: (err: Error | null, origin?: string | boolean) => void) => {
-        // Acepta el dominio de producción y cualquier preview de Vercel
-        const allowed =
-          !origin ||
-          origin === FRONTEND_URL ||
-          /^https:\/\/[a-z0-9-]+-[a-z0-9]+\.vercel\.app$/.test(origin);
-        callback(null, allowed ? origin : false);
-      }
-    : true,
+  origin: (origin: string | undefined, callback: (err: Error | null, origin?: string | boolean) => void) => {
+    const allowed =
+      !origin ||
+      (FRONTEND_URL
+        ? origin === FRONTEND_URL || ADDITIONAL_ORIGINS.includes(origin)
+        : DEV_ORIGINS.includes(origin));
+    callback(null, allowed ? origin : false);
+  },
   credentials: true,
 }));
-app.use(express.json());
 
-// Clerk: inicializa el contexto de autenticación para todas las rutas.
-// Debe estar ANTES del router para que getAuth(req) funcione en cualquier middleware.
-app.use(clerkMiddleware());
+app.use(express.json({ limit: '50kb' }));
+
+// ─── Rate limiting ────────────────────────────────────────────────────────────
+// Límite estricto para endpoints de autenticación (fuerza bruta / spam de emails)
+app.use('/api/auth', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes de autenticación, intenta más tarde' },
+}));
+
+// Límite general para el resto de la API
+app.use('/api', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes, intenta más tarde' },
+}));
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
 app.use('/api', apiRouter);
+
+// ─── 404 fallback ─────────────────────────────────────────────────────────────
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: 'Ruta no encontrada' });
+});
 
 export default app;

@@ -28,15 +28,50 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
-export async function loginWithGoogle(
-  idToken: string,
+export async function loginWithCredentials(
+  email: string,
+  password: string,
 ): Promise<{ user: User; token: string }> {
-  const res = await fetch(`${API_BASE}/auth/google`, {
+  const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken }),
+    body: JSON.stringify({ email, password }),
   })
   return handleResponse<{ user: User; token: string }>(res)
+}
+
+export async function registerUser(
+  name: string,
+  email: string,
+  password: string,
+): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, password }),
+  })
+  return handleResponse<{ message: string }>(res)
+}
+
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  return handleResponse<{ message: string }>(res)
+}
+
+export async function resetPassword(
+  token: string,
+  password: string,
+): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  })
+  return handleResponse<{ message: string }>(res)
 }
 
 // ─── Salidas ──────────────────────────────────────────────────────────────────
@@ -71,6 +106,14 @@ export async function updateSalida(
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
+  })
+  return handleResponse<SalidaRecord>(res)
+}
+
+export async function claimSalida(id: string): Promise<SalidaRecord> {
+  const res = await fetch(`${API_BASE}/salidas/${id}/claim`, {
+    method: 'PATCH',
+    headers: authHeaders(),
   })
   return handleResponse<SalidaRecord>(res)
 }

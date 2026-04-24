@@ -417,7 +417,6 @@ function GpxFilePicker({ value, onChange }: GpxFilePickerProps) {
 
 interface FichaCierreProps {
   user: User
-  isGuest: boolean
   onDone: () => void
   onCancel: () => void
 }
@@ -569,7 +568,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
         setIsSubmitting(false)
       }
     },
-    [salidas, onDone, gpxFile],
+    [onDone, gpxFile],
   )
 
   // ─── Success screen ─────────────────────────────────────────────────────────

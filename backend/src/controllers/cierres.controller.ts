@@ -57,7 +57,23 @@ interface CreateCierreBody {
 export async function createCierre(req: Request, res: Response): Promise<void> {
   try {
     const data = req.body as CreateCierreBody;
-    const userId = req.user?.id ?? null;
+    const userId = req.user!.id;
+
+    const salida = await prisma.salida.findUnique({ where: { id: data.salidaId } });
+    if (!salida) {
+      res.status(404).json({ error: 'Salida no encontrada' });
+      return;
+    }
+    if (salida.userId !== null && salida.userId !== userId) {
+      res.status(403).json({ error: 'No tienes permiso para cerrar esta salida' });
+      return;
+    }
+
+    const existingCierre = await prisma.cierre.findFirst({ where: { salidaId: data.salidaId } });
+    if (existingCierre) {
+      res.status(409).json({ error: 'Esta salida ya tiene un cierre registrado' });
+      return;
+    }
 
     const cierre = await prisma.cierre.create({
       data: {
@@ -100,13 +116,28 @@ export async function getCierres(req: Request, res: Response): Promise<void> {
   try {
     const userId = req.user?.id;
 
-    const cierres = await prisma.cierre.findMany({
-      where: userId ? { userId } : {},
-      orderBy: { createdAt: 'desc' },
-      include: { salida: { select: { nombreActividad: true } } },
-    });
+    // Sin autenticación no hay cierres que mostrar — evita exponer datos de toda la plataforma
+    if (!userId) {
+      res.json({ data: [], total: 0, page: 1, limit: 50 });
+      return;
+    }
 
-    res.json(cierres);
+    const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 50));
+    const skip = (page - 1) * limit;
+
+    const [cierres, total] = await prisma.$transaction([
+      prisma.cierre.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip,
+        include: { salida: { select: { nombreActividad: true } } },
+      }),
+      prisma.cierre.count({ where: { userId } }),
+    ]);
+
+    res.json({ data: cierres, total, page, limit });
   } catch (error) {
     console.error('[getCierres]', error);
     res.status(500).json({ error: 'No se pudieron obtener los cierres' });

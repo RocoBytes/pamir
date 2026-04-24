@@ -1,12 +1,18 @@
 import { Router } from 'express';
-import { authMiddleware, requireAuth } from '../middleware/auth.middleware.js';
-import { getMe } from '../controllers/auth.controller.js';
+import {
+  register,
+  verifyEmail,
+  login,
+  forgotPassword,
+  resetPassword,
+} from '../controllers/auth.controller.js';
 
 const router = Router();
 
-// Aplica verificación de sesión Clerk en todas las rutas de auth
-router.use(authMiddleware);
-
-router.get('/me', requireAuth, getMe);
+router.post('/register', register);
+router.get('/verify/:token', verifyEmail);
+router.post('/login', login);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 export default router;

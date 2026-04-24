@@ -35,7 +35,6 @@ const CIERRE_IMAGE =
 
 interface DashboardProps {
   user: User
-  isGuest: boolean
   onNewSalida: () => void
   onNewCierre: () => void
   onNewIntegrante: () => void
@@ -96,7 +95,7 @@ function SalidaCard({ salida }: { salida: SalidaRecord }) {
   )
 }
 
-export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegrante, onLogout }: DashboardProps) {
+export function Dashboard({ user, onNewSalida, onNewCierre, onNewIntegrante, onLogout }: DashboardProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -132,7 +131,7 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegr
 
           <div className="flex items-center gap-2">
             <span className="text-sm text-[#757874] hidden sm:inline">
-              {isGuest ? 'Invitado' : user.name}
+              {user.name}
             </span>
             <Button variant="ghost" size="sm" onClick={onLogout} aria-label="Cerrar sesion">
               <LogOut size={16} />
@@ -143,24 +142,6 @@ export function Dashboard({ user, isGuest, onNewSalida, onNewCierre, onNewIntegr
       </header>
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6">
-        {/* Guest banner */}
-        {isGuest && (
-          <div className="flex items-start gap-2 rounded-2xl bg-[#fef9f0] border border-[#A4636E]/20 p-4 mb-5 text-sm text-[#8b5a3a]">
-            <AlertCircle size={16} className="mt-0.5 shrink-0 text-[#A4636E]" />
-            <span>
-              Modo invitado: tus salidas se guardan solo en este dispositivo.
-              Para sincronizar en la nube,{' '}
-              <button
-                onClick={onLogout}
-                className="underline font-semibold hover:text-[#A4636E] transition-colors"
-              >
-                inicia sesion
-              </button>
-              .
-            </span>
-          </div>
-        )}
-
         {/* Hero cards — formulario de salida + ficha de cierre */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {/* Card: Formulario de Salida */}

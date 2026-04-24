@@ -6,6 +6,7 @@ import {
   getSalidaById,
   updateSalida,
   deleteSalida,
+  claimSalida,
 } from '../controllers/salidas.controller.js';
 
 const router = Router();
@@ -17,6 +18,7 @@ router.use(authMiddleware);
 router.post('/', createSalida);
 router.get('/', getSalidas);
 router.get('/:id', getSalidaById);
+router.patch('/:id/claim', claimSalida);
 router.put('/:id', updateSalida);
 router.delete('/:id', deleteSalida);
 

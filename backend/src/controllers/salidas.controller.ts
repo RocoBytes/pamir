@@ -72,6 +72,7 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
     const salida = await prisma.salida.create({
       data: {
         userId,
+        creatorEmail: req.user?.email ?? null,
         tipoSalida: data.tipoSalida,
         disciplina: data.disciplina,
         nombreActividad: data.nombreActividad,
@@ -132,9 +133,42 @@ export async function getSalidas(req: Request, res: Response): Promise<void> {
   }
 }
 
+export async function claimSalida(req: Request, res: Response): Promise<void> {
+  try {
+    const id = req.params['id'] as string;
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Debes iniciar sesión para reclamar una salida' });
+      return;
+    }
+
+    const salida = await prisma.salida.findUnique({ where: { id } });
+
+    if (!salida) {
+      res.status(404).json({ error: 'Salida no encontrada' });
+      return;
+    }
+    if (salida.userId !== null) {
+      res.status(409).json({ error: 'Esta salida ya tiene un propietario' });
+      return;
+    }
+
+    const updated = await prisma.salida.update({
+      where: { id },
+      data: { userId, creatorEmail: req.user!.email },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('[claimSalida]', error);
+    res.status(500).json({ error: 'No se pudo reclamar la salida' });
+  }
+}
+
 export async function getSalidaById(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string;
+    const requestUserId = req.user?.id ?? null;
 
     const salida = await prisma.salida.findUnique({
       where: { id },
@@ -143,6 +177,11 @@ export async function getSalidaById(req: Request, res: Response): Promise<void> 
 
     if (!salida) {
       res.status(404).json({ error: 'Salida no encontrada' });
+      return;
+    }
+
+    if (salida.userId !== null && salida.userId !== requestUserId) {
+      res.status(403).json({ error: 'No tienes permiso para ver esta salida' });
       return;
     }
 
@@ -156,11 +195,51 @@ export async function getSalidaById(req: Request, res: Response): Promise<void> 
 export async function updateSalida(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string;
-    const { status, ...rest } = req.body as { status?: SalidaStatus; [key: string]: unknown };
+    const requestUserId = req.user?.id ?? null;
 
+    const existing = await prisma.salida.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Salida no encontrada' });
+      return;
+    }
+    // Salidas con dueño sólo puede editarlas ese dueño
+    if (existing.userId !== null && existing.userId !== requestUserId) {
+      res.status(403).json({ error: 'No tienes permiso para modificar esta salida' });
+      return;
+    }
+
+    // Whitelist explícita — nunca exponer campos de sistema al cliente
+    const body = req.body as Partial<CreateSalidaBody>;
     const salida = await prisma.salida.update({
       where: { id },
-      data: { ...rest, status },
+      data: {
+        ...(body.tipoSalida !== undefined && { tipoSalida: body.tipoSalida }),
+        ...(body.disciplina !== undefined && { disciplina: body.disciplina }),
+        ...(body.nombreActividad !== undefined && { nombreActividad: body.nombreActividad }),
+        ...(body.ubicacionGeografica !== undefined && { ubicacionGeografica: body.ubicacionGeografica }),
+        ...(body.fechaInicio !== undefined && { fechaInicio: new Date(body.fechaInicio) }),
+        ...(body.fechaRetornoEstimada !== undefined && { fechaRetornoEstimada: new Date(body.fechaRetornoEstimada) }),
+        ...(body.horaRetornoEstimada !== undefined && { horaRetornoEstimada: body.horaRetornoEstimada }),
+        ...(body.horaAlerta !== undefined && { horaAlerta: body.horaAlerta }),
+        ...(body.avisosExternos !== undefined && { avisosExternos: asJson(body.avisosExternos) }),
+        ...(body.retenCarabineros !== undefined && { retenCarabineros: body.retenCarabineros || null }),
+        ...(body.nombreFamiliar !== undefined && { nombreFamiliar: body.nombreFamiliar || null }),
+        ...(body.telefonoFamiliar !== undefined && { telefonoFamiliar: body.telefonoFamiliar || null }),
+        ...(body.liderCordada !== undefined && { liderCordada: body.liderCordada }),
+        ...(body.participantes !== undefined && { participantes: asJson(body.participantes) }),
+        ...(body.coordinacionGrupal !== undefined && { coordinacionGrupal: body.coordinacionGrupal }),
+        ...(body.matrizRiesgos !== undefined && { matrizRiesgos: body.matrizRiesgos }),
+        ...(body.mediosComunicacion !== undefined && { mediosComunicacion: asJson(body.mediosComunicacion) }),
+        ...(body.idDispositivoFrecuencia !== undefined && { idDispositivoFrecuencia: body.idDispositivoFrecuencia }),
+        ...(body.equipoColectivo !== undefined && { equipoColectivo: asJson(body.equipoColectivo) }),
+        ...(body.equipoColectivoOtro !== undefined && { equipoColectivoOtro: body.equipoColectivoOtro }),
+        ...(body.pronosticoMeteorologico !== undefined && { pronosticoMeteorologico: body.pronosticoMeteorologico }),
+        ...(body.riesgosIdentificados !== undefined && { riesgosIdentificados: asJson(body.riesgosIdentificados) }),
+        ...(body.riesgosOtro !== undefined && { riesgosOtro: body.riesgosOtro }),
+        ...(body.planEvacuacion !== undefined && { planEvacuacion: body.planEvacuacion }),
+        ...(body.status !== undefined && { status: body.status }),
+        ...(body.incidentReport !== undefined && { incidentReport: body.incidentReport }),
+      },
     });
 
     res.json(salida);
@@ -173,9 +252,19 @@ export async function updateSalida(req: Request, res: Response): Promise<void> {
 export async function deleteSalida(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string;
+    const requestUserId = req.user?.id ?? null;
+
+    const existing = await prisma.salida.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Salida no encontrada' });
+      return;
+    }
+    if (existing.userId !== null && existing.userId !== requestUserId) {
+      res.status(403).json({ error: 'No tienes permiso para eliminar esta salida' });
+      return;
+    }
 
     await prisma.salida.delete({ where: { id } });
-
     res.status(204).send();
   } catch (error) {
     console.error('[deleteSalida]', error);

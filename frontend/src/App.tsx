@@ -8,11 +8,18 @@ import { FichaCierre } from './components/FichaCierre'
 
 type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone'
 
+function getQueryParam(name: string): string | null {
+  return new URLSearchParams(window.location.search).get(name)
+}
+
 export default function App() {
-  const { user, token, isGuest, isLoading, loginAsGuest, logout } = useAuth()
+  const { user, token, isLoading, loginWithCredentials, register, logout } = useAuth()
   const [route, setRoute] = useState<Route>('dashboard')
 
-  const isAuthenticated = !!(user && (token || isGuest))
+  const isAuthenticated = !!(user && token)
+
+  const verifiedParam = getQueryParam('verified')
+  const resetToken = getQueryParam('reset')
 
   if (isLoading) {
     return (
@@ -27,19 +34,22 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <AuthPage onLoginAsGuest={loginAsGuest} isLoading={isLoading} />
+      <AuthPage
+        onLogin={loginWithCredentials}
+        onRegister={register}
+        isLoading={isLoading}
+        verifiedStatus={verifiedParam === '1' ? 'success' : verifiedParam === 'error' ? 'error' : undefined}
+        resetToken={resetToken ?? undefined}
+      />
     )
   }
 
-  // Keep WizardLayout mounted while creating an integrante so React Hook Form
-  // state (including mid-step participantes) is preserved in memory.
   if ((route === 'nueva-salida' || route === 'nuevo-integrante') && user) {
     return (
       <>
         <div className={route === 'nueva-salida' ? undefined : 'hidden'}>
           <WizardLayout
             user={user}
-            isGuest={isGuest}
             onDone={() => setRoute('dashboard')}
             onCancel={() => setRoute('dashboard')}
             onCreateIntegrante={() => setRoute('nuevo-integrante')}
@@ -62,7 +72,6 @@ export default function App() {
     return (
       <FichaCierre
         user={user}
-        isGuest={isGuest}
         onDone={() => setRoute('dashboard')}
         onCancel={() => setRoute('dashboard')}
       />
@@ -72,7 +81,6 @@ export default function App() {
   return (
     <Dashboard
       user={user!}
-      isGuest={isGuest}
       onNewSalida={() => setRoute('nueva-salida')}
       onNewCierre={() => setRoute('nueva-cierre')}
       onNewIntegrante={() => setRoute('nuevo-integrante-standalone')}
