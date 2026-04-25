@@ -170,6 +170,8 @@ export interface CreateIntegrantePayload {
   cirugiasLesionesDetalle?: string
   fuma: boolean
   usaLentes: boolean
+  membresiaClub: string
+  nombreClub?: string
   declaracionSalud: boolean
   aceptacionRiesgo: boolean
   consentimientoDatos: boolean
