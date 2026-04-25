@@ -13,6 +13,7 @@ import { Step5Status, type Step5Data } from './Step5Status'
 
 interface WizardLayoutProps {
   user: User
+  isAdmin: boolean
   onDone: () => void
   onCancel: () => void
   onCreateIntegrante: () => void
@@ -70,7 +71,7 @@ function hasDraft(): boolean {
   return !!(draft && Object.keys(draft).length > 0)
 }
 
-export function WizardLayout({ onDone, onCancel, onCreateIntegrante }: WizardLayoutProps) {
+export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: WizardLayoutProps) {
   const [currentStep, setCurrentStep] = useState<StepId>(1)
   const [formData, setFormData] = useState<Omit<SalidaFormData, 'gpxFile'>>(EMPTY_FORM)
   const [gpxFile, setGpxFile] = useState<File | null>(null)
@@ -320,6 +321,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante }: WizardLay
             }}
             onSubmit={(data) => handleStepComplete(3, data)}
             onBack={goBack}
+            isAdmin={isAdmin}
             onCreateIntegrante={onCreateIntegrante}
           />
         )}

@@ -27,7 +27,6 @@ export type MedioComunicacion =
 
 export type EquipoColectivoSeguridad =
   | 'CUERDAS'
-  | 'BOTIQUIN_AVANZADO'
   | 'BOTIQUIN_GRUPAL'
   | 'GPS'
   | 'MAPA_BRUJULA'
@@ -227,7 +226,6 @@ export const RIESGO_IDENTIFICADO_LABELS: Record<RiesgoIdentificado, string> = {
 
 export const EQUIPO_COLECTIVO_LABELS: Record<EquipoColectivoSeguridad, string> = {
   CUERDAS: 'Cuerdas',
-  BOTIQUIN_AVANZADO: 'Botiquín Avanzado',
   BOTIQUIN_GRUPAL: 'Botiquín Grupal',
   GPS: 'GPS',
   MAPA_BRUJULA: 'Mapa y Brújula',

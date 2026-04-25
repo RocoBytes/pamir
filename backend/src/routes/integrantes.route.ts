@@ -12,7 +12,7 @@ router.get('/me', requireAuth, getMyIntegrante);
 // Buscar por RUT exacto (para el picker del wizard)
 router.get('/by-rut/:rut', getIntegranteByRut);
 
-// Crear integrante (formulario de registro)
-router.post('/', createIntegrante);
+// Crear integrante (formulario de registro) — requiere autenticación
+router.post('/', requireAuth, createIntegrante);
 
 export default router;

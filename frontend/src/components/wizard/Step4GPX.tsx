@@ -21,7 +21,6 @@ const MEDIOS = [
 
 const EQUIPOS = [
   'CUERDAS',
-  'BOTIQUIN_AVANZADO',
   'BOTIQUIN_GRUPAL',
   'GPS',
   'MAPA_BRUJULA',

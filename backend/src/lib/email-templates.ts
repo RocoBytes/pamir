@@ -202,7 +202,6 @@ const MEDIO_COM_MAP: Record<string, string> = {
 
 const EQUIPO_MAP: Record<string, string> = {
   CUERDAS: 'Cuerdas',
-  BOTIQUIN_AVANZADO: 'Botiquín Avanzado',
   BOTIQUIN_GRUPAL: 'Botiquín Grupal',
   GPS: 'GPS',
   MAPA_BRUJULA: 'Mapa y Brújula',

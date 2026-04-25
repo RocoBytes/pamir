@@ -36,6 +36,7 @@ const CIERRE_IMAGE =
 interface DashboardProps {
   user: User
   locked?: boolean
+  isAdmin?: boolean
   onNewSalida: () => void
   onNewCierre: () => void
   onNewIntegrante: () => void
@@ -96,7 +97,7 @@ function SalidaCard({ salida }: { salida: SalidaRecord }) {
   )
 }
 
-export function Dashboard({ user, locked = false, onNewSalida, onNewCierre, onNewIntegrante, onLogout }: DashboardProps) {
+export function Dashboard({ user, locked = false, isAdmin = false, onNewSalida, onNewCierre, onNewIntegrante, onLogout }: DashboardProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -291,25 +292,27 @@ export function Dashboard({ user, locked = false, onNewSalida, onNewCierre, onNe
           )}
         </div>
 
-        {/* Quick action: Registrar Integrante */}
-        <button
-          onClick={onNewIntegrante}
-          className="w-full flex items-center gap-4 bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm hover:shadow-md transition-shadow duration-200 p-4 mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] focus-visible:ring-offset-2"
-          aria-label="Registrar nuevo integrante"
-        >
-          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#e8eef7] flex items-center justify-center">
-            <UserPlus size={20} className="text-[#264c99]" />
-          </div>
-          <div className="flex-1 text-left">
-            <p className="font-semibold text-slate-900 text-sm">
-              {locked ? 'Completar mi Ficha' : 'Registrar Integrante'}
-            </p>
-            <p className="text-xs text-[#757874]">
-              {locked ? 'Completa tu registro para usar la aplicación' : 'Crear ficha sin necesidad de asociar una salida'}
-            </p>
-          </div>
-          <ChevronRight size={16} className="text-[#757874]" />
-        </button>
+        {/* Quick action: Completar ficha (todos) o Registrar Integrante (solo admin) */}
+        {(locked || isAdmin) && (
+          <button
+            onClick={onNewIntegrante}
+            className="w-full flex items-center gap-4 bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm hover:shadow-md transition-shadow duration-200 p-4 mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] focus-visible:ring-offset-2"
+            aria-label={locked ? 'Completar mi ficha de integrante' : 'Registrar nuevo integrante'}
+          >
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#e8eef7] flex items-center justify-center">
+              <UserPlus size={20} className="text-[#264c99]" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-semibold text-slate-900 text-sm">
+                {locked ? 'Completar mi Ficha' : 'Registrar Integrante'}
+              </p>
+              <p className="text-xs text-[#757874]">
+                {locked ? 'Completa tu registro para usar la aplicación' : 'Crear ficha sin necesidad de asociar una salida'}
+              </p>
+            </div>
+            <ChevronRight size={16} className="text-[#757874]" />
+          </button>
+        )}
 
         {/* Page header */}
         <div className="mb-5">

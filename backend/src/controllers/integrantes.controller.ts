@@ -29,16 +29,25 @@ interface CreateIntegranteBody {
   cirugiasLesionesDetalle?: string;
   fuma: boolean;
   usaLentes: boolean;
+  membresiaClub: string;
+  nombreClub?: string;
   declaracionSalud: boolean;
   aceptacionRiesgo: boolean;
   consentimientoDatos: boolean;
   derechoImagen: boolean;
 }
 
+const ADMIN_EMAIL = 'seguridad.acp.cl@gmail.com';
+
 // POST /api/integrantes
 export async function createIntegrante(req: Request, res: Response): Promise<void> {
   try {
     const data = req.body as CreateIntegranteBody;
+
+    if (req.user!.email !== ADMIN_EMAIL && req.user!.email !== data.email) {
+      res.status(403).json({ error: 'No autorizado para crear integrantes para otros usuarios' });
+      return;
+    }
 
     const existing = await prisma.integrante.findUnique({ where: { rut: data.rut } });
     if (existing) {
@@ -73,6 +82,8 @@ export async function createIntegrante(req: Request, res: Response): Promise<voi
         cirugiasLesionesDetalle: data.cirugiasLesionesDetalle ?? null,
         fuma: data.fuma,
         usaLentes: data.usaLentes,
+        membresiaClub: data.membresiaClub,
+        nombreClub: data.nombreClub ?? null,
         declaracionSalud: data.declaracionSalud,
         aceptacionRiesgo: data.aceptacionRiesgo,
         consentimientoDatos: data.consentimientoDatos,

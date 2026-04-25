@@ -119,11 +119,12 @@ interface RutLookupResultProps {
   integrante: IntegranteRecord | null | undefined
   loading: boolean
   actionLabel: string
+  isAdmin: boolean
   onSelect: (integrante: IntegranteRecord) => void
   onCreateIntegrante: () => void
 }
 
-function RutLookupResult({ rut, integrante, loading, actionLabel, onSelect, onCreateIntegrante }: RutLookupResultProps) {
+function RutLookupResult({ rut, integrante, loading, actionLabel, isAdmin, onSelect, onCreateIntegrante }: RutLookupResultProps) {
   if (loading) {
     return (
       <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-[#4a6fad]/20 bg-[#f0f4fb] text-sm text-[#757874]">
@@ -155,14 +156,16 @@ function RutLookupResult({ rut, integrante, loading, actionLabel, onSelect, onCr
           Integrante no encontrado:{' '}
           <span className="font-mono font-medium text-slate-700">{rut}</span>
         </p>
-        <button
-          type="button"
-          onClick={onCreateIntegrante}
-          className="flex items-center gap-1.5 text-sm text-[#264c99] hover:text-[#1e3c7a] font-medium self-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] rounded transition-colors"
-        >
-          <UserPlus size={15} />
-          Crear integrante
-        </button>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={onCreateIntegrante}
+            className="flex items-center gap-1.5 text-sm text-[#264c99] hover:text-[#1e3c7a] font-medium self-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] rounded transition-colors"
+          >
+            <UserPlus size={15} />
+            Crear integrante
+          </button>
+        )}
       </div>
     )
   }
@@ -273,11 +276,12 @@ function LiderPicker({ value, participantes, onChange, error }: LiderPickerProps
 
 interface ParticipantePickerProps {
   selected: { rut: string; nombre: string }[]
+  isAdmin: boolean
   onAdd: (p: { rut: string; nombre: string }) => void
   onCreateIntegrante: () => void
 }
 
-function ParticipantePicker({ selected, onAdd, onCreateIntegrante }: ParticipantePickerProps) {
+function ParticipantePicker({ selected, isAdmin, onAdd, onCreateIntegrante }: ParticipantePickerProps) {
   const [rut, setRut] = useState('')
   const { integrante, loading, isComplete } = useRutLookup(rut)
   const alreadyAdded = integrante ? selected.some((p) => p.rut === integrante.rut) : false
@@ -306,6 +310,7 @@ function ParticipantePicker({ selected, onAdd, onCreateIntegrante }: Participant
           integrante={integrante}
           loading={loading}
           actionLabel="Agregar"
+          isAdmin={isAdmin}
           onSelect={handleAdd}
           onCreateIntegrante={() => {
             setRut('')
@@ -327,6 +332,7 @@ function ParticipantePicker({ selected, onAdd, onCreateIntegrante }: Participant
 
 interface Step3HumanTeamProps {
   defaultValues: Step3Data
+  isAdmin: boolean
   onSubmit: (data: Step3Data) => void
   onBack: () => void
   onCreateIntegrante: () => void
@@ -334,7 +340,7 @@ interface Step3HumanTeamProps {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegrante }: Step3HumanTeamProps) {
+export function Step3HumanTeam({ defaultValues, isAdmin, onSubmit, onBack, onCreateIntegrante }: Step3HumanTeamProps) {
   const {
     control,
     handleSubmit,
@@ -401,6 +407,7 @@ export function Step3HumanTeam({ defaultValues, onSubmit, onBack, onCreateIntegr
         {/* Searchable picker */}
         <ParticipantePicker
           selected={participantes}
+          isAdmin={isAdmin}
           onAdd={addParticipante}
           onCreateIntegrante={onCreateIntegrante}
         />

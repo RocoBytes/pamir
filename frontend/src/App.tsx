@@ -9,6 +9,8 @@ import { fetchMyIntegrante } from './lib/api'
 
 type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone'
 
+const ADMIN_EMAIL = 'seguridad.acp.cl@gmail.com'
+
 function getQueryParam(name: string): string | null {
   return new URLSearchParams(window.location.search).get(name)
 }
@@ -29,6 +31,7 @@ export default function App() {
   const [hasIntegrante, setHasIntegrante] = useState(false)
 
   const isAuthenticated = !!(user && token)
+  const isAdmin = user?.email === ADMIN_EMAIL
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -66,6 +69,7 @@ export default function App() {
         <div className={route === 'nueva-salida' ? undefined : 'hidden'}>
           <WizardLayout
             user={user}
+            isAdmin={isAdmin}
             onDone={() => setRoute('dashboard')}
             onCancel={() => setRoute('dashboard')}
             onCreateIntegrante={() => setRoute('nuevo-integrante')}
@@ -78,7 +82,7 @@ export default function App() {
     )
   }
 
-  if (route === 'nuevo-integrante-standalone') {
+  if (route === 'nuevo-integrante-standalone' && (!hasIntegrante || isAdmin)) {
     return (
       <RegistroIntegrante
         onBack={() => setRoute('dashboard')}
@@ -102,6 +106,7 @@ export default function App() {
     <Dashboard
       user={user!}
       locked={!hasIntegrante}
+      isAdmin={isAdmin}
       onNewSalida={() => setRoute('nueva-salida')}
       onNewCierre={() => setRoute('nueva-cierre')}
       onNewIntegrante={() => setRoute('nuevo-integrante-standalone')}

@@ -101,6 +101,13 @@ const schema = z
     fuma: z.boolean({ error: 'Selecciona una opción' }),
     usaLentes: z.boolean({ error: 'Selecciona una opción' }),
 
+    // Membresía
+    membresiaClub: z.enum(
+      ['SOCIO_ANDINO_PAMIR', 'SOCIO_OTRO_CLUB', 'POSTULANTE_CLUB', 'NO_PERTENECE'],
+      { error: 'Selecciona una opción' }
+    ),
+    nombreClub: z.string().max(50, 'Máximo 50 caracteres').optional(),
+
     // Sección IV
     declaracionSalud: z.literal(true, { error: 'Debes aceptar esta declaración para continuar' }),
     aceptacionRiesgo: z.literal(true, { error: 'Debes aceptar esta cláusula para continuar' }),
@@ -119,6 +126,12 @@ const schema = z
     }
     if (data.cirugiasLesionesTiene && !data.cirugiasLesionesDetalle?.trim()) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Describe la cirugía o lesión', path: ['cirugiasLesionesDetalle'] })
+    }
+    if (
+      (data.membresiaClub === 'SOCIO_OTRO_CLUB' || data.membresiaClub === 'POSTULANTE_CLUB') &&
+      !data.nombreClub?.trim()
+    ) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Indica el nombre del club', path: ['nombreClub'] })
     }
   })
 
@@ -356,6 +369,8 @@ export function RegistroIntegrante({ onBack, defaultEmail, onComplete }: Registr
       cirugiasLesionesDetalle: '',
       fuma: undefined as unknown as boolean,
       usaLentes: undefined as unknown as boolean,
+      membresiaClub: undefined as unknown as 'SOCIO_ANDINO_PAMIR' | 'SOCIO_OTRO_CLUB' | 'POSTULANTE_CLUB' | 'NO_PERTENECE',
+      nombreClub: '',
       declaracionSalud: undefined as unknown as true,
       aceptacionRiesgo: undefined as unknown as true,
       consentimientoDatos: undefined as unknown as true,
@@ -363,6 +378,8 @@ export function RegistroIntegrante({ onBack, defaultEmail, onComplete }: Registr
     },
   })
 
+  const membresiaClub = watch('membresiaClub')
+  const nombreClub = watch('nombreClub') ?? ''
   const alergiasTiene = watch('alergiasTiene')
   const alergiasDetalle = watch('alergiasDetalle') ?? ''
   const enfermedadesCronicasTiene = watch('enfermedadesCronicasTiene')
@@ -401,6 +418,8 @@ export function RegistroIntegrante({ onBack, defaultEmail, onComplete }: Registr
         cirugiasLesionesDetalle: data.cirugiasLesionesDetalle,
         fuma: data.fuma,
         usaLentes: data.usaLentes,
+        membresiaClub: data.membresiaClub,
+        nombreClub: data.nombreClub,
         declaracionSalud: data.declaracionSalud,
         aceptacionRiesgo: data.aceptacionRiesgo,
         consentimientoDatos: data.consentimientoDatos,
@@ -582,6 +601,50 @@ export function RegistroIntegrante({ onBack, defaultEmail, onComplete }: Registr
               error={errors.previsionSalud?.message}
               {...register('previsionSalud')}
             />
+
+            <Controller
+              control={control}
+              name="membresiaClub"
+              render={({ field }) => (
+                <SingleSelectChip
+                  label="Membresía en Club de Montaña"
+                  options={[
+                    { value: 'SOCIO_ANDINO_PAMIR', label: 'Socio Andino Club Pamir' },
+                    { value: 'SOCIO_OTRO_CLUB', label: 'Socio otro Club' },
+                    { value: 'POSTULANTE_CLUB', label: 'Postulante a un club' },
+                    { value: 'NO_PERTENECE', label: 'No pertenece a ningún club' },
+                  ]}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  error={errors.membresiaClub?.message}
+                  required
+                />
+              )}
+            />
+
+            {(membresiaClub === 'SOCIO_OTRO_CLUB' || membresiaClub === 'POSTULANTE_CLUB') && (
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-semibold text-[#264c99]">
+                  Nombre del Club
+                  <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Club Andino de Chile"
+                  maxLength={50}
+                  value={nombreClub}
+                  onChange={(e) => setValue('nombreClub', e.target.value, { shouldValidate: true })}
+                  className={[
+                    'w-full rounded-xl border bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-[#757874]/50',
+                    'transition-colors duration-150',
+                    'focus:outline-none focus:ring-2 focus:ring-[#264c99] focus:border-[#264c99]',
+                    errors.nombreClub ? 'border-[#A4636E]' : 'border-[#4a6fad]/40',
+                  ].join(' ')}
+                />
+                <p className="text-xs text-[#757874] self-end">{nombreClub.length}/50</p>
+                <FieldError message={errors.nombreClub?.message} />
+              </div>
+            )}
           </div>
 
           {/* ── Sección II ─────────────────────────────────────────────── */}

@@ -175,6 +175,10 @@ model Integrante {
   fuma                        Boolean
   usaLentes                   Boolean  @map("usa_lentes")
 
+  // Membresía
+  membresiaClub String  @map("membresia_club")
+  nombreClub    String? @map("nombre_club")
+
   // Sección IV – Cláusulas legales
   declaracionSalud    Boolean @map("declaracion_salud")
   aceptacionRiesgo    Boolean @map("aceptacion_riesgo")
