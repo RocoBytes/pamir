@@ -6,6 +6,9 @@ import apiRouter from './routes/index.js';
 
 const app: Application = express();
 
+// Confiar en el proxy de Render (necesario para express-rate-limit en producción)
+app.set('trust proxy', 1);
+
 // ─── Security headers ─────────────────────────────────────────────────────────
 app.use(helmet());
 
