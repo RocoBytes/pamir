@@ -54,7 +54,7 @@ const PREVISIONES = [
   'Sistema de Salud del Ejército',
 ]
 
-const GRUPOS_SANGUINEOS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+const GRUPOS_SANGUINEOS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Lo Desconozco']
 
 const GENEROS = [
   { value: 'FEMENINO', label: 'Femenino' },
