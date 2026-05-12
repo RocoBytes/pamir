@@ -40,6 +40,7 @@ const STEPS: StepMeta[] = [
 const EMPTY_FORM: Omit<SalidaFormData, 'gpxFile'> = {
   tipoSalida: 'NO_OFICIAL',
   disciplina: 'TREKKING',
+  temporada: 'estival',
   nombreActividad: '',
   ubicacionGeografica: '',
   fechaInicio: '',
@@ -289,6 +290,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
             defaultValues={{
               tipoSalida: formData.tipoSalida,
               disciplina: formData.disciplina,
+              temporada: formData.temporada,
               nombreActividad: formData.nombreActividad,
               ubicacionGeografica: formData.ubicacionGeografica,
             }}
