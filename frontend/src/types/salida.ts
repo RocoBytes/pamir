@@ -59,6 +59,8 @@ export type Disciplina =
   | 'ESQUI_MONTANA'
   | 'TRAIL_SKY_RUNNING'
 
+export type Temporada = 'estival' | 'invernal'
+
 export type SalidaStatus =
   | 'BORRADOR'
   | 'CONFIRMADA'
@@ -71,6 +73,7 @@ export interface SalidaFormData {
   // Step 1 – Clasificación de la Salida
   tipoSalida: TipoSalida
   disciplina: Disciplina
+  temporada: Temporada
   nombreActividad: string
   ubicacionGeografica: string
 
@@ -113,6 +116,7 @@ export interface SalidaRecord {
   id: string
   tipoSalida: TipoSalida
   disciplina: Disciplina
+  temporada?: Temporada
   nombreActividad: string
   ubicacionGeografica: string
   fechaInicio: string
@@ -203,6 +207,11 @@ export const DISCIPLINA_LABELS: Record<Disciplina, string> = {
   ESCALADA_HIELO: 'Escalada en Hielo',
   ESQUI_MONTANA: 'Esquí de Montaña',
   TRAIL_SKY_RUNNING: 'Trail / Sky Running',
+}
+
+export const TEMPORADA_LABELS: Record<Temporada, string> = {
+  estival: 'Estival',
+  invernal: 'Invernal',
 }
 
 export const MEDIO_COMUNICACION_LABELS: Record<MedioComunicacion, string> = {

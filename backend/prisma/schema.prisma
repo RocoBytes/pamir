@@ -48,6 +48,7 @@ model Salida {
   // Paso 1 – Clasificación de la salida
   tipoSalida          String @map("tipo_salida")
   disciplina          String
+  temporada           String?
   nombreActividad     String @map("nombre_actividad")
   ubicacionGeografica String @map("ubicacion_geografica")
 

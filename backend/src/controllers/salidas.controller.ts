@@ -31,6 +31,7 @@ interface CreateSalidaBody {
   // Paso 1
   tipoSalida: string;
   disciplina: string;
+  temporada: string;
   nombreActividad: string;
   ubicacionGeografica: string;
   // Paso 2
@@ -75,6 +76,7 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
         creatorEmail: req.user?.email ?? null,
         tipoSalida: data.tipoSalida,
         disciplina: data.disciplina,
+        temporada: data.temporada,
         nombreActividad: data.nombreActividad,
         ubicacionGeografica: data.ubicacionGeografica,
         fechaInicio: new Date(data.fechaInicio),
@@ -215,6 +217,7 @@ export async function updateSalida(req: Request, res: Response): Promise<void> {
       data: {
         ...(body.tipoSalida !== undefined && { tipoSalida: body.tipoSalida }),
         ...(body.disciplina !== undefined && { disciplina: body.disciplina }),
+        ...(body.temporada !== undefined && { temporada: body.temporada }),
         ...(body.nombreActividad !== undefined && { nombreActividad: body.nombreActividad }),
         ...(body.ubicacionGeografica !== undefined && { ubicacionGeografica: body.ubicacionGeografica }),
         ...(body.fechaInicio !== undefined && { fechaInicio: new Date(body.fechaInicio) }),

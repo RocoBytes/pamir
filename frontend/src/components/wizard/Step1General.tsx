@@ -4,7 +4,12 @@ import { z } from 'zod'
 import { ArrowRight } from 'lucide-react'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
-import type { TipoSalida, Disciplina } from '../../types/salida'
+import type { TipoSalida, Disciplina, Temporada } from '../../types/salida'
+
+const TEMPORADA_OPTIONS: { value: Temporada; label: string }[] = [
+  { value: 'estival', label: 'Estival' },
+  { value: 'invernal', label: 'Invernal' },
+]
 
 const TIPO_OPTIONS: { value: TipoSalida; label: string }[] = [
   { value: 'OFICIAL_CLUB', label: 'Oficial del Club' },
@@ -30,6 +35,10 @@ const step1Schema = z.object({
   disciplina: z.enum(
     ['TREKKING', 'MEDIA_MONTANA', 'ALTA_MONTANA', 'ESCALADA_ROCA', 'ESCALADA_HIELO', 'ESQUI_MONTANA', 'TRAIL_SKY_RUNNING'],
     { error: 'Selecciona la disciplina' },
+  ),
+  temporada: z.enum(
+    ['estival', 'invernal'],
+    { error: 'Selecciona la temporada' },
   ),
   nombreActividad: z.string().min(2, 'Ingresa el nombre de la actividad o ruta (min. 2 caracteres)'),
   ubicacionGeografica: z.string().min(2, 'Ingresa la ubicación geográfica (min. 2 caracteres)'),
@@ -131,6 +140,20 @@ export function Step1General({ defaultValues, onSubmit }: Step1GeneralProps) {
             value={field.value}
             onChange={field.onChange}
             error={errors.disciplina?.message}
+          />
+        )}
+      />
+
+      <Controller
+        name="temporada"
+        control={control}
+        render={({ field }) => (
+          <RadioChipGroup
+            label="Temporada"
+            options={TEMPORADA_OPTIONS}
+            value={field.value}
+            onChange={field.onChange}
+            error={errors.temporada?.message}
           />
         )}
       />
