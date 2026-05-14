@@ -10,8 +10,6 @@ import {
   TEMPORADA_LABELS,
   AVISO_EXTERNO_LABELS,
   MEDIO_COMUNICACION_LABELS,
-  EQUIPO_COLECTIVO_LABELS,
-  RIESGO_IDENTIFICADO_LABELS,
 } from '../types/salida'
 import { Button } from './ui/Button'
 

@@ -431,7 +431,7 @@ const STEP_LABELS = [
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
+export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
   const [loadingSalidas, setLoadingSalidas] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
