@@ -21,10 +21,7 @@ const RIESGOS = [
 ] as const
 
 const step5Schema = z.object({
-  pronosticoMeteorologico: z
-    .string()
-    .min(1, 'El pronóstico meteorológico es obligatorio')
-    .max(1000, 'Máximo 1000 caracteres'),
+  pronosticoMeteorologico: z.string().optional(),
   riesgosIdentificados: z
     .array(z.enum(RIESGOS))
     .min(1, 'Selecciona al menos un riesgo'),
@@ -199,13 +196,79 @@ function GpxFilePicker({ value, onChange }: GpxFilePickerProps) {
   )
 }
 
+// ─── Pronostico file picker ───────────────────────────────────────────────────
+
+function PronosticoFilePicker({ value, onChange }: GpxFilePickerProps) {
+  const [sizeError, setSizeError] = React.useState<string | null>(null)
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    if (file) {
+      if (file.size > MAX_GPX_SIZE) {
+        setSizeError('El archivo supera el límite de 15 MB')
+        e.target.value = ''
+        return
+      }
+      setSizeError(null)
+    }
+    onChange(file)
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-semibold text-[#264c99]">
+        Pronóstico Meteorológico
+        <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+      </span>
+      <p className="text-xs text-[#757874]">
+        Sube una foto o documento (PDF, JPG, PNG) del pronóstico meteorológico.
+      </p>
+
+      {value ? (
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#264c99]/40 bg-[#e8eef7]">
+          <Paperclip size={15} className="text-[#264c99] shrink-0" />
+          <span className="text-sm text-[#1e3c7a] flex-1 truncate">{value.name}</span>
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="shrink-0 text-[#4a6fad] hover:text-[#A4636E] transition-colors"
+            aria-label="Quitar archivo"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      ) : (
+        <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-[#4a6fad]/40 bg-white cursor-pointer hover:border-[#264c99]/60 hover:bg-[#f5f8f5] transition-colors">
+          <Paperclip size={15} className="text-[#4a6fad]/60" />
+          <span className="text-sm text-[#757874]">Seleccionar archivo…</span>
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            className="sr-only"
+            onChange={handleFileChange}
+            required
+          />
+        </label>
+      )}
+
+      {sizeError && (
+        <p className="text-xs text-[#A4636E]" role="alert">
+          {sizeError}
+        </p>
+      )}
+    </div>
+  )
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Step5TechnicalPlanProps {
   defaultValues: Step5Data
   gpxFile: File | null
+  pronosticoFile: File | null
   isSubmitting: boolean
   onFileChange: (file: File | null) => void
+  onPronosticoFileChange: (file: File | null) => void
   onSubmit: (data: Step5Data) => Promise<void>
   onBack: () => void
 }
@@ -215,8 +278,10 @@ interface Step5TechnicalPlanProps {
 export function Step5Status({
   defaultValues,
   gpxFile,
+  pronosticoFile,
   isSubmitting,
   onFileChange,
+  onPronosticoFileChange,
   onSubmit,
   onBack,
 }: Step5TechnicalPlanProps) {
@@ -240,37 +305,8 @@ export function Step5Status({
       noValidate
       className="flex flex-col gap-6"
     >
-      {/* Pronóstico Meteorológico */}
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="pronosticoMeteorologico"
-          className="text-sm font-semibold text-[#264c99]"
-        >
-          Pronóstico Meteorológico
-          <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
-        </label>
-        <p className="text-xs text-[#757874] -mt-0.5">
-          Resumen de condiciones esperadas y fuente: Meteoblue, Mountain Forecast, etc.
-        </p>
-        <textarea
-          id="pronosticoMeteorologico"
-          rows={4}
-          maxLength={1000}
-          placeholder="Ej: Vientos moderados del SW, temperatura estimada -5°C en cima. Fuente: Meteoblue."
-          {...register('pronosticoMeteorologico')}
-          className={[
-            'w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 bg-white',
-            'placeholder:text-[#757874]/50 resize-y',
-            'focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-colors',
-            errors.pronosticoMeteorologico ? 'border-[#A4636E]' : 'border-[#4a6fad]/40',
-          ].join(' ')}
-        />
-        {errors.pronosticoMeteorologico && (
-          <p className="text-xs text-[#A4636E]" role="alert">
-            {errors.pronosticoMeteorologico.message}
-          </p>
-        )}
-      </div>
+      {/* Pronóstico Meteorológico File Picker */}
+      <PronosticoFilePicker value={pronosticoFile} onChange={onPronosticoFileChange} />
 
       {/* Principales Riesgos Identificados */}
       <div className="flex flex-col gap-3">

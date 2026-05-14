@@ -139,6 +139,9 @@ export interface SalidaRecord {
   equipoColectivo: EquipoColectivoSeguridad[]
   equipoColectivoOtro?: string
   pronosticoMeteorologico?: string
+  pronosticoFileId?: string
+  pronosticoFileName?: string
+  pronosticoFileUrl?: string
   riesgosIdentificados?: RiesgoIdentificado[]
   riesgosOtro?: string
   planEvacuacion?: string
@@ -157,6 +160,13 @@ export interface GpxUploadResponse {
   gpxFileId: string
   gpxFileName: string
   gpxFileUrl: string
+}
+
+export interface PronosticoUploadResponse {
+  message: string
+  pronosticoFileId: string
+  pronosticoFileName: string
+  pronosticoFileUrl: string
 }
 
 // ─── Integrante (registered club member) ─────────────────────────────────────

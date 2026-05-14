@@ -104,6 +104,9 @@ const cierreSchema = z
     salidaId: z.string().min(1, 'Selecciona una salida'),
     fechaFinalizacionReal: z.string().min(1, 'La fecha de finalización es obligatoria'),
     estadoCierre: z.enum(ESTADOS, { error: 'Selecciona el estado de la salida' }),
+    altitudMaxima: z.coerce
+      .number({ invalid_type_error: 'Debe ser un número' })
+      .min(0, 'Debe ser mayor o igual a 0 m.s.n.m.'),
     motivoAbandono: z.enum(MOTIVOS_ABANDONO).optional(),
     // Paso 2
     huboCambios: z.enum(HUBO_CAMBIOS).optional(),
@@ -425,7 +428,7 @@ const STEP_LABELS = [
   'Cierre de Actividad',
   'Evaluación de la Planificación',
   'Gestión de Incidentes',
-  'Análisis Técnico y de Equipo',
+  'Análisis Técnico y de Equipamiento',
   'Lecciones Aprendidas y Recomendaciones',
 ]
 
@@ -761,6 +764,34 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
                   )}
                 />
 
+                {/* Altitud Máxima */}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="altitudMaxima" className="text-sm font-semibold text-[#264c99]">
+                    Altitud máxima alcanzada (m.s.n.m.)
+                    <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+                  </label>
+                  <p className="text-xs text-[#757874] -mt-0.5">
+                    Independiente si lograron o no el objetivo.
+                  </p>
+                  <input
+                    id="altitudMaxima"
+                    type="number"
+                    min="0"
+                    placeholder="Ej: 4500"
+                    {...register('altitudMaxima')}
+                    className={[
+                      'w-full md:w-1/2 rounded-xl border px-3 py-2.5 text-sm text-slate-900 bg-white',
+                      'placeholder:text-[#757874]/50 focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-colors',
+                      errors.altitudMaxima ? 'border-[#A4636E]' : 'border-[#4a6fad]/40',
+                    ].join(' ')}
+                  />
+                  {errors.altitudMaxima && (
+                    <p className="text-xs text-[#A4636E]" role="alert">
+                      {errors.altitudMaxima.message}
+                    </p>
+                  )}
+                </div>
+
                 {/* Motivo de Abandono (condicional) */}
                 {estadoSeleccionado === 'ABORTADA_INCOMPLETA' && (
                   <Controller
@@ -1081,7 +1112,7 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
                 </div>
               </>
             )}
-            {/* ── PASO 4: Análisis Técnico y de Equipo ─────────────────── */}
+            {/* ── PASO 4: Análisis Técnico y de Equipamiento ─────────────────── */}
             {currentStep === 4 && (
               <>
                 {/* Q12: Desempeño del Equipo */}

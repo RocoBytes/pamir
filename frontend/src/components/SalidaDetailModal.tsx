@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Mountain, X, Loader2, MapPin, Calendar, Clock, AlertCircle } from 'lucide-react'
+import { Mountain, X, Loader2, MapPin, Calendar, Clock, AlertCircle, FileImage } from 'lucide-react'
 import type { SalidaRecord } from '../types/salida'
 import { getSalida } from '../lib/api'
 import {
@@ -267,9 +267,15 @@ export function SalidaDetailModal({ salidaId, onClose }: SalidaDetailModalProps)
 
               <div className="pt-2 border-t border-slate-100">
                 <h4 className="text-xs font-semibold text-[#757874] uppercase tracking-wider mb-1">Pronóstico Meteorológico</h4>
-                <p className="text-sm text-slate-900 bg-slate-50 p-3 rounded-xl border border-slate-100 whitespace-pre-wrap">
-                  {salida.pronosticoMeteorologico || <span className="text-[#757874] italic">No especificado</span>}
-                </p>
+                {salida.pronosticoFileUrl ? (
+                  <a href={salida.pronosticoFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-1 px-3 py-2 bg-[#e8eef7] text-[#1e3c7a] rounded-xl hover:bg-[#dde6f7] transition-colors text-sm font-medium">
+                    <FileImage size={16} /> Ver archivo subido ({salida.pronosticoFileName || 'Documento'})
+                  </a>
+                ) : (
+                  <p className="text-sm text-slate-900 bg-slate-50 p-3 rounded-xl border border-slate-100 whitespace-pre-wrap">
+                    {salida.pronosticoMeteorologico || <span className="text-[#757874] italic">No especificado</span>}
+                  </p>
+                )}
               </div>
             </section>
           </div>

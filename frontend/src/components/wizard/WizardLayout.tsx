@@ -3,7 +3,7 @@ import { Users, Radio, Map, X, Check } from 'lucide-react'
 import logoPamir from '../../assets/logo_PAMIR.png'
 import type { SalidaFormData, User } from '../../types/salida'
 import { saveDraft, loadDraft, loadDraftStep, clearDraft, saveDraftStep } from '../../lib/storage'
-import { createSalida, uploadGpx } from '../../lib/api'
+import { createSalida, uploadGpx, uploadPronostico } from '../../lib/api'
 import { Button } from '../ui/Button'
 import { Step1General } from './Step1General'
 import { Step2Participants } from './Step2Participants'
@@ -76,6 +76,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
   const [currentStep, setCurrentStep] = useState<StepId>(1)
   const [formData, setFormData] = useState<Omit<SalidaFormData, 'gpxFile'>>(EMPTY_FORM)
   const [gpxFile, setGpxFile] = useState<File | null>(null)
+  const [pronosticoFile, setPronosticoFile] = useState<File | null>(null)
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set())
   // Initialize banner from localStorage directly in useState — no effect needed
   const [showDraftBanner, setShowDraftBanner] = useState<boolean>(hasDraft)
@@ -139,7 +140,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
     async (step5Data: Step5Data) => {
       const finalData: Omit<SalidaFormData, 'gpxFile'> = {
         ...formData,
-        pronosticoMeteorologico: step5Data.pronosticoMeteorologico,
+        pronosticoMeteorologico: '', // Will use uploaded file instead
         riesgosIdentificados: step5Data.riesgosIdentificados,
         riesgosOtro: step5Data.riesgosOtro ?? '',
         planEvacuacion: step5Data.planEvacuacion ?? '',
@@ -152,6 +153,9 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
           const salida = await createSalida(finalData)
           if (gpxFile) {
             await uploadGpx(salida.id, gpxFile)
+          }
+          if (pronosticoFile) {
+            await uploadPronostico(salida.id, pronosticoFile)
           }
         }
 
@@ -348,8 +352,10 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
               planEvacuacion: formData.planEvacuacion,
             }}
             gpxFile={gpxFile}
+            pronosticoFile={pronosticoFile}
             isSubmitting={isSubmitting}
             onFileChange={setGpxFile}
+            onPronosticoFileChange={setPronosticoFile}
             onSubmit={handleFinalSubmit}
             onBack={goBack}
           />

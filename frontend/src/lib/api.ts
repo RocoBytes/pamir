@@ -1,4 +1,4 @@
-import type { SalidaFormData, SalidaRecord, GpxUploadResponse, User, IntegranteRecord } from '../types/salida'
+import type { SalidaFormData, SalidaRecord, GpxUploadResponse, PronosticoUploadResponse, User, IntegranteRecord } from '../types/salida'
 import { getAuthToken } from './auth-token'
 
 // En desarrollo el proxy de Vite redirige /api → localhost:3000.
@@ -149,6 +149,18 @@ export async function uploadGpx(salidaId: string, file: File): Promise<GpxUpload
   return handleResponse<GpxUploadResponse>(res)
 }
 
+export async function uploadPronostico(salidaId: string, file: File): Promise<PronosticoUploadResponse> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const res = await fetch(`${API_BASE}/salidas/${salidaId}/pronostico`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  })
+  return handleResponse<PronosticoUploadResponse>(res)
+}
+
 // ─── Integrantes ─────────────────────────────────────────────────────────────
 
 export interface CreateIntegrantePayload {
@@ -217,6 +229,7 @@ export interface CreateCierrePayload {
   salidaId: string
   fechaFinalizacionReal: string
   estadoCierre: string
+  altitudMaxima: number
   motivoAbandono?: string
   huboCambios: string
   motivosCambios?: string[]

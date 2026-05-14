@@ -79,6 +79,9 @@ model Salida {
   riesgosIdentificados    Json    @default("[]") @map("riesgos_identificados")
   riesgosOtro             String? @map("riesgos_otro")
   planEvacuacion          String? @map("plan_evacuacion")
+  pronosticoFileId        String? @map("pronostico_file_id")
+  pronosticoFileName      String? @map("pronostico_file_name")
+  pronosticoFileUrl       String? @map("pronostico_file_url")
 
   // GPX
   gpxFileId   String? @map("gpx_file_id")
@@ -106,6 +109,7 @@ model Cierre {
   // Paso 1
   fechaFinalizacionReal DateTime @map("fecha_finalizacion_real")
   estadoCierre          String   @map("estado_cierre")
+  altitudMaxima         Int      @default(0) @map("altitud_maxima")
   motivoAbandono        String?  @map("motivo_abandono")
 
   // Paso 2

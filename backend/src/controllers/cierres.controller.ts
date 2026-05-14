@@ -34,6 +34,7 @@ interface CreateCierreBody {
   salidaId: string;
   fechaFinalizacionReal: string;
   estadoCierre: string;
+  altitudMaxima: number;
   motivoAbandono?: string;
   huboCambios: string;
   motivosCambios?: unknown[];
@@ -81,6 +82,7 @@ export async function createCierre(req: Request, res: Response): Promise<void> {
         userId,
         fechaFinalizacionReal: new Date(data.fechaFinalizacionReal),
         estadoCierre: data.estadoCierre,
+        altitudMaxima: data.altitudMaxima,
         motivoAbandono: data.motivoAbandono,
         huboCambios: data.huboCambios,
         motivosCambios: asJson(data.motivosCambios ?? []),
