@@ -104,9 +104,7 @@ const cierreSchema = z
     salidaId: z.string().min(1, 'Selecciona una salida'),
     fechaFinalizacionReal: z.string().min(1, 'La fecha de finalización es obligatoria'),
     estadoCierre: z.enum(ESTADOS, { error: 'Selecciona el estado de la salida' }),
-    altitudMaxima: z.coerce
-      .number({ invalid_type_error: 'Debe ser un número' })
-      .min(0, 'Debe ser mayor o igual a 0 m.s.n.m.'),
+    altitudMaxima: z.number({ error: 'Debe ser un número' }).min(0, 'Debe ser mayor o igual a 0 m.s.n.m.'),
     motivoAbandono: z.enum(MOTIVOS_ABANDONO).optional(),
     // Paso 2
     huboCambios: z.enum(HUBO_CAMBIOS).optional(),
@@ -500,6 +498,7 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
       'salidaId',
       'fechaFinalizacionReal',
       'estadoCierre',
+      'altitudMaxima',
       'motivoAbandono',
     ])
     if (valid) setCurrentStep(2)
@@ -541,6 +540,7 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
             salidaId: values.salidaId,
             fechaFinalizacionReal: values.fechaFinalizacionReal,
             estadoCierre: values.estadoCierre,
+            altitudMaxima: values.altitudMaxima,
             motivoAbandono: values.motivoAbandono,
             huboCambios: values.huboCambios!,
             motivosCambios: values.motivosCambios,
@@ -778,7 +778,7 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
                     type="number"
                     min="0"
                     placeholder="Ej: 4500"
-                    {...register('altitudMaxima')}
+                    {...register('altitudMaxima', { valueAsNumber: true })}
                     className={[
                       'w-full md:w-1/2 rounded-xl border px-3 py-2.5 text-sm text-slate-900 bg-white',
                       'placeholder:text-[#757874]/50 focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-colors',
