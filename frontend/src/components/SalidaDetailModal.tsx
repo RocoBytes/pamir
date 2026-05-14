@@ -10,6 +10,8 @@ import {
   TEMPORADA_LABELS,
   AVISO_EXTERNO_LABELS,
   MEDIO_COMUNICACION_LABELS,
+  EQUIPO_COLECTIVO_LABELS,
+  RIESGO_IDENTIFICADO_LABELS,
 } from '../types/salida'
 import { Button } from './ui/Button'
 
@@ -168,9 +170,8 @@ export function SalidaDetailModal({ salidaId, onClose }: SalidaDetailModalProps)
               {salida.participantes.length > 0 ? (
                 <ul className="space-y-2">
                   {salida.participantes.map((p, idx) => (
-                    <li key={idx} className="bg-slate-50 rounded-xl px-3 py-2 flex items-center justify-between">
+                    <li key={idx} className="bg-slate-50 rounded-xl px-3 py-2">
                       <span className="text-sm font-medium text-slate-900">{p.nombre}</span>
-                      <span className="text-xs text-[#757874] font-mono">{p.rut}</span>
                     </li>
                   ))}
                 </ul>
@@ -198,6 +199,26 @@ export function SalidaDetailModal({ salidaId, onClose }: SalidaDetailModalProps)
               </div>
 
               <div className="pt-2 border-t border-slate-100">
+                <h3 className="text-sm font-bold text-[#264c99] mb-2">Equipo Crítico (Colectivo)</h3>
+                <div className="flex flex-wrap gap-2">
+                  {salida.equipoColectivo.length > 0 ? (
+                    salida.equipoColectivo.map((e) => (
+                      <span key={e} className="bg-[#e8eef7] text-[#1e3c7a] text-xs font-medium px-2.5 py-1 rounded-lg">
+                        {EQUIPO_COLECTIVO_LABELS[e]}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-[#757874]">Ninguno</span>
+                  )}
+                </div>
+                {salida.equipoColectivoOtro && (
+                  <p className="text-xs text-[#757874] mt-2">
+                    Otro: <span className="font-medium text-slate-900">{salida.equipoColectivoOtro}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-slate-100">
                 <h3 className="text-sm font-bold text-[#264c99] mb-2">Avisos Externos</h3>
                 <div className="flex flex-wrap gap-2">
                   {salida.avisosExternos.length > 0 ? (
@@ -210,6 +231,45 @@ export function SalidaDetailModal({ salidaId, onClose }: SalidaDetailModalProps)
                     <span className="text-sm text-[#757874]">Ninguno</span>
                   )}
                 </div>
+              </div>
+            </section>
+
+            {/* Planificación Técnica */}
+            <section className="bg-white rounded-2xl border border-[#4a6fad]/15 p-5 shadow-sm space-y-4">
+              <h3 className="text-sm font-bold text-[#264c99] mb-4">Planificación Técnica</h3>
+              
+              <div>
+                <h4 className="text-xs font-semibold text-[#757874] uppercase tracking-wider mb-1">Riesgos Identificados</h4>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {(salida.riesgosIdentificados || []).length > 0 ? (
+                    salida.riesgosIdentificados!.map((r) => (
+                      <span key={r} className="bg-[#f5e8ea] text-[#A4636E] text-xs font-medium px-2.5 py-1 rounded-lg border border-[#A4636E]/20">
+                        {RIESGO_IDENTIFICADO_LABELS[r]}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-[#757874]">Ninguno documentado</span>
+                  )}
+                </div>
+                {salida.riesgosOtro && (
+                  <p className="text-xs text-[#757874] mt-2">
+                    Otro: <span className="font-medium text-slate-900">{salida.riesgosOtro}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-slate-100">
+                <h4 className="text-xs font-semibold text-[#757874] uppercase tracking-wider mb-1">Plan de Evacuación</h4>
+                <p className="text-sm text-slate-900 bg-slate-50 p-3 rounded-xl border border-slate-100 whitespace-pre-wrap">
+                  {salida.planEvacuacion || <span className="text-[#757874] italic">No especificado</span>}
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100">
+                <h4 className="text-xs font-semibold text-[#757874] uppercase tracking-wider mb-1">Pronóstico Meteorológico</h4>
+                <p className="text-sm text-slate-900 bg-slate-50 p-3 rounded-xl border border-slate-100 whitespace-pre-wrap">
+                  {salida.pronosticoMeteorologico || <span className="text-[#757874] italic">No especificado</span>}
+                </p>
               </div>
             </section>
           </div>
