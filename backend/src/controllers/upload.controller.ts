@@ -5,7 +5,6 @@ import { prisma } from '../lib/prisma.js';
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
 const ALLOWED_EXT = /\.gpx$/i;
-const ALLOWED_PRONOSTICO_EXT = /\.(gpx|pdf|jpg|jpeg|png)$/i; // gpx isn't strictly needed for pronóstico but added for safety, we'll check it's one of them. Actually let's just use /\.(pdf|jpg|jpeg|png)$/i
 const ALLOWED_PRONOSTICO_EXT_STRICT = /\.(pdf|jpg|jpeg|png)$/i;
 
 function sanitizeGpxFilename(raw: string): string {
