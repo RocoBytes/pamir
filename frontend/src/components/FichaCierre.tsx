@@ -696,7 +696,7 @@ export function FichaCierre({ onDone, onCancel }: FichaCierreProps) {
                       ].join(' ')}
                     >
                       <option value="">— Selecciona una salida —</option>
-                      {salidas.map((s) => (
+                      {salidas.filter((s) => s.userId === user.id).map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.nombreActividad} ({s.ubicacionGeografica})
                         </option>

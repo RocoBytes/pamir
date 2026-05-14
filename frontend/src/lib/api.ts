@@ -83,6 +83,13 @@ export async function fetchSalidas(): Promise<SalidaRecord[]> {
   return handleResponse<SalidaRecord[]>(res)
 }
 
+export async function getSalida(id: string): Promise<SalidaRecord> {
+  const res = await fetch(`${API_BASE}/salidas/${id}`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<SalidaRecord>(res)
+}
+
 export async function createSalida(
   data: Omit<SalidaFormData, 'gpxFile'> & {
     gpxFileId?: string

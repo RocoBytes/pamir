@@ -120,11 +120,46 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
 export async function getSalidas(req: Request, res: Response): Promise<void> {
   try {
     const userId = req.user?.id;
+    const userEmail = req.user?.email;
+
+    if (!userId) {
+      const salidas = await prisma.salida.findMany({
+        where: { userId: null, status: 'EN_CURSO' },
+        orderBy: { createdAt: 'desc' },
+      });
+      res.json(salidas);
+      return;
+    }
+
+    let userRut: string | null = null;
+    if (userEmail) {
+      const integrante = await prisma.integrante.findFirst({
+        where: { email: userEmail },
+        select: { rut: true },
+      });
+      if (integrante) {
+        userRut = integrante.rut;
+      }
+    }
+
+    const whereClause: Prisma.SalidaWhereInput = {
+      status: 'EN_CURSO',
+      OR: [
+        { userId: userId },
+      ],
+    };
+
+    if (userRut) {
+      whereClause.OR!.push({
+        participantes: {
+          path: '$[*].rut',
+          array_contains: userRut,
+        },
+      });
+    }
 
     const salidas = await prisma.salida.findMany({
-      where: userId
-        ? { userId, status: 'EN_CURSO' }
-        : { userId: null, status: 'EN_CURSO' },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
     });
 
@@ -171,6 +206,7 @@ export async function getSalidaById(req: Request, res: Response): Promise<void> 
   try {
     const id = req.params.id as string;
     const requestUserId = req.user?.id ?? null;
+    const requestUserEmail = req.user?.email ?? null;
 
     const salida = await prisma.salida.findUnique({
       where: { id },
@@ -182,7 +218,21 @@ export async function getSalidaById(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    if (salida.userId !== null && salida.userId !== requestUserId) {
+    let isParticipant = false;
+    if (requestUserEmail) {
+      const integrante = await prisma.integrante.findFirst({
+        where: { email: requestUserEmail },
+        select: { rut: true },
+      });
+      if (integrante && integrante.rut) {
+        const parts = (salida.participantes ?? []) as { rut?: string }[];
+        if (parts.some((p) => p.rut === integrante.rut)) {
+          isParticipant = true;
+        }
+      }
+    }
+
+    if (salida.userId !== null && salida.userId !== requestUserId && !isParticipant) {
       res.status(403).json({ error: 'No tienes permiso para ver esta salida' });
       return;
     }

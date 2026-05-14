@@ -24,6 +24,7 @@ import {
 } from '../types/salida'
 import { fetchSalidas } from '../lib/api'
 import { Button } from './ui/Button'
+import { SalidaDetailModal } from './SalidaDetailModal'
 
 // Imagen de ruta alpinista en Chile — reemplazar por foto propia si se desea
 const HERO_IMAGE =
@@ -55,15 +56,24 @@ function formatDate(iso: string): string {
   }
 }
 
-function SalidaCard({ salida }: { salida: SalidaRecord }) {
+function SalidaCard({ salida, currentUserId, onClick }: { salida: SalidaRecord, currentUserId: string, onClick: (id: string) => void }) {
+  const isOwner = salida.userId === currentUserId
   return (
-    <article className="bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+    <button 
+      onClick={() => onClick(salida.id)}
+      className="w-full text-left bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99]"
+    >
       <div className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-slate-900 text-base leading-tight truncate">
-              {salida.nombreActividad}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-slate-900 text-base leading-tight truncate">
+                {salida.nombreActividad}
+              </h3>
+              <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${isOwner ? 'bg-[#e8eef7] text-[#264c99] border-[#264c99]/20' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                {isOwner ? 'Líder' : 'Participante'}
+              </span>
+            </div>
             <p className="text-sm text-[#757874] mt-0.5 truncate flex items-center gap-1">
               <MapPin size={12} className="shrink-0" />
               {salida.ubicacionGeografica}
@@ -93,7 +103,7 @@ function SalidaCard({ salida }: { salida: SalidaRecord }) {
           </div>
         </div>
       </div>
-    </article>
+    </button>
   )
 }
 
@@ -101,6 +111,7 @@ export function Dashboard({ user, locked = false, isAdmin = false, onNewSalida, 
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedSalidaId, setSelectedSalidaId] = useState<string | null>(null)
 
   const loadSalidas = useCallback(async () => {
     setIsLoading(true)
@@ -227,7 +238,7 @@ export function Dashboard({ user, locked = false, isAdmin = false, onNewSalida, 
           )}
 
           {/* Card: Ficha de Cierre */}
-          {!locked && salidas.length > 0 ? (
+          {!locked && salidas.some(s => s.userId === user.id) ? (
             <button
               onClick={onNewCierre}
               className="relative w-full rounded-3xl overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4a6fad] focus-visible:ring-offset-2"
@@ -285,7 +296,7 @@ export function Dashboard({ user, locked = false, isAdmin = false, onNewSalida, 
                   </h2>
                 </div>
                 <p className="text-xs text-white/50 max-w-[180px]">
-                  Registra tu primera salida para desbloquear esta sección
+                  {locked ? 'Registra tu primera salida para desbloquear esta sección' : 'Solo puedes cerrar actividades que hayas liderado/creado'}
                 </p>
               </div>
             </div>
@@ -362,12 +373,18 @@ export function Dashboard({ user, locked = false, isAdmin = false, onNewSalida, 
         {!isLoading && !error && salidas.length > 0 && (
           <div className="grid gap-3">
             {salidas.map((salida) => (
-              <SalidaCard key={salida.id} salida={salida} />
+              <SalidaCard key={salida.id} salida={salida} currentUserId={user.id} onClick={setSelectedSalidaId} />
             ))}
           </div>
         )}
       </main>
 
+      {selectedSalidaId && (
+        <SalidaDetailModal 
+          salidaId={selectedSalidaId} 
+          onClose={() => setSelectedSalidaId(null)} 
+        />
+      )}
     </div>
   )
 }
