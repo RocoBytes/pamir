@@ -152,8 +152,7 @@ export async function getSalidas(req: Request, res: Response): Promise<void> {
     if (userRut) {
       whereClause.OR!.push({
         participantes: {
-          path: '$[*].rut',
-          array_contains: userRut,
+          array_contains: [{ rut: userRut }],
         },
       });
     }
