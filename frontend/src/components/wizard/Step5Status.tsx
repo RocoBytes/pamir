@@ -296,17 +296,38 @@ export function Step5Status({
     defaultValues,
   })
 
+  const [fileError, setFileError] = React.useState<string | null>(null)
+
+  const handleFormSubmit = (data: Step5Data) => {
+    if (!pronosticoFile) {
+      setFileError('El archivo de pronóstico es obligatorio')
+      return
+    }
+    setFileError(null)
+    onSubmit(data)
+  }
+
   const riesgosSeleccionados = watch('riesgosIdentificados')
   const showOtroRiesgo = riesgosSeleccionados?.includes('OTRO')
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit(handleFormSubmit)}
       noValidate
       className="flex flex-col gap-6"
     >
       {/* Pronóstico Meteorológico File Picker */}
-      <PronosticoFilePicker value={pronosticoFile} onChange={onPronosticoFileChange} />
+      <div className="flex flex-col gap-1">
+        <PronosticoFilePicker value={pronosticoFile} onChange={(file) => {
+          onPronosticoFileChange(file)
+          if (file) setFileError(null)
+        }} />
+        {fileError && (
+          <p className="text-xs text-[#A4636E]" role="alert">
+            {fileError}
+          </p>
+        )}
+      </div>
 
       {/* Principales Riesgos Identificados */}
       <div className="flex flex-col gap-3">
