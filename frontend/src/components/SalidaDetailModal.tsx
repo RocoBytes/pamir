@@ -22,7 +22,9 @@ interface SalidaDetailModalProps {
 
 function formatDateFull(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString('es-ES', {
+    const datePart = iso.split('T')[0].split(' ')[0]
+    const [year, month, day] = datePart.split('-').map(Number)
+    return new Date(year, month - 1, day).toLocaleDateString('es-ES', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
