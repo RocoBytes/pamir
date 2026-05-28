@@ -36,13 +36,16 @@ const oauth2Client = new google.auth.OAuth2(
 const authUrl = oauth2Client.generateAuthUrl({
   access_type: 'offline',
   prompt: 'consent', // Fuerza a Google a devolver siempre el refresh_token
-  scope: ['https://www.googleapis.com/auth/drive.file'],
+  scope: [
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/gmail.send',
+  ],
 })
 
 console.log('\n──────────────────────────────────────────────────────')
 console.log('1. Abre esta URL en tu navegador:')
 console.log('\n' + authUrl + '\n')
-console.log('2. Inicia sesión con madridnawrathsusana@gmail.com')
+console.log('2. Inicia sesión con seguridad.acp.cl@gmail.com')
 console.log('3. Acepta los permisos')
 console.log('4. El navegador intentará abrir http://localhost/?code=XXX...')
 console.log('   (dará error de conexión — eso es normal)')
