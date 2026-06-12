@@ -43,3 +43,5 @@ services:
         sync: false   # ID de la carpeta en Drive
       - key: FRONTEND_URL
         sync: false   # URL de tu app en Vercel, ej: https://pamir.vercel.app
+      - key: CRON_SECRET
+        sync: false   # Secreto compartido con el cronjob externo (cron-job.org). Ejemplo: openssl rand -hex 32

@@ -7,10 +7,11 @@ import { RegistroIntegrante } from './components/RegistroIntegrante'
 import { FichaCierre } from './components/FichaCierre'
 import { EvaluacionExpress } from './components/EvaluacionExpress'
 import { DocumentosPage } from './components/DocumentosPage'
+import { AdminPanel } from './components/AdminPanel'
 import { fetchMyIntegrante } from './lib/api'
 import type { IntegranteRecord } from './types/salida'
 
-type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone' | 'documentos'
+type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone' | 'documentos' | 'admin-panel'
 
 const ADMIN_EMAIL = 'seguridad.acp.cl@gmail.com'
 
@@ -129,6 +130,10 @@ export default function App() {
     return <DocumentosPage onBack={() => setRoute('dashboard')} />
   }
 
+  if (route === 'admin-panel' && isAdmin) {
+    return <AdminPanel onBack={() => setRoute('dashboard')} />
+  }
+
   if (route === 'nueva-cierre' && user) {
     return (
       <FichaCierre
@@ -149,6 +154,7 @@ export default function App() {
       onNewCierre={() => setRoute('nueva-cierre')}
       onNewIntegrante={() => setRoute('nuevo-integrante-standalone')}
       onDocumentos={() => setRoute('documentos')}
+      onAdminPanel={() => setRoute('admin-panel')}
       onLogout={logout}
     />
   )

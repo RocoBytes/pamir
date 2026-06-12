@@ -630,6 +630,85 @@ export function buildConfirmationEmail(data: IntegranteEmailData): string {
 </html>`;
 }
 
+// ─── Alerta salida sin cierre ─────────────────────────────────────────────────
+
+interface AlertaSalidaEmailData {
+  nombreActividad: string;
+  ubicacionGeografica: string;
+  fechaInicio: Date | string;
+  fechaRetornoEstimada: Date | string;
+  horaRetornoEstimada: string;
+  horaAlerta: string;
+  liderCordada: string;
+  participantes: unknown;
+  creatorEmail?: string | null;
+}
+
+// String(date) yields "Thu Jul 15 2026..." which formatDate cannot parse
+// reliably; normalize Date instances to ISO before formatting.
+function toIsoString(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
+export function buildAlertaSalidaEmail(salida: AlertaSalidaEmailData): string {
+  const participantesArr: Array<{ nombre?: string; rut?: string }> = Array.isArray(salida.participantes)
+    ? (salida.participantes as Array<{ nombre?: string; rut?: string }>)
+    : [];
+
+  const participantRows = participantesArr.length
+    ? participantesArr
+        .map((p) =>
+          `<li style="margin-bottom:2px;">${escapeHtml(p.nombre ?? '')}${p.rut ? ` <span style="color:${GRAY};font-size:12px;">(${escapeHtml(p.rut)})</span>` : ''}</li>`,
+        )
+        .join('')
+    : `<li style="color:${GRAY};">Sin participantes registrados</li>`;
+
+  const intro = `
+    <p style="margin:0 0 12px;color:#1f2937;font-size:15px;">
+      Se ha superado la <strong>hora de alerta</strong> de la siguiente salida de montaña
+      <strong>sin que se haya registrado un cierre</strong>.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border:2px solid #fca5a5;border-radius:8px;margin-bottom:0;">
+      <tr>
+        <td style="padding:14px 16px;">
+          <p style="margin:0;font-size:13px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:0.05em;">⚠ Acción requerida</p>
+          <p style="margin:6px 0 0;font-size:13px;color:#7f1d1d;line-height:1.6;">
+            Verifica el estado de la cordada. Si el grupo ya retornó, registra el cierre en el sistema PAMIR.
+            Si no has recibido noticias, activa el protocolo de búsqueda y rescate.
+          </p>
+        </td>
+      </tr>
+    </table>`;
+
+  const tabla = `
+    ${sectionHeader('I. Identificación de la Salida')}
+    ${row('Nombre de la actividad', salida.nombreActividad)}
+    ${row('Ubicación geográfica', salida.ubicacionGeografica)}
+    ${row('Líder de cordada', salida.liderCordada)}
+    ${salida.creatorEmail ? row('Contacto creador', salida.creatorEmail) : ''}
+
+    ${sectionHeader('II. Cronología')}
+    ${row('Fecha de inicio', formatDate(toIsoString(salida.fechaInicio)))}
+    ${row('Fecha de retorno estimada', formatDate(toIsoString(salida.fechaRetornoEstimada)))}
+    ${row('Hora de retorno estimada', salida.horaRetornoEstimada)}
+    ${row('Hora de alerta (umbral superado)', salida.horaAlerta)}
+
+    ${sectionHeader('III. Participantes')}
+    <tr>
+      <td colspan="2" style="padding:8px 12px;color:#1f2937;font-size:13px;border-bottom:1px solid ${BORDER};">
+        <ul style="margin:0;padding-left:18px;">${participantRows}</ul>
+      </td>
+    </tr>
+  `;
+
+  return emailShell(
+    'ALERTA — Salida sin cierre registrado',
+    intro,
+    tabla,
+    'Esta alerta fue generada automáticamente por el sistema PAMIR. Hora de la alerta superada sin cierre.',
+  );
+}
+
 export function buildVerificationEmail(name: string, verificationUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="es">

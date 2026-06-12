@@ -7,6 +7,7 @@ import integrantesRouter from './integrantes.route.js';
 import cierresRouter from './cierres.route.js';
 import evaluacionesRouter from './evaluaciones.route.js';
 import documentosRouter from './documentos.route.js';
+import cronRouter from './cron.route.js';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use('/integrantes', integrantesRouter);
 router.use('/cierres', cierresRouter);
 router.use('/evaluaciones', evaluacionesRouter);
 router.use('/documentos', documentosRouter);
+router.use('/cron', cronRouter);
 
 export default router;

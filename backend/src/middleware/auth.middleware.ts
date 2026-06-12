@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { verifyToken } from '../lib/jwt.js';
+import { ADMIN_EMAIL } from '../lib/constants.js';
 
 export async function authMiddleware(
   req: Request,
@@ -35,6 +36,18 @@ export function requireAuth(
 ): void {
   if (!req.user) {
     res.status(401).json({ error: 'Autenticación requerida' });
+    return;
+  }
+  next();
+}
+
+export function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (!req.user || req.user.email !== ADMIN_EMAIL) {
+    res.status(403).json({ error: 'Acceso restringido al administrador' });
     return;
   }
   next();

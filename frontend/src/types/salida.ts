@@ -170,6 +170,9 @@ export interface SalidaRecord {
   createdAt: string
   updatedAt: string
   userId: string
+  // Admin-only fields (populated by the admin branch of GET /api/salidas)
+  alertaEnviadaAt?: string | null
+  _count?: { cierres: number }
 }
 
 export interface GpxUploadResponse {

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { sendEmail } from '../lib/google-gmail.js';
 import { buildConfirmationEmail } from '../lib/email-templates.js';
+import { ADMIN_EMAIL } from '../lib/constants.js';
 
 interface CreateIntegranteBody {
   nombreCompleto: string;
@@ -36,8 +37,6 @@ interface CreateIntegranteBody {
   consentimientoDatos: boolean;
   derechoImagen: boolean;
 }
-
-const ADMIN_EMAIL = 'seguridad.acp.cl@gmail.com';
 
 // POST /api/integrantes
 export async function createIntegrante(req: Request, res: Response): Promise<void> {

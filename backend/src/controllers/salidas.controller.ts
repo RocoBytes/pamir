@@ -138,10 +138,12 @@ export async function getSalidas(req: Request, res: Response): Promise<void> {
     }
 
     // El admin ve todas las salidas (incluidas COMPLETADAS) para poder
-    // revisar evaluaciones y cierres de cualquier líder
+    // revisar evaluaciones y cierres de cualquier líder.
+    // _count.cierres allows the AdminPanel to detect open salidas without a cierre.
     if (userEmail === ADMIN_EMAIL) {
       const salidas = await prisma.salida.findMany({
         orderBy: { createdAt: 'desc' },
+        include: { _count: { select: { cierres: true } } },
       });
       res.json(salidas);
       return;
