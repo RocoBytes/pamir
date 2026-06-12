@@ -8,10 +8,12 @@ import {
   BellOff,
   CheckCircle2,
   Users,
+  BarChart3,
 } from 'lucide-react'
 import logoPamir from '../assets/logo_PAMIR.png'
 
-import { fetchSalidas } from '../lib/api'
+import { fetchSalidas, fetchAdminStats } from '../lib/api'
+import type { AdminStats } from '../lib/api'
 import type { SalidaRecord } from '../types/salida'
 import { STATUS_LABELS, STATUS_COLORS, DISCIPLINA_LABELS } from '../types/salida'
 import { Button } from './ui/Button'
@@ -69,8 +71,66 @@ function isOpenSalida(salida: SalidaRecord): boolean {
   return salida.status === 'EN_CURSO' && (salida._count?.cierres ?? 0) === 0
 }
 
+// "2026-06-01T00:00:00.000Z" → "jun 2026" (UTC keeps the month from shifting)
+function formatMes(iso: string): string {
+  try {
+    const formatted = new Date(iso).toLocaleDateString('es-CL', {
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })
+    return formatted === 'Invalid Date' ? '—' : formatted
+  } catch {
+    return '—'
+  }
+}
+
+function MetricCard({
+  label,
+  value,
+  subtitle,
+  ariaLabel,
+}: {
+  label: string
+  value: string | number
+  subtitle?: string
+  ariaLabel?: string
+}) {
+  return (
+    <div
+      className="bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm p-4"
+      aria-label={ariaLabel}
+    >
+      <p className="text-2xl font-bold text-[#264c99] leading-tight">{value}</p>
+      <p className="text-xs text-[#757874] mt-1">{label}</p>
+      {subtitle && <p className="text-[10px] text-[#757874]/70 mt-0.5">{subtitle}</p>}
+    </div>
+  )
+}
+
+function BarRow({ label, value, max }: { label: string; value: number; max: number }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-24 shrink-0 text-xs text-[#757874] truncate">{label}</span>
+      <div className="flex-1 bg-[#e8eef7] rounded-full h-2">
+        <div
+          className="bg-[#264c99] rounded-full h-2"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="w-8 shrink-0 text-xs font-semibold text-slate-700 text-right">
+        {value}
+      </span>
+    </div>
+  )
+}
+
 export function AdminPanel({ onBack }: AdminPanelProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[] | null>(null)
+  const [stats, setStats] = useState<AdminStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(true)
+  const [statsError, setStatsError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -87,12 +147,33 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     }
   }, [])
 
+  // Loaded independently: a stats failure must not block the salidas list
+  const loadStats = useCallback(async () => {
+    setStatsLoading(true)
+    try {
+      const data = await fetchAdminStats()
+      setStats(data)
+      setStatsError(null)
+    } catch (err) {
+      setStatsError(err instanceof Error ? err.message : 'No se pudieron cargar las métricas')
+    } finally {
+      setStatsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     void loadSalidas()
-  }, [loadSalidas])
+    void loadStats()
+  }, [loadSalidas, loadStats])
 
   const openSalidas = salidas ? salidas.filter(isOpenSalida) : []
   const allSalidas = salidas ?? []
+
+  // Chart data: last 6 months in chronological order; max guards against
+  // division by zero in BarRow (width renders as 0%)
+  const meses = stats ? stats.porMes.slice(0, 6).reverse() : []
+  const maxMes = Math.max(0, ...meses.map((x) => x.total))
+  const maxDisciplina = stats ? Math.max(0, ...stats.topDisciplinas.map((x) => x.total)) : 0
 
   // Group all salidas by status for the history section
   const grouped = allSalidas.reduce<Record<string, SalidaRecord[]>>((acc, s) => {
@@ -161,6 +242,102 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               </button>
             </div>
           </div>
+        )}
+
+        {/* ── Section: Métricas ────────────────────────────────────────────── */}
+        {!isLoading && (
+          <section className="mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <BarChart3 size={16} className="text-[#264c99]" />
+              <h2 className="text-base font-bold text-slate-900">Métricas</h2>
+            </div>
+
+            {statsLoading && (
+              <div className="flex items-center gap-2 bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm p-4 text-[#757874]">
+                <Loader2 className="animate-spin text-[#264c99]" size={16} />
+                <p className="text-xs">Cargando métricas...</p>
+              </div>
+            )}
+
+            {!statsLoading && statsError && (
+              <div className="flex items-start gap-2 rounded-xl bg-[#f5e8ea] border border-[#A4636E]/30 p-3 text-sm text-[#8b3a44]">
+                <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p>{statsError}</p>
+                  <button
+                    onClick={() => void loadStats()}
+                    className="mt-2 text-[#8b3a44] font-semibold underline text-xs"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!statsLoading && stats && (
+              <>
+                {/* Metric cards */}
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <MetricCard label="Total de salidas" value={stats.totalSalidas} />
+                  <MetricCard label="En curso" value={stats.salidasAbiertas} />
+                  <MetricCard label="Completadas" value={stats.salidasCompletadas} />
+                  <MetricCard
+                    label="% con cierre"
+                    value={`${stats.pctConCierre}%`}
+                    subtitle={`${stats.totalCierres} de ${stats.totalSalidas} salidas`}
+                    ariaLabel="Salidas con ficha de cierre registrada"
+                  />
+                  <MetricCard label="Incidentes (sin lesión)" value={stats.incidentes} />
+                  <MetricCard label="Accidentes (con lesión)" value={stats.accidentes} />
+                </div>
+
+                {/* Salidas por mes (last 6 months, chronological order) */}
+                <div className="bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm p-4 mb-3">
+                  <h3 className="text-xs font-bold text-[#264c99] uppercase tracking-wide mb-3">
+                    Salidas por mes
+                  </h3>
+                  {meses.length === 0 ? (
+                    <p className="text-xs text-[#757874]">Sin datos de salidas en los últimos meses</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {meses.map((m) => (
+                        <BarRow
+                          key={m.mes}
+                          label={formatMes(m.mes)}
+                          value={m.total}
+                          max={maxMes}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Top disciplinas */}
+                <div className="bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm p-4">
+                  <h3 className="text-xs font-bold text-[#264c99] uppercase tracking-wide mb-3">
+                    Disciplinas más frecuentes
+                  </h3>
+                  {stats.topDisciplinas.length === 0 ? (
+                    <p className="text-xs text-[#757874]">Sin salidas registradas</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {stats.topDisciplinas.map((d) => (
+                        <BarRow
+                          key={d.disciplina}
+                          label={
+                            (DISCIPLINA_LABELS as Record<string, string>)[d.disciplina] ??
+                            d.disciplina
+                          }
+                          value={d.total}
+                          max={maxDisciplina}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </section>
         )}
 
         {!isLoading && salidas && (

@@ -327,6 +327,27 @@ export async function fetchDocumentos(): Promise<DocumentoRecord[]> {
   return handleResponse<DocumentoRecord[]>(res)
 }
 
+// ─── Admin (solo administrador) ──────────────────────────────────────────────
+
+export interface AdminStats {
+  totalSalidas: number
+  salidasAbiertas: number
+  salidasCompletadas: number
+  totalCierres: number
+  pctConCierre: number
+  incidentes: number
+  accidentes: number
+  porMes: { mes: string; total: number }[]
+  topDisciplinas: { disciplina: string; total: number }[]
+}
+
+export async function fetchAdminStats(): Promise<AdminStats> {
+  const res = await fetch(`${API_BASE}/admin/stats`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<AdminStats>(res)
+}
+
 // ─── Health ───────────────────────────────────────────────────────────────────
 
 export async function healthCheck(): Promise<{ status: string }> {
