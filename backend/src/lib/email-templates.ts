@@ -384,6 +384,29 @@ function evaluacionCtaBlock(evaluacionUrl: string): string {
         </tr>`;
 }
 
+function feedbackCierreBlock(): string {
+  const replyHint = CONTACT_EMAIL
+    ? `escríbenos a <a href="mailto:${CONTACT_EMAIL}" style="color:${GREEN};font-weight:600;">${CONTACT_EMAIL}</a> o responde directamente este correo`
+    : 'responde directamente este correo';
+  return `
+        <tr>
+          <td style="padding:0 32px 24px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border:1px solid #f1d48a;border-radius:8px;">
+              <tr>
+                <td style="padding:16px 20px;">
+                  <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#92600a;">¿Algo que agregar o corregir?</p>
+                  <p style="margin:0;font-size:12px;color:#78350f;line-height:1.6;">
+                    Si hay algo que quieras agregar o modificar en este cierre, o si no estás de acuerdo
+                    con algún dato de la salida o con algo de la aplicación, ${replyHint}.
+                    Tu observación quedará registrada con tu nombre y nos ayuda a corregir el registro oficial.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>`;
+}
+
 // ─── Salida notification ──────────────────────────────────────────────────────
 
 export function buildSalidaNotificationEmail(nombreCompleto: string, salida: SalidaEmailData): string {
@@ -503,7 +526,7 @@ export function buildCierreNotificationEmail(nombreCompleto: string, salida: Sal
     intro,
     tabla,
     'Este correo es una notificación automática del sistema PAMIR.',
-    evaluacionUrl ? evaluacionCtaBlock(evaluacionUrl) : '',
+    (evaluacionUrl ? evaluacionCtaBlock(evaluacionUrl) : '') + feedbackCierreBlock(),
   );
 }
 
