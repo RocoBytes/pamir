@@ -117,7 +117,7 @@ export async function getMyIntegrante(req: Request, res: Response): Promise<void
     const email = req.user!.email;
     const integrante = await prisma.integrante.findFirst({
       where: { email },
-      select: { id: true, nombreCompleto: true, rut: true, email: true, createdAt: true },
+      select: { id: true, nombreCompleto: true, rut: true, email: true, membresiaClub: true, createdAt: true },
     });
     if (!integrante) {
       res.status(404).json({ error: 'Sin ficha de integrante' });

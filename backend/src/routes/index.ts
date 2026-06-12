@@ -6,6 +6,7 @@ import uploadRouter from './upload.route.js';
 import integrantesRouter from './integrantes.route.js';
 import cierresRouter from './cierres.route.js';
 import evaluacionesRouter from './evaluaciones.route.js';
+import documentosRouter from './documentos.route.js';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/salidas', uploadRouter); // POST /api/salidas/:id/gpx
 router.use('/integrantes', integrantesRouter);
 router.use('/cierres', cierresRouter);
 router.use('/evaluaciones', evaluacionesRouter);
+router.use('/documentos', documentosRouter);
 
 export default router;

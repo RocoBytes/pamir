@@ -310,6 +310,23 @@ export async function fetchResultadosEvaluacion(salidaId: string): Promise<Evalu
   return handleResponse<EvaluacionResultados>(res)
 }
 
+// ─── Documentos del club (solo socios ACP) ───────────────────────────────────
+
+export interface DocumentoRecord {
+  id: string
+  categoria: string
+  nombre: string
+  descripcion?: string | null
+  driveFileUrl?: string | null
+}
+
+export async function fetchDocumentos(): Promise<DocumentoRecord[]> {
+  const res = await fetch(`${API_BASE}/documentos`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<DocumentoRecord[]>(res)
+}
+
 // ─── Health ───────────────────────────────────────────────────────────────────
 
 export async function healthCheck(): Promise<{ status: string }> {

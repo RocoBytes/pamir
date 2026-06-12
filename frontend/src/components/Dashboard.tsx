@@ -14,6 +14,7 @@ import {
   Lock,
   UserPlus,
   Star,
+  BookOpen,
 } from 'lucide-react'
 import logoPamir from '../assets/logo_PAMIR.png'
 
@@ -40,9 +41,11 @@ interface DashboardProps {
   user: User
   locked?: boolean
   isAdmin?: boolean
+  isSocioPamir?: boolean
   onNewSalida: () => void
   onNewCierre: () => void
   onNewIntegrante: () => void
+  onDocumentos: () => void
   onLogout: () => void
 }
 
@@ -114,7 +117,7 @@ function SalidaCard({ salida, currentUserId, onClick }: { salida: SalidaRecord, 
   )
 }
 
-export function Dashboard({ user, locked = false, isAdmin = false, onNewSalida, onNewCierre, onNewIntegrante, onLogout }: DashboardProps) {
+export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir = false, onNewSalida, onNewCierre, onNewIntegrante, onDocumentos, onLogout }: DashboardProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -310,6 +313,31 @@ export function Dashboard({ user, locked = false, isAdmin = false, onNewSalida, 
             </div>
           )}
         </div>
+
+        {/* Documentación del club — exclusivo socios Andino Club Pamir (y admin) */}
+        {(isSocioPamir || isAdmin) && (
+          <button
+            onClick={onDocumentos}
+            className="w-full flex items-center gap-4 bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm hover:shadow-md transition-shadow duration-200 p-4 mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] focus-visible:ring-offset-2"
+            aria-label="Abrir documentación del club"
+          >
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#e8eef7] flex items-center justify-center">
+              <BookOpen size={20} className="text-[#264c99]" />
+            </div>
+            <div className="flex-1 text-left">
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-slate-900 text-sm">Documentación del Club</p>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#264c99] bg-[#e8eef7] px-2 py-0.5 rounded-md">
+                  Socios ACP
+                </span>
+              </div>
+              <p className="text-xs text-[#757874]">
+                Avisos de expedición, matriz de riesgo, check-lists, glosario y más
+              </p>
+            </div>
+            <ChevronRight size={16} className="text-[#757874]" />
+          </button>
+        )}
 
         {/* Quick action: Completar ficha (todos) o Registrar Integrante (solo admin) */}
         {(locked || isAdmin) && (

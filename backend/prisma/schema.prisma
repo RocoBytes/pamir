@@ -181,6 +181,24 @@ model Cierre {
   @@map("cierres")
 }
 
+// Biblioteca de documentos del club (formularios, check-lists, glosario, libros).
+// Visible solo para socios de Andino Club Pamir (membresiaClub SOCIO_ANDINO_PAMIR) y admin.
+model Documento {
+  id           String  @id @default(uuid())
+  categoria    String
+  nombre       String
+  descripcion  String?
+  driveFileId  String? @map("drive_file_id")
+  driveFileUrl String? @map("drive_file_url")
+  orden        Int     @default(0)
+  visible      Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("documentos")
+}
+
 model Integrante {
   id String @id @default(uuid())
 

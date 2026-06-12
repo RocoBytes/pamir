@@ -6,9 +6,11 @@ import { WizardLayout } from './components/wizard/WizardLayout'
 import { RegistroIntegrante } from './components/RegistroIntegrante'
 import { FichaCierre } from './components/FichaCierre'
 import { EvaluacionExpress } from './components/EvaluacionExpress'
+import { DocumentosPage } from './components/DocumentosPage'
 import { fetchMyIntegrante } from './lib/api'
+import type { IntegranteRecord } from './types/salida'
 
-type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone'
+type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone' | 'documentos'
 
 const ADMIN_EMAIL = 'seguridad.acp.cl@gmail.com'
 
@@ -29,10 +31,12 @@ export default function App() {
   const { user, token, isLoading, loginWithCredentials, register, logout } = useAuth()
   const [route, setRoute] = useState<Route>('dashboard')
   const [integranteChecked, setIntegranteChecked] = useState(false)
-  const [hasIntegrante, setHasIntegrante] = useState(false)
+  const [integrante, setIntegrante] = useState<IntegranteRecord | null>(null)
 
   const isAuthenticated = !!(user && token)
   const isAdmin = user?.email === ADMIN_EMAIL
+  const hasIntegrante = integrante !== null
+  const isSocioPamir = integrante?.membresiaClub === 'SOCIO_ANDINO_PAMIR'
 
   // Reset al cambiar la sesión, ajustando estado durante el render
   // (evita el setState síncrono dentro del effect)
@@ -40,7 +44,7 @@ export default function App() {
   if (prevAuthenticated !== isAuthenticated) {
     setPrevAuthenticated(isAuthenticated)
     setIntegranteChecked(false)
-    setHasIntegrante(false)
+    setIntegrante(null)
   }
 
   useEffect(() => {
@@ -50,12 +54,12 @@ export default function App() {
     fetchMyIntegrante()
       .then(result => {
         if (cancelled) return
-        setHasIntegrante(result !== null)
+        setIntegrante(result)
         setIntegranteChecked(true)
       })
       .catch(() => {
         if (cancelled) return
-        setHasIntegrante(false)
+        setIntegrante(null)
         setIntegranteChecked(true)
       })
     return () => { cancelled = true }
@@ -112,9 +116,17 @@ export default function App() {
       <RegistroIntegrante
         onBack={() => setRoute('dashboard')}
         defaultEmail={!hasIntegrante ? user?.email : undefined}
-        onComplete={!hasIntegrante ? () => { setHasIntegrante(true); setRoute('dashboard') } : undefined}
+        onComplete={!hasIntegrante ? () => {
+          // Refetch para conocer la membresía recién registrada (gate de documentos)
+          fetchMyIntegrante().then(setIntegrante).catch(() => {})
+          setRoute('dashboard')
+        } : undefined}
       />
     )
+  }
+
+  if (route === 'documentos' && (isSocioPamir || isAdmin)) {
+    return <DocumentosPage onBack={() => setRoute('dashboard')} />
   }
 
   if (route === 'nueva-cierre' && user) {
@@ -132,9 +144,11 @@ export default function App() {
       user={user!}
       locked={!hasIntegrante}
       isAdmin={isAdmin}
+      isSocioPamir={isSocioPamir}
       onNewSalida={() => setRoute('nueva-salida')}
       onNewCierre={() => setRoute('nueva-cierre')}
       onNewIntegrante={() => setRoute('nuevo-integrante-standalone')}
+      onDocumentos={() => setRoute('documentos')}
       onLogout={logout}
     />
   )
