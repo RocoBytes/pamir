@@ -1,8 +1,11 @@
 import { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import { prisma } from '../lib/prisma.js';
 import { Prisma, Cierre } from '../generated/prisma/client.js';
 import { sendEmail } from '../lib/google-gmail.js';
 import { buildCierreNotificationEmail } from '../lib/email-templates.js';
+
+const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
 const asJson = (v: unknown): Prisma.InputJsonValue => v as Prisma.InputJsonValue;
 
@@ -21,10 +24,20 @@ async function sendCierreParticipantEmails(salidaId: string, cierre: Cierre): Pr
   });
 
   for (const i of integrantes) {
+    let evaluacionUrl: string | undefined;
+    try {
+      const evalToken = await prisma.evaluacionToken.create({
+        data: { token: randomUUID(), salidaId, email: i.email },
+      });
+      evaluacionUrl = `${FRONTEND_URL}?evaluacion=${evalToken.token}`;
+    } catch (err) {
+      console.error(`[cierre-email] No se pudo crear token de evaluación para ${i.email}:`, err);
+    }
+
     await sendEmail(
       i.email,
       `Cierre de la salida "${salida.nombreActividad}" — Pamir`,
-      buildCierreNotificationEmail(i.nombreCompleto, salida, cierre),
+      buildCierreNotificationEmail(i.nombreCompleto, salida, cierre, evaluacionUrl),
     ).catch((err) => console.error(`[cierre-email] Fallo al enviar a ${i.email}:`, err));
     await new Promise((r) => setTimeout(r, 350));
   }

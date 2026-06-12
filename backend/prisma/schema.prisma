@@ -99,7 +99,40 @@ model Salida {
   user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   cierres Cierre[]
 
+  evaluacionTokens     EvaluacionToken[]
+  evaluacionRespuestas EvaluacionRespuesta[]
+
   @@map("salidas")
+}
+
+model EvaluacionToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  salidaId  String   @map("salida_id")
+  email     String
+  // `used` es boolean (sin timestamp) para que no pueda correlacionarse
+  // temporalmente con EvaluacionRespuesta.createdAt — anonimato by design
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  salida Salida @relation(fields: [salidaId], references: [id], onDelete: Cascade)
+
+  @@map("evaluacion_tokens")
+}
+
+// Sin FK ni campo que vincule a EvaluacionToken: la respuesta es anónima
+model EvaluacionRespuesta {
+  id             String   @id @default(uuid())
+  salidaId       String   @map("salida_id")
+  notaObjetivos  Int      @map("nota_objetivos")
+  notaItinerario Int      @map("nota_itinerario")
+  notaLider      Int      @map("nota_lider")
+  comentario     String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  salida Salida @relation(fields: [salidaId], references: [id], onDelete: Cascade)
+
+  @@map("evaluacion_respuestas")
 }
 
 model Cierre {

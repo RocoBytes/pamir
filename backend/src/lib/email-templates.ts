@@ -323,7 +323,7 @@ function pronosticoRow(score: number): string {
 
 // ─── Email shell ──────────────────────────────────────────────────────────────
 
-function emailShell(subtitle: string, introHtml: string, tableHtml: string, footerNote: string): string {
+function emailShell(subtitle: string, introHtml: string, tableHtml: string, footerNote: string, afterTableHtml = ''): string {
   return `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -345,6 +345,7 @@ function emailShell(subtitle: string, introHtml: string, tableHtml: string, foot
             </table>
           </td>
         </tr>
+        ${afterTableHtml}
         <tr>
           <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid ${BORDER};">
             <p style="margin:0;color:${GRAY};font-size:12px;line-height:1.6;">
@@ -358,6 +359,29 @@ function emailShell(subtitle: string, introHtml: string, tableHtml: string, foot
   </table>
 </body>
 </html>`;
+}
+
+function evaluacionCtaBlock(evaluacionUrl: string): string {
+  return `
+        <tr>
+          <td style="padding:0 32px 28px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:${LIGHT_GREEN};border:1px solid ${BORDER};border-radius:8px;">
+              <tr>
+                <td style="padding:20px 24px;text-align:center;">
+                  <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:${GREEN};">¿Cómo estuvo la salida?</p>
+                  <p style="margin:0 0 16px;font-size:13px;color:#374151;line-height:1.6;">
+                    Ayúdanos a mejorar respondiendo una evaluación express de <strong>1 minuto</strong>.
+                    Es <strong>100% anónima</strong>: tu respuesta no queda asociada a tu nombre.
+                  </p>
+                  <a href="${evaluacionUrl}" style="display:inline-block;background:${GREEN};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;">Evaluar esta salida (anónimo)</a>
+                  <p style="margin:14px 0 0;color:#6b7280;font-size:11px;word-break:break-all;">
+                    Si el botón no funciona, copia este enlace: ${evaluacionUrl}
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>`;
 }
 
 // ─── Salida notification ──────────────────────────────────────────────────────
@@ -420,7 +444,7 @@ export function buildSalidaNotificationEmail(nombreCompleto: string, salida: Sal
 
 // ─── Cierre notification ──────────────────────────────────────────────────────
 
-export function buildCierreNotificationEmail(nombreCompleto: string, salida: SalidaEmailData, cierre: CierreEmailData): string {
+export function buildCierreNotificationEmail(nombreCompleto: string, salida: SalidaEmailData, cierre: CierreEmailData, evaluacionUrl?: string): string {
   const hayIncidente = cierre.ocurrioIncidente === 'SI' || cierre.ocurrioAccidente === 'SI';
   const abortada = cierre.estadoCierre === 'ABORTADA_INCOMPLETA';
   const huboCambios = cierre.huboCambios === 'SI';
@@ -479,6 +503,7 @@ export function buildCierreNotificationEmail(nombreCompleto: string, salida: Sal
     intro,
     tabla,
     'Este correo es una notificación automática del sistema PAMIR.',
+    evaluacionUrl ? evaluacionCtaBlock(evaluacionUrl) : '',
   );
 }
 

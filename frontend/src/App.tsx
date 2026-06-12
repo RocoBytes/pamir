@@ -5,6 +5,7 @@ import { Dashboard } from './components/Dashboard'
 import { WizardLayout } from './components/wizard/WizardLayout'
 import { RegistroIntegrante } from './components/RegistroIntegrante'
 import { FichaCierre } from './components/FichaCierre'
+import { EvaluacionExpress } from './components/EvaluacionExpress'
 import { fetchMyIntegrante } from './lib/api'
 
 type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone'
@@ -46,6 +47,14 @@ export default function App() {
 
   const verifiedParam = getQueryParam('verified')
   const resetToken = getQueryParam('reset')
+  const evaluacionToken = getQueryParam('evaluacion')
+
+  // Página pública: el formulario anónimo de evaluación no requiere sesión.
+  // `!== null` cubre el caso de link cortado (?evaluacion= sin token):
+  // EvaluacionExpress muestra "Enlace no válido" en vez de caer al login.
+  if (evaluacionToken !== null) {
+    return <EvaluacionExpress token={evaluacionToken} />
+  }
 
   if (isLoading || (isAuthenticated && !integranteChecked)) {
     return <Spinner />

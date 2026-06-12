@@ -13,6 +13,7 @@ import {
   ClipboardCheck,
   Lock,
   UserPlus,
+  Star,
 } from 'lucide-react'
 import logoPamir from '../assets/logo_PAMIR.png'
 
@@ -25,6 +26,7 @@ import {
 import { fetchSalidas } from '../lib/api'
 import { Button } from './ui/Button'
 import { SalidaDetailModal } from './SalidaDetailModal'
+import { EvaluacionResultadosModal } from './EvaluacionResultadosModal'
 
 // Imagen de ruta alpinista en Chile — reemplazar por foto propia si se desea
 const HERO_IMAGE =
@@ -117,6 +119,7 @@ export function Dashboard({ user, locked = false, isAdmin = false, onNewSalida, 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedSalidaId, setSelectedSalidaId] = useState<string | null>(null)
+  const [evaluacionSalida, setEvaluacionSalida] = useState<SalidaRecord | null>(null)
 
   const loadSalidas = useCallback(async () => {
     setIsLoading(true)
@@ -378,16 +381,36 @@ export function Dashboard({ user, locked = false, isAdmin = false, onNewSalida, 
         {!isLoading && !error && salidas.length > 0 && (
           <div className="grid gap-3">
             {salidas.map((salida) => (
-              <SalidaCard key={salida.id} salida={salida} currentUserId={user.id} onClick={setSelectedSalidaId} />
+              <div key={salida.id}>
+                <SalidaCard salida={salida} currentUserId={user.id} onClick={setSelectedSalidaId} />
+                {isAdmin && (
+                  <button
+                    onClick={() => setEvaluacionSalida(salida)}
+                    className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-[#4a6fad] hover:text-[#264c99] px-2 py-1 rounded-lg hover:bg-[#e8eef7] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99]"
+                    aria-label={`Ver evaluaciones de ${salida.nombreActividad}`}
+                  >
+                    <Star size={13} />
+                    Ver evaluaciones
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         )}
       </main>
 
       {selectedSalidaId && (
-        <SalidaDetailModal 
-          salidaId={selectedSalidaId} 
-          onClose={() => setSelectedSalidaId(null)} 
+        <SalidaDetailModal
+          salidaId={selectedSalidaId}
+          onClose={() => setSelectedSalidaId(null)}
+        />
+      )}
+
+      {evaluacionSalida && (
+        <EvaluacionResultadosModal
+          salidaId={evaluacionSalida.id}
+          nombreActividad={evaluacionSalida.nombreActividad}
+          onClose={() => setEvaluacionSalida(null)}
         />
       )}
     </div>

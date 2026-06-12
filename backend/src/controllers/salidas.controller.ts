@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { Prisma, SalidaStatus, Salida } from '../generated/prisma/client.js';
 import { sendEmail } from '../lib/google-gmail.js';
 import { buildSalidaNotificationEmail } from '../lib/email-templates.js';
+import { ADMIN_EMAIL } from '../lib/constants.js';
 
 const asJson = (v: unknown): Prisma.InputJsonValue => v as Prisma.InputJsonValue;
 
@@ -130,6 +131,16 @@ export async function getSalidas(req: Request, res: Response): Promise<void> {
     if (!userId) {
       const salidas = await prisma.salida.findMany({
         where: { userId: null, status: 'EN_CURSO' },
+        orderBy: { createdAt: 'desc' },
+      });
+      res.json(salidas);
+      return;
+    }
+
+    // El admin ve todas las salidas (incluidas COMPLETADAS) para poder
+    // revisar evaluaciones y cierres de cualquier líder
+    if (userEmail === ADMIN_EMAIL) {
+      const salidas = await prisma.salida.findMany({
         orderBy: { createdAt: 'desc' },
       });
       res.json(salidas);

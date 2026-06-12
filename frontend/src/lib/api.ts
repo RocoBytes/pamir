@@ -260,6 +260,56 @@ export async function createCierre(data: CreateCierrePayload): Promise<{ id: str
   return handleResponse<{ id: string }>(res)
 }
 
+// ─── Evaluaciones (anónimas) ─────────────────────────────────────────────────
+
+export interface EvaluacionInfo {
+  nombreActividad: string
+  fechaInicio: string
+  used: boolean
+}
+
+export interface SubmitEvaluacionPayload {
+  notaObjetivos: number
+  notaItinerario: number
+  notaLider: number
+  comentario?: string
+}
+
+export interface EvaluacionResultados {
+  totalTokens: number
+  totalRespuestas: number
+  promedios: {
+    objetivos: number
+    itinerario: number
+    lider: number
+  }
+  comentarios: string[]
+}
+
+export async function fetchEvaluacion(token: string): Promise<EvaluacionInfo> {
+  const res = await fetch(`${API_BASE}/evaluaciones/${encodeURIComponent(token)}`)
+  return handleResponse<EvaluacionInfo>(res)
+}
+
+export async function submitEvaluacion(
+  token: string,
+  data: SubmitEvaluacionPayload,
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`${API_BASE}/evaluaciones/${encodeURIComponent(token)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<{ ok: boolean }>(res)
+}
+
+export async function fetchResultadosEvaluacion(salidaId: string): Promise<EvaluacionResultados> {
+  const res = await fetch(`${API_BASE}/evaluaciones/resultados/${salidaId}`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<EvaluacionResultados>(res)
+}
+
 // ─── Health ───────────────────────────────────────────────────────────────────
 
 export async function healthCheck(): Promise<{ status: string }> {
