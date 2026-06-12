@@ -17,17 +17,23 @@ export const MOCK_INTEGRANTE = {
   nombreCompleto: 'Test Alpinista',
   rut: '12.345.678-9',
   email: 'test@example.com',
+  membresiaClub: 'SOCIO_ANDINO_PAMIR',
+  nombreClub: null,
   createdAt: new Date().toISOString(),
 }
 
 export const MOCK_SALIDA = {
   id: 'salida-001',
+  numeroSalida: 7,
   nombreActividad: 'Ascenso al Plomo',
   ubicacionGeografica: 'Cajón del Maipo',
   disciplina: 'ALPINISMO',
   fechaInicio: new Date().toISOString(),
   horaRetornoEstimada: '18:00',
   status: 'EN_CURSO',
+  participantes: [
+    { rut: '12.345.678-9', nombre: 'Test Alpinista', membresiaClub: 'SOCIO_ANDINO_PAMIR' },
+  ],
 }
 
 /** Injects a valid auth session into localStorage before page load */
@@ -62,6 +68,13 @@ export async function mockSalidas(page: Page, salidas: unknown[] = []) {
     } else {
       void route.continue()
     }
+  })
+}
+
+/** Mocks GET /api/integrantes/by-rut/:rut — returns the mock integrante */
+export async function mockIntegranteByRut(page: Page, integrante: unknown = MOCK_INTEGRANTE) {
+  await page.route('**/api/integrantes/by-rut/**', (route: Route) => {
+    void route.fulfill({ status: 200, json: integrante })
   })
 }
 

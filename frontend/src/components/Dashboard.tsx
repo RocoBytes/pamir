@@ -67,6 +67,11 @@ function SalidaCard({ salida, currentUserId, onClick }: { salida: SalidaRecord, 
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
+              {typeof salida.numeroSalida === 'number' && (
+                <span className="shrink-0 text-[10px] font-bold text-[#4a6fad] bg-[#e8eef7] px-2 py-0.5 rounded-md">
+                  N° {salida.numeroSalida}
+                </span>
+              )}
               <h3 className="font-semibold text-slate-900 text-base leading-tight truncate">
                 {salida.nombreActividad}
               </h3>

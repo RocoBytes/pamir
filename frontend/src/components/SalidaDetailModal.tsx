@@ -5,6 +5,7 @@ import { getSalida } from '../lib/api'
 import {
   STATUS_LABELS,
   STATUS_COLORS,
+  CLUB_BADGE_LABELS,
   TIPO_SALIDA_LABELS,
   DISCIPLINA_LABELS,
   TEMPORADA_LABELS,
@@ -91,6 +92,11 @@ export function SalidaDetailModal({ salidaId, onClose }: SalidaDetailModalProps)
             <span className="font-semibold text-slate-900 truncate pr-4">
               Detalle de Salida
             </span>
+            {typeof salida.numeroSalida === 'number' && (
+              <span className="shrink-0 text-[10px] font-bold text-[#4a6fad] bg-[#e8eef7] px-2 py-0.5 rounded-md">
+                N° {salida.numeroSalida}
+              </span>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -172,7 +178,12 @@ export function SalidaDetailModal({ salidaId, onClose }: SalidaDetailModalProps)
               {salida.participantes.length > 0 ? (
                 <ul className="space-y-2">
                   {salida.participantes.map((p, idx) => (
-                    <li key={idx} className="bg-slate-50 rounded-xl px-3 py-2">
+                    <li key={idx} className="bg-slate-50 rounded-xl px-3 py-2 flex items-center gap-2">
+                      {p.membresiaClub && (
+                        <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide bg-[#264c99]/10 text-[#264c99] px-1.5 py-0.5 rounded-md">
+                          {CLUB_BADGE_LABELS[p.membresiaClub]}
+                        </span>
+                      )}
                       <span className="text-sm font-medium text-slate-900">{p.nombre}</span>
                     </li>
                   ))}
@@ -269,14 +280,16 @@ export function SalidaDetailModal({ salidaId, onClose }: SalidaDetailModalProps)
 
               <div className="pt-2 border-t border-slate-100">
                 <h4 className="text-xs font-semibold text-[#757874] uppercase tracking-wider mb-1">Pronóstico Meteorológico</h4>
-                {salida.pronosticoFileUrl ? (
-                  <a href={salida.pronosticoFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-1 px-3 py-2 bg-[#e8eef7] text-[#1e3c7a] rounded-xl hover:bg-[#dde6f7] transition-colors text-sm font-medium">
-                    <FileImage size={16} /> Ver archivo subido ({salida.pronosticoFileName || 'Documento'})
-                  </a>
-                ) : (
+                {/* Registros viejos pueden tener solo archivo, solo texto, o nada */}
+                {(salida.pronosticoMeteorologico || !salida.pronosticoFileUrl) && (
                   <p className="text-sm text-slate-900 bg-slate-50 p-3 rounded-xl border border-slate-100 whitespace-pre-wrap">
                     {salida.pronosticoMeteorologico || <span className="text-[#757874] italic">No especificado</span>}
                   </p>
+                )}
+                {salida.pronosticoFileUrl && (
+                  <a href={salida.pronosticoFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-2 px-3 py-2 bg-[#e8eef7] text-[#1e3c7a] rounded-xl hover:bg-[#dde6f7] transition-colors text-sm font-medium">
+                    <FileImage size={16} /> Ver archivo subido ({salida.pronosticoFileName || 'Documento'})
+                  </a>
                 )}
               </div>
             </section>

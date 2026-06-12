@@ -69,6 +69,21 @@ export type SalidaStatus =
   | 'CANCELADA'
   | 'INCIDENTE'
 
+export type MembresiaClub =
+  | 'SOCIO_ANDINO_PAMIR'
+  | 'SOCIO_EL_MONTANISTA'
+  | 'SOCIO_OTRO_CLUB'
+  | 'POSTULANTE_CLUB'
+  | 'NO_PERTENECE'
+
+// membresiaClub is optional: participants added before this field existed
+// (old records and in-flight localStorage drafts) simply render without badge
+export interface Participante {
+  rut: string
+  nombre: string
+  membresiaClub?: MembresiaClub
+}
+
 export interface SalidaFormData {
   // Step 1 – Clasificación de la Salida
   tipoSalida: TipoSalida
@@ -89,7 +104,7 @@ export interface SalidaFormData {
 
   // Step 3 – Equipo Humano
   liderCordada: string
-  participantes: { rut: string; nombre: string }[]
+  participantes: Participante[]
   coordinacionGrupal: boolean
   matrizRiesgos: boolean
 
@@ -114,6 +129,8 @@ export interface SalidaFormData {
 
 export interface SalidaRecord {
   id: string
+  // optional: defensive against responses cached before the migration ran
+  numeroSalida?: number
   tipoSalida: TipoSalida
   disciplina: Disciplina
   temporada?: Temporada
@@ -128,7 +145,7 @@ export interface SalidaRecord {
   nombreFamiliar?: string | null
   telefonoFamiliar?: string | null
   liderCordada: string
-  participantes: { rut: string; nombre: string }[]
+  participantes: Participante[]
   coordinacionGrupal: boolean
   matrizRiesgos: boolean
   gpxFileId?: string
@@ -176,7 +193,17 @@ export interface IntegranteRecord {
   nombreCompleto: string
   rut: string
   email: string
+  membresiaClub?: MembresiaClub
+  nombreClub?: string | null
   createdAt: string
+}
+
+export const CLUB_BADGE_LABELS: Record<MembresiaClub, string> = {
+  SOCIO_ANDINO_PAMIR: 'ACP',
+  SOCIO_EL_MONTANISTA: 'CAEM',
+  SOCIO_OTRO_CLUB: 'SOC',
+  POSTULANTE_CLUB: 'POST',
+  NO_PERTENECE: 'NA',
 }
 
 export const STATUS_LABELS: Record<SalidaStatus, string> = {

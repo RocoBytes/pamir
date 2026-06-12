@@ -5,13 +5,26 @@ import { ArrowRight, ChevronLeft, X, UserPlus, UserCheck, Loader2, ChevronDown }
 import { useState, useEffect, useRef } from 'react'
 import { Button } from '../ui/Button'
 import { getIntegranteByRut } from '../../lib/api'
-import type { IntegranteRecord } from '../../types/salida'
+import { CLUB_BADGE_LABELS } from '../../types/salida'
+import type { IntegranteRecord, Participante } from '../../types/salida'
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
+// membresiaClub es opcional para que drafts guardados en localStorage antes de
+// este campo sigan validando sin migración
 const step3Schema = z.object({
   liderCordada: z.string().min(1, 'Selecciona el líder de cordada'),
-  participantes: z.array(z.object({ rut: z.string(), nombre: z.string() })).min(1, 'Agrega al menos un participante'),
+  participantes: z
+    .array(
+      z.object({
+        rut: z.string(),
+        nombre: z.string(),
+        membresiaClub: z
+          .enum(['SOCIO_ANDINO_PAMIR', 'SOCIO_EL_MONTANISTA', 'SOCIO_OTRO_CLUB', 'POSTULANTE_CLUB', 'NO_PERTENECE'])
+          .optional(),
+      }),
+    )
+    .min(1, 'Agrega al menos un participante'),
   coordinacionGrupal: z.boolean({ error: 'Selecciona una opción' }),
   matrizRiesgos: z.boolean({ error: 'Selecciona una opción' }),
 })
@@ -139,7 +152,14 @@ function RutLookupResult({ rut, integrante, loading, actionLabel, isAdmin, onSel
       <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#264c99]/30 bg-[#e8eef7]">
         <UserCheck size={18} className="text-[#264c99] shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[#1e3c7a] truncate">{integrante.nombreCompleto}</p>
+          <p className="text-sm font-semibold text-[#1e3c7a] truncate">
+            {integrante.nombreCompleto}
+            {integrante.membresiaClub && (
+              <span className="ml-2 align-middle text-[10px] font-bold uppercase tracking-wide bg-[#264c99]/10 text-[#264c99] px-1.5 py-0.5 rounded-md">
+                {CLUB_BADGE_LABELS[integrante.membresiaClub]}
+              </span>
+            )}
+          </p>
           <p className="text-xs text-[#757874]">{integrante.rut}</p>
         </div>
         <Button type="button" size="sm" onClick={() => onSelect(integrante)}>
@@ -275,9 +295,9 @@ function LiderPicker({ value, participantes, onChange, error }: LiderPickerProps
 // ─── Participant picker (multi-select by RUT) ─────────────────────────────────
 
 interface ParticipantePickerProps {
-  selected: { rut: string; nombre: string }[]
+  selected: Participante[]
   isAdmin: boolean
-  onAdd: (p: { rut: string; nombre: string }) => void
+  onAdd: (p: Participante) => void
   onCreateIntegrante: () => void
 }
 
@@ -288,7 +308,7 @@ function ParticipantePicker({ selected, isAdmin, onAdd, onCreateIntegrante }: Pa
 
   function handleAdd(i: IntegranteRecord) {
     if (!selected.some((p) => p.rut === i.rut)) {
-      onAdd({ rut: i.rut, nombre: i.nombreCompleto })
+      onAdd({ rut: i.rut, nombre: i.nombreCompleto, membresiaClub: i.membresiaClub })
     }
     setRut('')
   }
@@ -355,7 +375,7 @@ export function Step3HumanTeam({ defaultValues, isAdmin, onSubmit, onBack, onCre
   const participantes = watch('participantes')
   const liderCordada = watch('liderCordada')
 
-  function addParticipante(p: { rut: string; nombre: string }) {
+  function addParticipante(p: Participante) {
     if (!participantes.some((existing) => existing.rut === p.rut)) {
       setValue('participantes', [...participantes, p], { shouldValidate: true })
     }
@@ -390,6 +410,11 @@ export function Step3HumanTeam({ defaultValues, isAdmin, onSubmit, onBack, onCre
                 key={p.rut}
                 className="inline-flex items-center gap-1.5 bg-[#e8eef7] text-[#1e3c7a] text-sm font-medium px-3 py-1 rounded-full border border-[#264c99]/20"
               >
+                {p.membresiaClub && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide bg-[#264c99]/10 text-[#264c99] px-1.5 py-0.5 rounded-md">
+                    {CLUB_BADGE_LABELS[p.membresiaClub]}
+                  </span>
+                )}
                 {p.nombre}
                 <button
                   type="button"

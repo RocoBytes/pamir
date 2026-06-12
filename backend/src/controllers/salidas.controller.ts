@@ -70,6 +70,11 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
     const data = req.body as CreateSalidaBody;
     const userId = req.user?.id ?? null;
 
+    if (!data.pronosticoMeteorologico?.trim()) {
+      res.status(400).json({ error: 'El pronóstico meteorológico es obligatorio' });
+      return;
+    }
+
     const salida = await prisma.salida.create({
       data: {
         userId,

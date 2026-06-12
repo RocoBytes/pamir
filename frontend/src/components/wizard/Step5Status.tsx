@@ -21,7 +21,11 @@ const RIESGOS = [
 ] as const
 
 const step5Schema = z.object({
-  pronosticoMeteorologico: z.string().optional(),
+  pronosticoMeteorologico: z
+    .string()
+    .trim()
+    .min(1, 'Describe el pronóstico meteorológico')
+    .max(1000, 'Máximo 1000 caracteres'),
   riesgosIdentificados: z
     .array(z.enum(RIESGOS))
     .min(1, 'Selecciona al menos un riesgo'),
@@ -217,11 +221,12 @@ function PronosticoFilePicker({ value, onChange }: GpxFilePickerProps) {
   return (
     <div className="flex flex-col gap-2">
       <span className="text-sm font-semibold text-[#264c99]">
-        Pronóstico Meteorológico
-        <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+        Archivo del Pronóstico{' '}
+        <span className="text-[#757874] font-normal">(opcional)</span>
       </span>
       <p className="text-xs text-[#757874]">
-        Sube una foto o documento (PDF, JPG, PNG) del pronóstico meteorológico.
+        Opcionalmente sube una foto o documento (PDF, JPG, PNG) del pronóstico
+        meteorológico.
       </p>
 
       {value ? (
@@ -246,7 +251,6 @@ function PronosticoFilePicker({ value, onChange }: GpxFilePickerProps) {
             accept=".pdf,.jpg,.jpeg,.png"
             className="sr-only"
             onChange={handleFileChange}
-            required
           />
         </label>
       )}
@@ -296,38 +300,46 @@ export function Step5Status({
     defaultValues,
   })
 
-  const [fileError, setFileError] = React.useState<string | null>(null)
-
-  const handleFormSubmit = (data: Step5Data) => {
-    if (!pronosticoFile) {
-      setFileError('El archivo de pronóstico es obligatorio')
-      return
-    }
-    setFileError(null)
-    onSubmit(data)
-  }
-
   const riesgosSeleccionados = watch('riesgosIdentificados')
   const showOtroRiesgo = riesgosSeleccionados?.includes('OTRO')
 
   return (
     <form
-      onSubmit={handleSubmit(handleFormSubmit)}
+      onSubmit={handleSubmit(onSubmit)}
       noValidate
       className="flex flex-col gap-6"
     >
-      {/* Pronóstico Meteorológico File Picker */}
-      <div className="flex flex-col gap-1">
-        <PronosticoFilePicker value={pronosticoFile} onChange={(file) => {
-          onPronosticoFileChange(file)
-          if (file) setFileError(null)
-        }} />
-        {fileError && (
+      {/* Pronóstico Meteorológico (descripción obligatoria) */}
+      <div className="flex flex-col gap-1.5">
+        <label
+          htmlFor="pronosticoMeteorologico"
+          className="text-sm font-semibold text-[#264c99]"
+        >
+          Pronóstico Meteorológico
+          <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
+        </label>
+        <textarea
+          id="pronosticoMeteorologico"
+          rows={3}
+          maxLength={1000}
+          placeholder='Ej: "Despejado en la mañana, viento de 40 km/h en altura desde las 14:00"'
+          {...register('pronosticoMeteorologico')}
+          className={[
+            'w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 bg-white',
+            'placeholder:text-[#757874]/50 resize-y',
+            'focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-colors',
+            errors.pronosticoMeteorologico ? 'border-[#A4636E]' : 'border-[#4a6fad]/40',
+          ].join(' ')}
+        />
+        {errors.pronosticoMeteorologico && (
           <p className="text-xs text-[#A4636E]" role="alert">
-            {fileError}
+            {errors.pronosticoMeteorologico.message}
           </p>
         )}
       </div>
+
+      {/* Archivo del pronóstico (opcional) */}
+      <PronosticoFilePicker value={pronosticoFile} onChange={onPronosticoFileChange} />
 
       {/* Principales Riesgos Identificados */}
       <div className="flex flex-col gap-3">

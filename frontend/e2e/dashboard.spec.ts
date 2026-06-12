@@ -86,6 +86,7 @@ test.describe('Dashboard – estado desbloqueado (tiene integrante)', () => {
     await page.goto('/')
     await expect(page.getByText('Ascenso al Plomo')).toBeVisible()
     await expect(page.getByText('Cajón del Maipo')).toBeVisible()
+    await expect(page.getByText('N° 7')).toBeVisible()
   })
 })
 

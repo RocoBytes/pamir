@@ -83,6 +83,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [numeroSalida, setNumeroSalida] = useState<number | null>(null)
 
   const restoreDraft = useCallback(() => {
     const draft = loadDraft()
@@ -140,7 +141,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
     async (step5Data: Step5Data) => {
       const finalData: Omit<SalidaFormData, 'gpxFile'> = {
         ...formData,
-        pronosticoMeteorologico: '', // Will use uploaded file instead
+        pronosticoMeteorologico: step5Data.pronosticoMeteorologico,
         riesgosIdentificados: step5Data.riesgosIdentificados,
         riesgosOtro: step5Data.riesgosOtro ?? '',
         planEvacuacion: step5Data.planEvacuacion ?? '',
@@ -157,6 +158,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
           if (pronosticoFile) {
             await uploadPronostico(salida.id, pronosticoFile)
           }
+          setNumeroSalida(salida.numeroSalida ?? null)
         }
 
         clearDraft()
@@ -169,7 +171,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
         setIsSubmitting(false)
       }
     },
-    [formData, gpxFile, onDone],
+    [formData, gpxFile, pronosticoFile, onDone],
   )
 
   // Success screen
@@ -181,7 +183,9 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
             <Check size={32} className="text-[#264c99]" />
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">
-            Salida registrada
+            {numeroSalida !== null
+              ? `Salida N° ${numeroSalida} registrada`
+              : 'Salida registrada'}
           </h2>
           <p className="text-[#757874] text-sm">Redirigiendo...</p>
         </div>

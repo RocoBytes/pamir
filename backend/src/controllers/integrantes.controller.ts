@@ -142,6 +142,8 @@ export async function getIntegranteByRut(req: Request, res: Response): Promise<v
         nombreCompleto: true,
         rut: true,
         email: true,
+        membresiaClub: true,
+        nombreClub: true,
         createdAt: true,
       },
     });
