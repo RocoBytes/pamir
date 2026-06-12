@@ -103,7 +103,7 @@ const schema = z
 
     // Membresía
     membresiaClub: z.enum(
-      ['SOCIO_ANDINO_PAMIR', 'SOCIO_OTRO_CLUB', 'POSTULANTE_CLUB', 'NO_PERTENECE'],
+      ['SOCIO_ANDINO_PAMIR', 'SOCIO_EL_MONTANISTA', 'SOCIO_OTRO_CLUB', 'POSTULANTE_CLUB', 'NO_PERTENECE'],
       { error: 'Selecciona una opción' }
     ),
     nombreClub: z.string().max(50, 'Máximo 50 caracteres').optional(),
@@ -369,7 +369,7 @@ export function RegistroIntegrante({ onBack, defaultEmail, onComplete }: Registr
       cirugiasLesionesDetalle: '',
       fuma: undefined as unknown as boolean,
       usaLentes: undefined as unknown as boolean,
-      membresiaClub: undefined as unknown as 'SOCIO_ANDINO_PAMIR' | 'SOCIO_OTRO_CLUB' | 'POSTULANTE_CLUB' | 'NO_PERTENECE',
+      membresiaClub: undefined as unknown as 'SOCIO_ANDINO_PAMIR' | 'SOCIO_EL_MONTANISTA' | 'SOCIO_OTRO_CLUB' | 'POSTULANTE_CLUB' | 'NO_PERTENECE',
       nombreClub: '',
       declaracionSalud: undefined as unknown as true,
       aceptacionRiesgo: undefined as unknown as true,
@@ -610,6 +610,7 @@ export function RegistroIntegrante({ onBack, defaultEmail, onComplete }: Registr
                   label="Membresía en Club de Montaña"
                   options={[
                     { value: 'SOCIO_ANDINO_PAMIR', label: 'Socio Andino Club Pamir' },
+                    { value: 'SOCIO_EL_MONTANISTA', label: 'Socio Club El Montañista' },
                     { value: 'SOCIO_OTRO_CLUB', label: 'Socio otro Club' },
                     { value: 'POSTULANTE_CLUB', label: 'Postulante a un club' },
                     { value: 'NO_PERTENECE', label: 'No pertenece a ningún club' },

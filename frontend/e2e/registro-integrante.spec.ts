@@ -89,6 +89,12 @@ test.describe('RegistroIntegrante – validaciones de formulario', () => {
     await expect(page.getByPlaceholder('Ej: Club Andino de Chile')).not.toBeVisible()
   })
 
+  test('oculta campo de nombre de club para socios El Montañista', async ({ page }) => {
+    await goToRegistroIntegrante(page)
+    await page.getByRole('button', { name: 'Socio Club El Montañista' }).click()
+    await expect(page.getByPlaceholder('Ej: Club Andino de Chile')).not.toBeVisible()
+  })
+
   test('valida que alergias con Sí requiere detalle', async ({ page }) => {
     await goToRegistroIntegrante(page)
 
