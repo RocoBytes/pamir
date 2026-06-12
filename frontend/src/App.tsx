@@ -34,15 +34,31 @@ export default function App() {
   const isAuthenticated = !!(user && token)
   const isAdmin = user?.email === ADMIN_EMAIL
 
+  // Reset al cambiar la sesión, ajustando estado durante el render
+  // (evita el setState síncrono dentro del effect)
+  const [prevAuthenticated, setPrevAuthenticated] = useState(isAuthenticated)
+  if (prevAuthenticated !== isAuthenticated) {
+    setPrevAuthenticated(isAuthenticated)
+    setIntegranteChecked(false)
+    setHasIntegrante(false)
+  }
+
   useEffect(() => {
-    if (!isAuthenticated) {
-      setIntegranteChecked(false)
-      setHasIntegrante(false)
-      return
-    }
+    if (!isAuthenticated) return
+    // `cancelled` descarta respuestas que lleguen después de un logout
+    let cancelled = false
     fetchMyIntegrante()
-      .then(result => { setHasIntegrante(result !== null); setIntegranteChecked(true) })
-      .catch(() => { setHasIntegrante(false); setIntegranteChecked(true) })
+      .then(result => {
+        if (cancelled) return
+        setHasIntegrante(result !== null)
+        setIntegranteChecked(true)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setHasIntegrante(false)
+        setIntegranteChecked(true)
+      })
+    return () => { cancelled = true }
   }, [isAuthenticated])
 
   const verifiedParam = getQueryParam('verified')

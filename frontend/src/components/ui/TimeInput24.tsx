@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useId } from 'react'
+import { useState, useRef, useId } from 'react'
 import { ChevronUp, ChevronDown, Clock } from 'lucide-react'
 
 interface TimeInput24Props {
@@ -26,9 +26,11 @@ export function TimeInput24({
   const minutesRef = useRef<HTMLInputElement>(null)
   const hoursRef = useRef<HTMLInputElement>(null)
 
-  // Refs always hold latest values to avoid stale closure bugs in blur handlers
-  const latestHours = useRef('')
-  const latestMinutes = useRef('')
+  // Los inputs son controlados: el value del DOM siempre refleja el último
+  // valor tipeado, así que sirve como fuente fresca en los handlers cruzados
+  // (blur de horas leyendo minutos y viceversa) sin refs-espejo
+  const domHours = () => hoursRef.current?.value ?? ''
+  const domMinutes = () => minutesRef.current?.value ?? ''
 
   function parseTime(v: string): { h: string; m: string } {
     if (!v) return { h: '', m: '' }
@@ -40,14 +42,14 @@ export function TimeInput24({
   const [hours, setHours] = useState(init.h)
   const [minutes, setMinutes] = useState(init.m)
 
-  latestHours.current = hours
-  latestMinutes.current = minutes
-
-  useEffect(() => {
+  // Sincronización prop → estado ajustando durante el render
+  const [prevValue, setPrevValue] = useState(value)
+  if (prevValue !== value) {
+    setPrevValue(value)
     const { h, m } = parseTime(value)
     setHours(h)
     setMinutes(m)
-  }, [value])
+  }
 
   function emitComplete(h: string, m: string) {
     const hNum = parseInt(h, 10)
@@ -67,12 +69,12 @@ export function TimeInput24({
   function handleHoursChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.replace(/\D/g, '').slice(0, 2)
     setHours(raw)
-    latestHours.current = raw
     const hNum = parseInt(raw, 10)
     // Only emit once both digits are typed; single digit waits for blur to pad
     if (raw.length === 2 && hNum <= 23) {
-      const mNum = parseInt(latestMinutes.current, 10)
-      if (latestMinutes.current !== '' && !isNaN(mNum) && mNum <= 59) {
+      const mVal = domMinutes()
+      const mNum = parseInt(mVal, 10)
+      if (mVal !== '' && !isNaN(mNum) && mNum <= 59) {
         onChange?.(`${String(hNum).padStart(2, '0')}:${String(mNum).padStart(2, '0')}`)
       }
       minutesRef.current?.focus()
@@ -83,12 +85,12 @@ export function TimeInput24({
   function handleMinutesChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.replace(/\D/g, '').slice(0, 2)
     setMinutes(raw)
-    latestMinutes.current = raw
     const mNum = parseInt(raw, 10)
     // Only emit once both digits are typed; single digit waits for blur to pad
     if (raw.length === 2 && mNum <= 59) {
-      const hNum = parseInt(latestHours.current, 10)
-      if (latestHours.current !== '' && !isNaN(hNum) && hNum <= 23) {
+      const hVal = domHours()
+      const hNum = parseInt(hVal, 10)
+      if (hVal !== '' && !isNaN(hNum) && hNum <= 23) {
         onChange?.(`${String(hNum).padStart(2, '0')}:${String(mNum).padStart(2, '0')}`)
       }
     }
@@ -110,11 +112,9 @@ export function TimeInput24({
     if (!isNaN(num) && num >= 0 && num <= 23) {
       const padded = String(num).padStart(2, '0')
       setHours(padded)
-      latestHours.current = padded
-      emitComplete(padded, latestMinutes.current)
+      emitComplete(padded, domMinutes())
     } else {
       setHours('')
-      latestHours.current = ''
       onChange?.('')
     }
     onBlur?.()
@@ -129,11 +129,9 @@ export function TimeInput24({
     if (!isNaN(num) && num >= 0 && num <= 59) {
       const padded = String(num).padStart(2, '0')
       setMinutes(padded)
-      latestMinutes.current = padded
-      emitComplete(latestHours.current, padded)
+      emitComplete(domHours(), padded)
     } else {
       setMinutes('')
-      latestMinutes.current = ''
       onChange?.('')
     }
     onBlur?.()
@@ -146,13 +144,12 @@ export function TimeInput24({
   function handleHoursKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault()
-      const current = parseInt(latestHours.current, 10)
+      const current = parseInt(domHours(), 10)
       const base = isNaN(current) ? 0 : current
       const next = e.key === 'ArrowUp' ? (base + 1) % 24 : (base - 1 + 24) % 24
       const padded = String(next).padStart(2, '0')
       setHours(padded)
-      latestHours.current = padded
-      emitComplete(padded, latestMinutes.current)
+      emitComplete(padded, domMinutes())
     }
     if (e.key === ':' || e.key === 'Tab') {
       minutesRef.current?.focus()
@@ -163,13 +160,12 @@ export function TimeInput24({
   function handleMinutesKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault()
-      const current = parseInt(latestMinutes.current, 10)
+      const current = parseInt(domMinutes(), 10)
       const base = isNaN(current) ? 0 : current
       const next = e.key === 'ArrowUp' ? (base + 1) % 60 : (base - 1 + 60) % 60
       const padded = String(next).padStart(2, '0')
       setMinutes(padded)
-      latestMinutes.current = padded
-      emitComplete(latestHours.current, padded)
+      emitComplete(domHours(), padded)
     }
     if (e.key === 'Backspace' && minutesRef.current?.value === '') {
       hoursRef.current?.focus()
@@ -178,23 +174,21 @@ export function TimeInput24({
   }
 
   function stepHours(delta: 1 | -1) {
-    const current = parseInt(latestHours.current, 10)
+    const current = parseInt(domHours(), 10)
     const base = isNaN(current) ? 0 : current
     const next = (base + delta + 24) % 24
     const padded = String(next).padStart(2, '0')
     setHours(padded)
-    latestHours.current = padded
-    emitComplete(padded, latestMinutes.current)
+    emitComplete(padded, domMinutes())
   }
 
   function stepMinutes(delta: 1 | -1) {
-    const current = parseInt(latestMinutes.current, 10)
+    const current = parseInt(domMinutes(), 10)
     const base = isNaN(current) ? 0 : current
     const next = (base + delta + 60) % 60
     const padded = String(next).padStart(2, '0')
     setMinutes(padded)
-    latestMinutes.current = padded
-    emitComplete(latestHours.current, padded)
+    emitComplete(domHours(), padded)
   }
 
   const borderClass = error

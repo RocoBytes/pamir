@@ -10,7 +10,7 @@ const ALLOWED_PRONOSTICO_EXT_STRICT = /\.(pdf|jpg|jpeg|png)$/i;
 function sanitizeGpxFilename(raw: string): string {
   const base = raw
     .replace(/[/\\]/g, '')
-    .replace(/[^\w\s.\-]/g, '_')
+    .replace(/[^\w\s.-]/g, '_')
     .trim()
     .slice(0, 200);
   return base.toLowerCase().endsWith('.gpx') ? base : `${base}.gpx`;
@@ -19,7 +19,7 @@ function sanitizeGpxFilename(raw: string): string {
 function sanitizePronosticoFilename(raw: string): string {
   return raw
     .replace(/[/\\]/g, '')
-    .replace(/[^\w\s.\-]/g, '_')
+    .replace(/[^\w\s.-]/g, '_')
     .trim()
     .slice(0, 200);
 }
