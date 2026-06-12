@@ -152,6 +152,7 @@ interface CierreEmailData {
   motivosCambios?: unknown;
   motivosCambiosOtro?: string | null;
   ocurrioIncidente: string;
+  ocurrioAccidente: string;
   tiposIncidente?: unknown;
   gravedadLesion?: string | null;
   patologiaMedica?: string | null;
@@ -246,11 +247,9 @@ const MOTIVO_CAMBIO_MAP: Record<string, string> = {
   OTRO: 'Otro',
 };
 
-const INCIDENTE_MAP: Record<string, string> = {
-  NADA: 'No ocurrió nada',
-  INCIDENTES_MENORES: 'Incidentes menores sin lesión',
-  ACCIDENTE_LESION: 'Accidente con lesión',
-  SUSTO: 'Situación de alto riesgo (near-miss)',
+const SI_NO_MAP: Record<string, string> = {
+  SI: 'Sí',
+  NO: 'No',
 };
 
 const TIPO_INCIDENTE_MAP: Record<string, string> = {
@@ -279,7 +278,7 @@ const CAUSA_RAIZ_MAP: Record<string, string> = {
 
 const DESEMPENO_MAP: Record<string, string> = {
   TODO_FUNCIONO: 'Todo funcionó correctamente',
-  FALLO_EQUIPO: 'Algún equipo falló o se dañó',
+  FALLO_EQUIPO: 'Algún equipamiento falló o se dañó',
 };
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -422,7 +421,7 @@ export function buildSalidaNotificationEmail(nombreCompleto: string, salida: Sal
 // ─── Cierre notification ──────────────────────────────────────────────────────
 
 export function buildCierreNotificationEmail(nombreCompleto: string, salida: SalidaEmailData, cierre: CierreEmailData): string {
-  const hayIncidente = cierre.ocurrioIncidente !== 'NADA';
+  const hayIncidente = cierre.ocurrioIncidente === 'SI' || cierre.ocurrioAccidente === 'SI';
   const abortada = cierre.estadoCierre === 'ABORTADA_INCOMPLETA';
   const huboCambios = cierre.huboCambios === 'SI';
   const motivosCambiosArr = safeStringArray(cierre.motivosCambios);
@@ -453,8 +452,9 @@ export function buildCierreNotificationEmail(nombreCompleto: string, salida: Sal
     ${huboCambios ? listRow('Motivos de los cambios', motivosCambiosArr.map((m) => MOTIVO_CAMBIO_MAP[m] ?? m)) : ''}
     ${huboCambios ? row('Otros motivos', opt(cierre.motivosCambiosOtro)) : ''}
 
-    ${sectionHeader('IV. Gestión de Incidentes')}
-    ${row('¿Ocurrió un incidente?', INCIDENTE_MAP[cierre.ocurrioIncidente] ?? cierre.ocurrioIncidente)}
+    ${sectionHeader('IV. Gestión de Incidentes y Accidentes')}
+    ${row('¿Ocurrió algún incidente (sin lesión)?', SI_NO_MAP[cierre.ocurrioIncidente] ?? cierre.ocurrioIncidente)}
+    ${row('¿Ocurrió algún accidente (con lesión)?', SI_NO_MAP[cierre.ocurrioAccidente] ?? cierre.ocurrioAccidente)}
     ${hayIncidente ? listRow('Tipos de incidente', tiposIncidenteArr.map((t) => TIPO_INCIDENTE_MAP[t] ?? t)) : ''}
     ${hayIncidente && cierre.gravedadLesion ? row('Gravedad de la lesión', GRAVEDAD_MAP[cierre.gravedadLesion] ?? cierre.gravedadLesion) : ''}
     ${hayIncidente && tiposIncidenteArr.includes('MEDICO') && cierre.patologiaMedica ? row('Patología médica', cierre.patologiaMedica) : ''}
@@ -462,8 +462,8 @@ export function buildCierreNotificationEmail(nombreCompleto: string, salida: Sal
     ${hayIncidente ? listRow('Causas raíz', causasRaizArr.map((c) => CAUSA_RAIZ_MAP[c] ?? c)) : ''}
     ${hayIncidente ? row('Otra causa raíz', opt(cierre.causaRaizOtro)) : ''}
 
-    ${sectionHeader('V. Análisis Técnico y de Equipo')}
-    ${row('Desempeño del equipo', DESEMPENO_MAP[cierre.desempenoEquipo] ?? cierre.desempenoEquipo)}
+    ${sectionHeader('V. Análisis Técnico y de Equipamiento')}
+    ${row('Desempeño del equipamiento', DESEMPENO_MAP[cierre.desempenoEquipo] ?? cierre.desempenoEquipo)}
     ${cierre.desempenoEquipo === 'FALLO_EQUIPO' ? row('Detalle de la falla', opt(cierre.detalleFallaEquipo)) : ''}
     ${row('Observaciones de la ruta', opt(cierre.observacionesRuta))}
     ${pronosticoRow(cierre.precisionPronostico)}

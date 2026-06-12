@@ -304,12 +304,6 @@ export type MotivoCambio =
   | 'FALTA_TIEMPO'
   | 'OTRO'
 
-export type OcurrioIncidente =
-  | 'NADA'
-  | 'INCIDENTES_MENORES'
-  | 'ACCIDENTE_LESION'
-  | 'SUSTO'
-
 export type TipoIncidente =
   | 'MEDICO'
   | 'LESION'
@@ -342,8 +336,9 @@ export interface FichaCierreFormData {
   huboCambios: 'SI' | 'NO'
   motivosCambios?: MotivoCambio[]
   motivosCambiosOtro?: string
-  // Paso 3 – Gestión de Incidentes y Sustos (Near-Miss)
-  ocurrioIncidente: OcurrioIncidente
+  // Paso 3 – Gestión de Incidentes y Accidentes
+  ocurrioIncidente: 'SI' | 'NO'
+  ocurrioAccidente: 'SI' | 'NO'
   tiposIncidente?: TipoIncidente[]
   gravedadLesion?: GravedadLesion
   descripcionSuceso?: string
@@ -391,13 +386,6 @@ export const MOTIVO_CAMBIO_LABELS: Record<MotivoCambio, string> = {
   OTRO: 'Otro',
 }
 
-export const OCURRIO_INCIDENTE_LABELS: Record<OcurrioIncidente, string> = {
-  NADA: 'No ocurrió nada',
-  INCIDENTES_MENORES: 'Hubo incidentes menores sin lesión',
-  ACCIDENTE_LESION: 'Hubo un accidente con lesión',
-  SUSTO: 'Hubo un "Susto" (Situación de alto riesgo sin consecuencias)',
-}
-
 export const TIPO_INCIDENTE_LABELS: Record<TipoIncidente, string> = {
   MEDICO: 'Médico: Puna (MAM), agotamiento extremo, deshidratación, golpe de calor, etc.',
   LESION: 'Lesión: Torcedura, caída, herida cortante, ampolla limitante, etc.',
@@ -424,6 +412,6 @@ export const CAUSA_RAIZ_LABELS: Record<CausaRaiz, string> = {
 
 export const DESEMPENO_EQUIPO_LABELS: Record<DesempenoEquipo, string> = {
   TODO_FUNCIONO: 'Todo funcionó correctamente',
-  FALLO_EQUIPO: 'Algún equipo falló o se dañó',
+  FALLO_EQUIPO: 'Algún equipamiento falló o se dañó',
 }
 

@@ -20,7 +20,6 @@ import type {
   EstadoCierre,
   MotivoAbandono,
   MotivoCambio,
-  OcurrioIncidente,
   TipoIncidente,
   GravedadLesion,
   CausaRaiz,
@@ -30,7 +29,6 @@ import {
   ESTADO_CIERRE_LABELS,
   MOTIVO_ABANDONO_LABELS,
   MOTIVO_CAMBIO_LABELS,
-  OCURRIO_INCIDENTE_LABELS,
   TIPO_INCIDENTE_LABELS,
   GRAVEDAD_LESION_LABELS,
   CAUSA_RAIZ_LABELS,
@@ -67,12 +65,8 @@ const MOTIVOS_CAMBIO = [
 
 const HUBO_CAMBIOS = ['SI', 'NO'] as const
 
-const OCURRIO_INCIDENTE_OPTIONS = [
-  'NADA',
-  'INCIDENTES_MENORES',
-  'ACCIDENTE_LESION',
-  'SUSTO',
-] as const
+const SI_NO = ['SI', 'NO'] as const
+const SI_NO_LABELS = { SI: 'Sí', NO: 'No' } as const
 
 const TIPOS_INCIDENTE = [
   'MEDICO',
@@ -111,7 +105,10 @@ const cierreSchema = z
     motivosCambios: z.array(z.enum(MOTIVOS_CAMBIO)).optional(),
     motivosCambiosOtro: z.string().max(100, 'Máximo 100 caracteres').optional(),
     // Paso 3
-    ocurrioIncidente: z.enum(OCURRIO_INCIDENTE_OPTIONS, {
+    ocurrioIncidente: z.enum(SI_NO, {
+      error: 'Selecciona una opción',
+    }),
+    ocurrioAccidente: z.enum(SI_NO, {
       error: 'Selecciona una opción',
     }),
     tiposIncidente: z.array(z.enum(TIPOS_INCIDENTE)).optional(),
@@ -152,18 +149,16 @@ const cierreSchema = z
     (d) => d.huboCambios !== 'SI' || (d.motivosCambios && d.motivosCambios.length > 0),
     { message: 'Selecciona al menos un motivo', path: ['motivosCambios'] },
   )
-  // Safe when ocurrioIncidente is still undefined (steps 1 & 2 nav)
+  // Safe when both fields are still undefined (steps 1 & 2 nav)
   .refine(
     (d) =>
-      !d.ocurrioIncidente ||
-      d.ocurrioIncidente === 'NADA' ||
+      (d.ocurrioIncidente !== 'SI' && d.ocurrioAccidente !== 'SI') ||
       (d.tiposIncidente && d.tiposIncidente.length > 0),
     { message: 'Selecciona al menos un tipo de incidente', path: ['tiposIncidente'] },
   )
   .refine(
     (d) =>
-      !d.ocurrioIncidente ||
-      d.ocurrioIncidente === 'NADA' ||
+      (d.ocurrioIncidente !== 'SI' && d.ocurrioAccidente !== 'SI') ||
       !!d.descripcionSuceso?.trim(),
     { message: 'Describe lo que ocurrió', path: ['descripcionSuceso'] },
   )
@@ -173,7 +168,7 @@ const cierreSchema = z
   )
   .refine(
     (d) => d.desempenoEquipo !== 'FALLO_EQUIPO' || !!d.detalleFallaEquipo?.trim(),
-    { message: 'Describe la falla del equipo', path: ['detalleFallaEquipo'] },
+    { message: 'Describe la falla del equipamiento', path: ['detalleFallaEquipo'] },
   )
 
 type CierreFormValues = z.infer<typeof cierreSchema>
@@ -459,10 +454,11 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
   const motivosCambiosVal = watch('motivosCambios') ?? []
   const showOtroMotivo = motivosCambiosVal.includes('OTRO')
   const ocurrioIncidenteVal = watch('ocurrioIncidente')
+  const ocurrioAccidenteVal = watch('ocurrioAccidente')
   const tiposIncidenteVal = watch('tiposIncidente') ?? []
   const causasRaizVal = watch('causasRaiz') ?? []
   const descripcionSucesoVal = watch('descripcionSuceso') ?? ''
-  const incidenteActivo = !!ocurrioIncidenteVal && ocurrioIncidenteVal !== 'NADA'
+  const incidenteActivo = ocurrioIncidenteVal === 'SI' || ocurrioAccidenteVal === 'SI'
   const showGravedadLesion = tiposIncidenteVal.includes('LESION')
   const showPatologiaMedica = tiposIncidenteVal.includes('MEDICO')
   const showCausaRaizOtro = causasRaizVal.includes('OTRO')
@@ -512,6 +508,7 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
   const goToStep4 = useCallback(async () => {
     const valid = await trigger([
       'ocurrioIncidente',
+      'ocurrioAccidente',
       'tiposIncidente',
       'gravedadLesion',
       'descripcionSuceso',
@@ -546,6 +543,7 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
             motivosCambios: values.motivosCambios,
             motivosCambiosOtro: values.motivosCambiosOtro,
             ocurrioIncidente: values.ocurrioIncidente,
+            ocurrioAccidente: values.ocurrioAccidente,
             tiposIncidente: values.tiposIncidente,
             gravedadLesion: values.gravedadLesion,
             patologiaMedica: values.patologiaMedica,
@@ -650,7 +648,7 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
               : currentStep === 3
               ? 'Esta sección es el corazón del Catastro de Accidentes.'
               : currentStep === 4
-              ? 'Evalúa el desempeño del equipo y las condiciones de la ruta.'
+              ? 'Evalúa el desempeño del equipamiento y las condiciones de la ruta.'
               : 'Comparte lo aprendido para mejorar futuras salidas.'}
           </p>
         </div>
@@ -911,22 +909,39 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
               </>
             )}
 
-            {/* ── PASO 3: Gestión de Incidentes y "Sustos" (Near-Miss) ── */}
+            {/* ── PASO 3: Gestión de Incidentes y Accidentes ── */}
             {currentStep === 3 && (
               <>
-                {/* Q7: ¿Ocurrió algún incidente o accidente? */}
+                {/* Q7a: ¿Ocurrió algún incidente? */}
                 <Controller
                   control={control}
                   name="ocurrioIncidente"
                   render={({ field }) => (
-                    <RadioGroup<OcurrioIncidente>
-                      label="¿Ocurrió algún incidente o accidente?"
+                    <RadioGroup<'SI' | 'NO'>
+                      label="¿Ocurrió algún incidente (sin lesión)?"
                       required
-                      options={OCURRIO_INCIDENTE_OPTIONS}
-                      labels={OCURRIO_INCIDENTE_LABELS}
+                      options={SI_NO}
+                      labels={SI_NO_LABELS}
                       value={field.value}
                       onChange={field.onChange}
                       error={errors.ocurrioIncidente?.message}
+                    />
+                  )}
+                />
+
+                {/* Q7b: ¿Ocurrió algún accidente? */}
+                <Controller
+                  control={control}
+                  name="ocurrioAccidente"
+                  render={({ field }) => (
+                    <RadioGroup<'SI' | 'NO'>
+                      label="¿Ocurrió algún accidente (con lesión)?"
+                      required
+                      options={SI_NO}
+                      labels={SI_NO_LABELS}
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={errors.ocurrioAccidente?.message}
                     />
                   )}
                 />
@@ -1115,13 +1130,13 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
             {/* ── PASO 4: Análisis Técnico y de Equipamiento ─────────────────── */}
             {currentStep === 4 && (
               <>
-                {/* Q12: Desempeño del Equipo */}
+                {/* Q12: Desempeño del Equipamiento */}
                 <Controller
                   control={control}
                   name="desempenoEquipo"
                   render={({ field }) => (
                     <RadioGroup<DesempenoEquipo>
-                      label="Desempeño del Equipo"
+                      label="Desempeño del Equipamiento"
                       required
                       options={DESEMPENO_EQUIPO_OPTIONS}
                       labels={DESEMPENO_EQUIPO_LABELS}
@@ -1139,7 +1154,7 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
                       htmlFor="detalleFallaEquipo"
                       className="text-sm font-semibold text-[#264c99]"
                     >
-                      Detalle de falla de equipo
+                      Detalle de falla de equipamiento
                       <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
                     </label>
                     <p className="text-xs text-[#757874] -mt-0.5">

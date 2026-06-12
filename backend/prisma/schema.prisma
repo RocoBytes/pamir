@@ -120,6 +120,7 @@ model Cierre {
 
   // Paso 3
   ocurrioIncidente  String  @map("ocurrio_incidente")
+  ocurrioAccidente  String  @default("NO") @map("ocurrio_accidente")
   tiposIncidente    Json    @default("[]") @map("tipos_incidente")
   gravedadLesion    String? @map("gravedad_lesion")
   patologiaMedica   String? @map("patologia_medica")

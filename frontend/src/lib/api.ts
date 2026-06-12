@@ -235,6 +235,7 @@ export interface CreateCierrePayload {
   motivosCambios?: string[]
   motivosCambiosOtro?: string
   ocurrioIncidente: string
+  ocurrioAccidente: string
   tiposIncidente?: string[]
   gravedadLesion?: string
   patologiaMedica?: string
