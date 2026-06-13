@@ -19,6 +19,7 @@ import {
   BookOpen,
   LayoutDashboard,
   History,
+  Siren,
 } from 'lucide-react'
 import logoPamir from '../assets/logo_PAMIR.png'
 
@@ -50,6 +51,7 @@ interface DashboardProps {
   onNewCierre: () => void
   onNewIntegrante: () => void
   onDocumentos: () => void
+  onContactos: () => void
   onAdminPanel: () => void
   onEditSalida: (id: string) => void
   onCloseSalida: (id: string) => void
@@ -124,7 +126,7 @@ function SalidaCard({ salida, currentUserId, onClick }: { salida: SalidaRecord, 
   )
 }
 
-export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir = false, onNewSalida, onNewCierre, onNewIntegrante, onDocumentos, onAdminPanel, onEditSalida, onCloseSalida, onLogout }: DashboardProps) {
+export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir = false, onNewSalida, onNewCierre, onNewIntegrante, onDocumentos, onContactos, onAdminPanel, onEditSalida, onCloseSalida, onLogout }: DashboardProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -352,6 +354,24 @@ export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir 
             </div>
           )}
         </div>
+
+        {/* Contactos esenciales — información de seguridad, visible para todos */}
+        <button
+          onClick={onContactos}
+          className="w-full flex items-center gap-4 bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm hover:shadow-md transition-shadow duration-200 p-4 mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] focus-visible:ring-offset-2"
+          aria-label="Abrir contactos esenciales de emergencia"
+        >
+          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#f5e8ea] flex items-center justify-center">
+            <Siren size={20} className="text-[#A4636E]" />
+          </div>
+          <div className="flex-1 text-left">
+            <p className="font-semibold text-slate-900 text-sm">Contactos esenciales</p>
+            <p className="text-xs text-[#757874]">
+              Rescate en montaña, SAMU, GOPE, Bomberos y más
+            </p>
+          </div>
+          <ChevronRight size={16} className="text-[#757874]" />
+        </button>
 
         {/* Documentación del club — exclusivo socios Andino Club Pamir (y admin) */}
         {(isSocioPamir || isAdmin) && (

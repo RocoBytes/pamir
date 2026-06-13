@@ -7,12 +7,13 @@ import { RegistroIntegrante } from './components/RegistroIntegrante'
 import { FichaCierre } from './components/FichaCierre'
 import { EvaluacionExpress } from './components/EvaluacionExpress'
 import { DocumentosPage } from './components/DocumentosPage'
+import { ContactosPage } from './components/ContactosPage'
 import { AdminPanel } from './components/AdminPanel'
 import { SalidaEditForm } from './components/SalidaEditForm'
 import { fetchMyIntegrante } from './lib/api'
 import type { IntegranteRecord } from './types/salida'
 
-type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone' | 'documentos' | 'admin-panel' | 'editar-salida'
+type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone' | 'documentos' | 'contactos' | 'admin-panel' | 'editar-salida'
 
 const ADMIN_EMAIL = 'seguridad.acp.cl@gmail.com'
 
@@ -132,6 +133,11 @@ export default function App() {
     return <DocumentosPage onBack={() => setRoute('dashboard')} />
   }
 
+  // Contactos de emergencia: visible para todos los usuarios logueados (sin gate).
+  if (route === 'contactos') {
+    return <ContactosPage onBack={() => setRoute('dashboard')} />
+  }
+
   if (route === 'admin-panel' && isAdmin) {
     return <AdminPanel onBack={() => setRoute('dashboard')} />
   }
@@ -168,6 +174,7 @@ export default function App() {
       onNewCierre={() => setRoute('nueva-cierre')}
       onNewIntegrante={() => setRoute('nuevo-integrante-standalone')}
       onDocumentos={() => setRoute('documentos')}
+      onContactos={() => setRoute('contactos')}
       onAdminPanel={() => setRoute('admin-panel')}
       onEditSalida={(id) => { setActionSalidaId(id); setRoute('editar-salida') }}
       onCloseSalida={(id) => { setActionSalidaId(id); setRoute('nueva-cierre') }}
