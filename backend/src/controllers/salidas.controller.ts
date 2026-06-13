@@ -268,15 +268,22 @@ export async function updateSalida(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string;
     const requestUserId = req.user?.id ?? null;
+    const requestUserEmail = req.user?.email ?? null;
+    const isAdmin = requestUserEmail === ADMIN_EMAIL;
 
     const existing = await prisma.salida.findUnique({ where: { id } });
     if (!existing) {
       res.status(404).json({ error: 'Salida no encontrada' });
       return;
     }
-    // Salidas con dueño sólo puede editarlas ese dueño
-    if (existing.userId !== null && existing.userId !== requestUserId) {
+    // Solo el dueño o el administrador pueden editar una salida.
+    if (!isAdmin && existing.userId !== null && existing.userId !== requestUserId) {
       res.status(403).json({ error: 'No tienes permiso para modificar esta salida' });
+      return;
+    }
+    // Solo se pueden editar salidas en curso (no cerradas, canceladas, etc.).
+    if (existing.status !== 'EN_CURSO') {
+      res.status(409).json({ error: 'Solo se pueden editar salidas en curso' });
       return;
     }
 
@@ -298,8 +305,7 @@ export async function updateSalida(req: Request, res: Response): Promise<void> {
         ...(body.retenCarabineros !== undefined && { retenCarabineros: body.retenCarabineros || null }),
         ...(body.nombreFamiliar !== undefined && { nombreFamiliar: body.nombreFamiliar || null }),
         ...(body.telefonoFamiliar !== undefined && { telefonoFamiliar: body.telefonoFamiliar || null }),
-        ...(body.liderCordada !== undefined && { liderCordada: body.liderCordada }),
-        ...(body.participantes !== undefined && { participantes: asJson(body.participantes) }),
+        // `liderCordada` y `participantes` (grupo humano) NO son editables por este endpoint.
         ...(body.coordinacionGrupal !== undefined && { coordinacionGrupal: body.coordinacionGrupal }),
         ...(body.matrizRiesgos !== undefined && { matrizRiesgos: body.matrizRiesgos }),
         ...(body.mediosComunicacion !== undefined && { mediosComunicacion: asJson(body.mediosComunicacion) }),
@@ -310,7 +316,7 @@ export async function updateSalida(req: Request, res: Response): Promise<void> {
         ...(body.riesgosIdentificados !== undefined && { riesgosIdentificados: asJson(body.riesgosIdentificados) }),
         ...(body.riesgosOtro !== undefined && { riesgosOtro: body.riesgosOtro }),
         ...(body.planEvacuacion !== undefined && { planEvacuacion: body.planEvacuacion }),
-        ...(body.status !== undefined && { status: body.status }),
+        // `status` NO es editable acá: la transición a COMPLETADA ocurre solo al crear el cierre.
         ...(body.incidentReport !== undefined && { incidentReport: body.incidentReport }),
       },
     });

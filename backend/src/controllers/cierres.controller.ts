@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { Prisma, Cierre } from '../generated/prisma/client.js';
 import { sendEmail } from '../lib/google-gmail.js';
 import { buildCierreNotificationEmail } from '../lib/email-templates.js';
+import { ADMIN_EMAIL } from '../lib/constants.js';
 
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
@@ -73,14 +74,21 @@ export async function createCierre(req: Request, res: Response): Promise<void> {
   try {
     const data = req.body as CreateCierreBody;
     const userId = req.user!.id;
+    const isAdmin = req.user!.email === ADMIN_EMAIL;
 
     const salida = await prisma.salida.findUnique({ where: { id: data.salidaId } });
     if (!salida) {
       res.status(404).json({ error: 'Salida no encontrada' });
       return;
     }
-    if (salida.userId !== null && salida.userId !== userId) {
+    // El dueño o el administrador pueden cerrar; nadie más.
+    if (!isAdmin && salida.userId !== null && salida.userId !== userId) {
       res.status(403).json({ error: 'No tienes permiso para cerrar esta salida' });
+      return;
+    }
+    // Solo se pueden cerrar salidas en curso.
+    if (salida.status !== 'EN_CURSO') {
+      res.status(409).json({ error: 'Solo se pueden cerrar salidas en curso' });
       return;
     }
 
@@ -90,34 +98,42 @@ export async function createCierre(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const cierre = await prisma.cierre.create({
-      data: {
-        salidaId: data.salidaId,
-        userId,
-        fechaFinalizacionReal: new Date(data.fechaFinalizacionReal),
-        estadoCierre: data.estadoCierre,
-        altitudMaxima: data.altitudMaxima,
-        motivoAbandono: data.motivoAbandono,
-        huboCambios: data.huboCambios,
-        motivosCambios: asJson(data.motivosCambios ?? []),
-        motivosCambiosOtro: data.motivosCambiosOtro,
-        ocurrioIncidente: data.ocurrioIncidente,
-        ocurrioAccidente: data.ocurrioAccidente ?? 'NO',
-        tiposIncidente: asJson(data.tiposIncidente ?? []),
-        gravedadLesion: data.gravedadLesion,
-        patologiaMedica: data.patologiaMedica || null,
-        descripcionSuceso: data.descripcionSuceso,
-        causasRaiz: asJson(data.causasRaiz ?? []),
-        causaRaizOtro: data.causaRaizOtro,
-        desempenoEquipo: data.desempenoEquipo,
-        detalleFallaEquipo: data.detalleFallaEquipo,
-        observacionesRuta: data.observacionesRuta,
-        precisionPronostico: data.precisionPronostico,
-        leccionesAprendidas: data.leccionesAprendidas,
-        recomendacionesFuturos: data.recomendacionesFuturos,
-        sugerenciasClub: data.sugerenciasClub,
-      },
-    });
+    // El cierre y la transición a COMPLETADA deben ser atómicos: crear la ficha
+    // de cierre es el único método para completar una salida.
+    const [cierre] = await prisma.$transaction([
+      prisma.cierre.create({
+        data: {
+          salidaId: data.salidaId,
+          userId,
+          fechaFinalizacionReal: new Date(data.fechaFinalizacionReal),
+          estadoCierre: data.estadoCierre,
+          altitudMaxima: data.altitudMaxima,
+          motivoAbandono: data.motivoAbandono,
+          huboCambios: data.huboCambios,
+          motivosCambios: asJson(data.motivosCambios ?? []),
+          motivosCambiosOtro: data.motivosCambiosOtro,
+          ocurrioIncidente: data.ocurrioIncidente,
+          ocurrioAccidente: data.ocurrioAccidente ?? 'NO',
+          tiposIncidente: asJson(data.tiposIncidente ?? []),
+          gravedadLesion: data.gravedadLesion,
+          patologiaMedica: data.patologiaMedica || null,
+          descripcionSuceso: data.descripcionSuceso,
+          causasRaiz: asJson(data.causasRaiz ?? []),
+          causaRaizOtro: data.causaRaizOtro,
+          desempenoEquipo: data.desempenoEquipo,
+          detalleFallaEquipo: data.detalleFallaEquipo,
+          observacionesRuta: data.observacionesRuta,
+          precisionPronostico: data.precisionPronostico,
+          leccionesAprendidas: data.leccionesAprendidas,
+          recomendacionesFuturos: data.recomendacionesFuturos,
+          sugerenciasClub: data.sugerenciasClub,
+        },
+      }),
+      prisma.salida.update({
+        where: { id: data.salidaId },
+        data: { status: 'COMPLETADA' },
+      }),
+    ]);
 
     res.status(201).json(cierre);
 

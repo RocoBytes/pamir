@@ -34,7 +34,7 @@ import {
   CAUSA_RAIZ_LABELS,
   DESEMPENO_EQUIPO_LABELS,
 } from '../types/salida'
-import { fetchSalidas, updateSalida, uploadGpx, createCierre } from '../lib/api'
+import { fetchSalidas, uploadGpx, createCierre } from '../lib/api'
 import { Button } from './ui/Button'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -415,6 +415,9 @@ interface FichaCierreProps {
   user: User
   onDone: () => void
   onCancel: () => void
+  /** Salida preseleccionada (flujo admin desde el detalle): bloquea la selección. */
+  salidaId?: string
+  isAdmin?: boolean
 }
 
 const STEP_LABELS = [
@@ -427,7 +430,7 @@ const STEP_LABELS = [
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
+export function FichaCierre({ user, onDone, onCancel, salidaId: preselectedSalidaId, isAdmin = false }: FichaCierreProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
   const [loadingSalidas, setLoadingSalidas] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -446,7 +449,7 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
     formState: { errors },
   } = useForm<CierreFormValues>({
     resolver: zodResolver(cierreSchema),
-    defaultValues: { motivosCambios: [], tiposIncidente: [], causasRaiz: [] },
+    defaultValues: { salidaId: preselectedSalidaId ?? '', motivosCambios: [], tiposIncidente: [], causasRaiz: [] },
   })
 
   const estadoSeleccionado = watch('estadoCierre')
@@ -558,7 +561,7 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
             recomendacionesFuturos: values.recomendacionesFuturos,
             sugerenciasClub: values.sugerenciasClub,
           })
-          await updateSalida(values.salidaId, { status: 'COMPLETADA' })
+          // La transición a COMPLETADA la realiza el backend de forma atómica al crear el cierre.
           if (gpxFile) {
             await uploadGpx(values.salidaId, gpxFile)
           }
@@ -679,35 +682,54 @@ export function FichaCierre({ user, onDone, onCancel }: FichaCierreProps) {
                     Formulario de Salida asociado
                     <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
                   </label>
-                  <p className="text-xs text-[#757874] -mt-0.5">
-                    Selecciona la salida que deseas cerrar.
-                  </p>
-                  <div className="relative">
-                    <select
-                      id="salidaId"
-                      {...register('salidaId')}
-                      aria-invalid={errors.salidaId ? 'true' : undefined}
-                      className={[
-                        'w-full appearance-none rounded-xl border bg-white px-3 py-2 pr-9 text-sm text-slate-900',
-                        'transition-colors duration-150',
-                        'focus:outline-none focus:ring-2 focus:ring-[#264c99] focus:border-[#264c99]',
-                        errors.salidaId
-                          ? 'border-[#A4636E] focus:ring-[#A4636E] focus:border-[#A4636E]'
-                          : 'border-[#4a6fad]/40',
-                      ].join(' ')}
-                    >
-                      <option value="">— Selecciona una salida —</option>
-                      {salidas.filter((s) => s.userId === user.id).map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.nombreActividad} ({s.ubicacionGeografica})
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a6fad]/60 pointer-events-none"
-                      size={16}
-                    />
-                  </div>
+                  {preselectedSalidaId ? (
+                    <>
+                      <p className="text-xs text-[#757874] -mt-0.5">
+                        Cerrando la siguiente salida:
+                      </p>
+                      <input type="hidden" {...register('salidaId')} />
+                      <div className="rounded-xl border border-[#4a6fad]/40 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900">
+                        {(() => {
+                          const s = salidas.find((x) => x.id === preselectedSalidaId)
+                          return s ? `${s.nombreActividad} (${s.ubicacionGeografica})` : 'Cargando…'
+                        })()}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-[#757874] -mt-0.5">
+                        Selecciona la salida que deseas cerrar.
+                      </p>
+                      <div className="relative">
+                        <select
+                          id="salidaId"
+                          {...register('salidaId')}
+                          aria-invalid={errors.salidaId ? 'true' : undefined}
+                          className={[
+                            'w-full appearance-none rounded-xl border bg-white px-3 py-2 pr-9 text-sm text-slate-900',
+                            'transition-colors duration-150',
+                            'focus:outline-none focus:ring-2 focus:ring-[#264c99] focus:border-[#264c99]',
+                            errors.salidaId
+                              ? 'border-[#A4636E] focus:ring-[#A4636E] focus:border-[#A4636E]'
+                              : 'border-[#4a6fad]/40',
+                          ].join(' ')}
+                        >
+                          <option value="">— Selecciona una salida —</option>
+                          {salidas
+                            .filter((s) => (isAdmin ? s.status === 'EN_CURSO' : s.userId === user.id))
+                            .map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.nombreActividad} ({s.ubicacionGeografica})
+                              </option>
+                            ))}
+                        </select>
+                        <ChevronDown
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a6fad]/60 pointer-events-none"
+                          size={16}
+                        />
+                      </div>
+                    </>
+                  )}
                   {errors.salidaId && (
                     <p className="text-xs text-[#A4636E]" role="alert">
                       {errors.salidaId.message}
