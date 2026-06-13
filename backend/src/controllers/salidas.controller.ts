@@ -235,6 +235,9 @@ export async function getSalidaById(req: Request, res: Response): Promise<void> 
       return;
     }
 
+    // El administrador puede ver el detalle de cualquier salida.
+    const isAdmin = requestUserEmail === ADMIN_EMAIL;
+
     let isParticipant = false;
     if (requestUserEmail) {
       const integrante = await prisma.integrante.findFirst({
@@ -249,7 +252,7 @@ export async function getSalidaById(req: Request, res: Response): Promise<void> 
       }
     }
 
-    if (salida.userId !== null && salida.userId !== requestUserId && !isParticipant) {
+    if (!isAdmin && salida.userId !== null && salida.userId !== requestUserId && !isParticipant) {
       res.status(403).json({ error: 'No tienes permiso para ver esta salida' });
       return;
     }
