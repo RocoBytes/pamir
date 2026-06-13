@@ -8,10 +8,11 @@ import { FichaCierre } from './components/FichaCierre'
 import { EvaluacionExpress } from './components/EvaluacionExpress'
 import { DocumentosPage } from './components/DocumentosPage'
 import { AdminPanel } from './components/AdminPanel'
+import { SalidaEditForm } from './components/SalidaEditForm'
 import { fetchMyIntegrante } from './lib/api'
 import type { IntegranteRecord } from './types/salida'
 
-type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone' | 'documentos' | 'admin-panel'
+type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone' | 'documentos' | 'admin-panel' | 'editar-salida'
 
 const ADMIN_EMAIL = 'seguridad.acp.cl@gmail.com'
 
@@ -31,6 +32,7 @@ const Spinner = () => (
 export default function App() {
   const { user, token, isLoading, loginWithCredentials, register, logout } = useAuth()
   const [route, setRoute] = useState<Route>('dashboard')
+  const [actionSalidaId, setActionSalidaId] = useState<string | null>(null)
   const [integranteChecked, setIntegranteChecked] = useState(false)
   const [integrante, setIntegrante] = useState<IntegranteRecord | null>(null)
 
@@ -134,12 +136,24 @@ export default function App() {
     return <AdminPanel onBack={() => setRoute('dashboard')} />
   }
 
+  if (route === 'editar-salida' && isAdmin && actionSalidaId) {
+    return (
+      <SalidaEditForm
+        salidaId={actionSalidaId}
+        onDone={() => { setActionSalidaId(null); setRoute('dashboard') }}
+        onCancel={() => { setActionSalidaId(null); setRoute('dashboard') }}
+      />
+    )
+  }
+
   if (route === 'nueva-cierre' && user) {
     return (
       <FichaCierre
         user={user}
-        onDone={() => setRoute('dashboard')}
-        onCancel={() => setRoute('dashboard')}
+        isAdmin={isAdmin}
+        salidaId={actionSalidaId ?? undefined}
+        onDone={() => { setActionSalidaId(null); setRoute('dashboard') }}
+        onCancel={() => { setActionSalidaId(null); setRoute('dashboard') }}
       />
     )
   }
@@ -155,6 +169,8 @@ export default function App() {
       onNewIntegrante={() => setRoute('nuevo-integrante-standalone')}
       onDocumentos={() => setRoute('documentos')}
       onAdminPanel={() => setRoute('admin-panel')}
+      onEditSalida={(id) => { setActionSalidaId(id); setRoute('editar-salida') }}
+      onCloseSalida={(id) => { setActionSalidaId(id); setRoute('nueva-cierre') }}
       onLogout={logout}
     />
   )

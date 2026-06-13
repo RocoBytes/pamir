@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Mountain, X, Loader2, MapPin, Calendar, Clock, AlertCircle, FileImage } from 'lucide-react'
+import { Mountain, X, Loader2, MapPin, Calendar, Clock, AlertCircle, FileImage, Pencil, ClipboardCheck } from 'lucide-react'
 import type { SalidaRecord } from '../types/salida'
 import { getSalida } from '../lib/api'
 import {
@@ -19,6 +19,10 @@ import { Button } from './ui/Button'
 interface SalidaDetailModalProps {
   salidaId: string
   onClose: () => void
+  /** Acciones de administrador, solo disponibles sobre salidas EN_CURSO. */
+  isAdmin?: boolean
+  onEdit?: () => void
+  onCerrar?: () => void
 }
 
 function formatDateFull(iso: string): string {
@@ -36,7 +40,7 @@ function formatDateFull(iso: string): string {
   }
 }
 
-export function SalidaDetailModal({ salidaId, onClose }: SalidaDetailModalProps) {
+export function SalidaDetailModal({ salidaId, onClose, isAdmin = false, onEdit, onCerrar }: SalidaDetailModalProps) {
   const [salida, setSalida] = useState<SalidaRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -297,10 +301,26 @@ export function SalidaDetailModal({ salidaId, onClose }: SalidaDetailModalProps)
         </div>
 
         {/* Footer */}
-        <div className="bg-white border-t border-[#4a6fad]/15 p-4 sm:p-6 shrink-0 flex justify-end">
-          <Button variant="primary" onClick={onClose} className="w-full sm:w-auto">
-            Cerrar
-          </Button>
+        <div className="bg-white border-t border-[#4a6fad]/15 p-4 sm:p-6 shrink-0 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          {isAdmin && salida.status === 'EN_CURSO' ? (
+            <>
+              <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto">
+                Volver
+              </Button>
+              <Button variant="secondary" onClick={onEdit} className="w-full sm:w-auto">
+                <Pencil size={16} />
+                Editar
+              </Button>
+              <Button variant="primary" onClick={onCerrar} className="w-full sm:w-auto">
+                <ClipboardCheck size={16} />
+                Cerrar salida
+              </Button>
+            </>
+          ) : (
+            <Button variant="primary" onClick={onClose} className="w-full sm:w-auto">
+              Cerrar
+            </Button>
+          )}
         </div>
       </div>
     </div>

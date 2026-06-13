@@ -48,6 +48,8 @@ interface DashboardProps {
   onNewIntegrante: () => void
   onDocumentos: () => void
   onAdminPanel: () => void
+  onEditSalida: (id: string) => void
+  onCloseSalida: (id: string) => void
   onLogout: () => void
 }
 
@@ -119,7 +121,7 @@ function SalidaCard({ salida, currentUserId, onClick }: { salida: SalidaRecord, 
   )
 }
 
-export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir = false, onNewSalida, onNewCierre, onNewIntegrante, onDocumentos, onAdminPanel, onLogout }: DashboardProps) {
+export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir = false, onNewSalida, onNewCierre, onNewIntegrante, onDocumentos, onAdminPanel, onEditSalida, onCloseSalida, onLogout }: DashboardProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -458,6 +460,9 @@ export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir 
         <SalidaDetailModal
           salidaId={selectedSalidaId}
           onClose={() => setSelectedSalidaId(null)}
+          isAdmin={isAdmin}
+          onEdit={() => { const id = selectedSalidaId; setSelectedSalidaId(null); onEditSalida(id) }}
+          onCerrar={() => { const id = selectedSalidaId; setSelectedSalidaId(null); onCloseSalida(id) }}
         />
       )}
 
