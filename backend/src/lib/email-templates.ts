@@ -154,11 +154,9 @@ interface CierreEmailData {
   ocurrioIncidente: string;
   ocurrioAccidente: string;
   tiposIncidente?: unknown;
-  gravedadLesion?: string | null;
-  patologiaMedica?: string | null;
-  descripcionSuceso?: string | null;
-  causasRaiz?: unknown;
-  causaRaizOtro?: string | null;
+  incidenteOtroDescripcion?: string | null;
+  tiposAccidente?: unknown;
+  accidenteOtroDescripcion?: string | null;
   desempenoEquipo: string;
   detalleFallaEquipo?: string | null;
   observacionesRuta: string;
@@ -253,26 +251,27 @@ const SI_NO_MAP: Record<string, string> = {
 };
 
 const TIPO_INCIDENTE_MAP: Record<string, string> = {
-  MEDICO: 'Médico',
-  LESION: 'Lesión',
-  TECNICO: 'Técnico',
-  LOGISTICO: 'Logístico',
-  AMBIENTAL: 'Ambiental',
+  EXTRAVIO: 'Extravío o pérdida temporal de orientación',
+  CAIDA_SIN_LESION: 'Caída sin lesión (persona o material)',
+  GOLPE_LEVE: 'Golpe o contusión leve sin consecuencias',
+  FALLA_EQUIPAMIENTO: 'Falla de equipamiento',
+  CLIMA_ADVERSO: 'Condiciones climáticas adversas imprevistas',
+  PROBLEMA_COMUNICACION: 'Problema de comunicación o señal',
+  INICIO_MAL_ALTURA: 'Inicio de mal de altura sin derivar en accidente',
+  DESCENSO_PREVENTIVO: 'Decisión de descenso preventivo',
+  OTRO: 'Otro',
 };
 
-const GRAVEDAD_MAP: Record<string, string> = {
-  LEVE: 'Leve (primeros auxilios básicos)',
-  MODERADA: 'Moderada (requiere atención médica)',
-  GRAVE: 'Grave (requiere rescate / evacuación)',
-};
-
-const CAUSA_RAIZ_MAP: Record<string, string> = {
-  EXCESO_CONFIANZA: 'Exceso de confianza',
-  ERROR_TECNICO: 'Error técnico',
-  FATIGA: 'Fatiga',
-  EQUIPAMIENTO_INADECUADO: 'Equipamiento inadecuado',
-  CONDICIONES_TERRENO: 'Condiciones del terreno',
-  MALA_VISIBILIDAD: 'Mala visibilidad',
+const TIPO_ACCIDENTE_MAP: Record<string, string> = {
+  CAIDA_CON_LESION: 'Caída con lesión (esguince, fractura o contusión)',
+  GOLPE_ROCA: 'Golpe de roca o caída de material',
+  HIPOTERMIA: 'Hipotermia',
+  MAL_AGUDO_MONTANA: 'Mal agudo de montaña (AMS / HACE / HAPE)',
+  DESHIDRATACION_SEVERA: 'Deshidratación severa',
+  CONGELAMIENTO: 'Congelamiento',
+  QUEMADURA_SOLAR: 'Quemadura solar grave',
+  AVALANCHA: 'Accidente de avalancha',
+  GRAVE_FATAL: 'Accidente grave o fatal',
   OTRO: 'Otro',
 };
 
@@ -468,12 +467,13 @@ export function buildSalidaNotificationEmail(nombreCompleto: string, salida: Sal
 // ─── Cierre notification ──────────────────────────────────────────────────────
 
 export function buildCierreNotificationEmail(nombreCompleto: string, salida: SalidaEmailData, cierre: CierreEmailData, evaluacionUrl?: string): string {
-  const hayIncidente = cierre.ocurrioIncidente === 'SI' || cierre.ocurrioAccidente === 'SI';
+  const hayIncidente = cierre.ocurrioIncidente === 'SI';
+  const hayAccidente = cierre.ocurrioAccidente === 'SI';
   const abortada = cierre.estadoCierre === 'ABORTADA_INCOMPLETA';
   const huboCambios = cierre.huboCambios === 'SI';
   const motivosCambiosArr = safeStringArray(cierre.motivosCambios);
   const tiposIncidenteArr = safeStringArray(cierre.tiposIncidente);
-  const causasRaizArr = safeStringArray(cierre.causasRaiz);
+  const tiposAccidenteArr = safeStringArray(cierre.tiposAccidente);
 
   const intro = `<p style="margin:0;color:#1f2937;font-size:15px;">
     Hola <strong>${escapeHtml(nombreCompleto)}</strong>, la salida en la que participaste ha sido oficialmente cerrada.
@@ -500,14 +500,12 @@ export function buildCierreNotificationEmail(nombreCompleto: string, salida: Sal
     ${huboCambios ? row('Otros motivos', opt(cierre.motivosCambiosOtro)) : ''}
 
     ${sectionHeader('IV. Gestión de Incidentes y Accidentes')}
-    ${row('¿Ocurrió algún incidente (sin lesión)?', SI_NO_MAP[cierre.ocurrioIncidente] ?? cierre.ocurrioIncidente)}
-    ${row('¿Ocurrió algún accidente (con lesión)?', SI_NO_MAP[cierre.ocurrioAccidente] ?? cierre.ocurrioAccidente)}
+    ${row('¿Hubo un incidente?', SI_NO_MAP[cierre.ocurrioIncidente] ?? cierre.ocurrioIncidente)}
     ${hayIncidente ? listRow('Tipos de incidente', tiposIncidenteArr.map((t) => TIPO_INCIDENTE_MAP[t] ?? t)) : ''}
-    ${hayIncidente && cierre.gravedadLesion ? row('Gravedad de la lesión', GRAVEDAD_MAP[cierre.gravedadLesion] ?? cierre.gravedadLesion) : ''}
-    ${hayIncidente && tiposIncidenteArr.includes('MEDICO') && cierre.patologiaMedica ? row('Patología médica', cierre.patologiaMedica) : ''}
-    ${hayIncidente ? row('Descripción del suceso', opt(cierre.descripcionSuceso)) : ''}
-    ${hayIncidente ? listRow('Causas raíz', causasRaizArr.map((c) => CAUSA_RAIZ_MAP[c] ?? c)) : ''}
-    ${hayIncidente ? row('Otra causa raíz', opt(cierre.causaRaizOtro)) : ''}
+    ${hayIncidente && tiposIncidenteArr.includes('OTRO') ? row('Descripción del incidente', opt(cierre.incidenteOtroDescripcion)) : ''}
+    ${row('¿Hubo un accidente?', SI_NO_MAP[cierre.ocurrioAccidente] ?? cierre.ocurrioAccidente)}
+    ${hayAccidente ? listRow('Tipos de accidente', tiposAccidenteArr.map((t) => TIPO_ACCIDENTE_MAP[t] ?? t)) : ''}
+    ${hayAccidente && tiposAccidenteArr.includes('OTRO') ? row('Descripción del accidente', opt(cierre.accidenteOtroDescripcion)) : ''}
 
     ${sectionHeader('V. Análisis Técnico y de Equipamiento')}
     ${row('Desempeño del equipamiento', DESEMPENO_MAP[cierre.desempenoEquipo] ?? cierre.desempenoEquipo)}

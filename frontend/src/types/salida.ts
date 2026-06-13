@@ -312,24 +312,26 @@ export type MotivoCambio =
   | 'OTRO'
 
 export type TipoIncidente =
-  | 'MEDICO'
-  | 'LESION'
-  | 'TECNICO'
-  | 'LOGISTICO'
-  | 'AMBIENTAL'
+  | 'EXTRAVIO'
+  | 'CAIDA_SIN_LESION'
+  | 'GOLPE_LEVE'
+  | 'FALLA_EQUIPAMIENTO'
+  | 'CLIMA_ADVERSO'
+  | 'PROBLEMA_COMUNICACION'
+  | 'INICIO_MAL_ALTURA'
+  | 'DESCENSO_PREVENTIVO'
+  | 'OTRO'
 
-export type GravedadLesion =
-  | 'LEVE'
-  | 'MODERADA'
-  | 'GRAVE'
-
-export type CausaRaiz =
-  | 'EXCESO_CONFIANZA'
-  | 'ERROR_TECNICO'
-  | 'FATIGA'
-  | 'EQUIPAMIENTO_INADECUADO'
-  | 'CONDICIONES_TERRENO'
-  | 'MALA_VISIBILIDAD'
+export type TipoAccidente =
+  | 'CAIDA_CON_LESION'
+  | 'GOLPE_ROCA'
+  | 'HIPOTERMIA'
+  | 'MAL_AGUDO_MONTANA'
+  | 'DESHIDRATACION_SEVERA'
+  | 'CONGELAMIENTO'
+  | 'QUEMADURA_SOLAR'
+  | 'AVALANCHA'
+  | 'GRAVE_FATAL'
   | 'OTRO'
 
 export type DesempenoEquipo = 'TODO_FUNCIONO' | 'FALLO_EQUIPO'
@@ -347,10 +349,9 @@ export interface FichaCierreFormData {
   ocurrioIncidente: 'SI' | 'NO'
   ocurrioAccidente: 'SI' | 'NO'
   tiposIncidente?: TipoIncidente[]
-  gravedadLesion?: GravedadLesion
-  descripcionSuceso?: string
-  causasRaiz?: CausaRaiz[]
-  causaRaizOtro?: string
+  incidenteOtroDescripcion?: string
+  tiposAccidente?: TipoAccidente[]
+  accidenteOtroDescripcion?: string
   // Paso 4 – Análisis Técnico y de Equipo
   desempenoEquipo: DesempenoEquipo
   detalleFallaEquipo?: string
@@ -394,26 +395,27 @@ export const MOTIVO_CAMBIO_LABELS: Record<MotivoCambio, string> = {
 }
 
 export const TIPO_INCIDENTE_LABELS: Record<TipoIncidente, string> = {
-  MEDICO: 'Médico: Puna (MAM), agotamiento extremo, deshidratación, golpe de calor, etc.',
-  LESION: 'Lesión: Torcedura, caída, herida cortante, ampolla limitante, etc.',
-  TECNICO: 'Técnico: Pérdida de equipo, rotura de material crítico, etc.',
-  LOGISTICO: 'Logístico: Extravío temporal, vivac no planificado, etc.',
-  AMBIENTAL: 'Ambiental: Caída de rocas, encuentro con fauna, tormenta eléctrica, etc.',
+  EXTRAVIO: 'Extravío o pérdida temporal de orientación',
+  CAIDA_SIN_LESION: 'Caída sin lesión, ya sea de persona o material',
+  GOLPE_LEVE: 'Golpe o contusión leve sin consecuencias',
+  FALLA_EQUIPAMIENTO: 'Falla de equipamiento, por ejemplo cuerda, arnés, crampones, etc.',
+  CLIMA_ADVERSO: 'Condiciones climáticas adversas imprevistas',
+  PROBLEMA_COMUNICACION: 'Problema de comunicación o señal',
+  INICIO_MAL_ALTURA: 'Inicio de mal de altura sin derivar en accidente',
+  DESCENSO_PREVENTIVO: 'Decisión de descenso preventivo',
+  OTRO: 'Otro',
 }
 
-export const GRAVEDAD_LESION_LABELS: Record<GravedadLesion, string> = {
-  LEVE: 'Leve (primeros auxilios básicos)',
-  MODERADA: 'Moderada (requiere atención médica)',
-  GRAVE: 'Grave (requiere rescate/evacuación)',
-}
-
-export const CAUSA_RAIZ_LABELS: Record<CausaRaiz, string> = {
-  EXCESO_CONFIANZA: 'Exceso de confianza',
-  ERROR_TECNICO: 'Error técnico',
-  FATIGA: 'Fatiga',
-  EQUIPAMIENTO_INADECUADO: 'Equipamiento inadecuado',
-  CONDICIONES_TERRENO: 'Condiciones objetivas del terreno',
-  MALA_VISIBILIDAD: 'Mala visibilidad',
+export const TIPO_ACCIDENTE_LABELS: Record<TipoAccidente, string> = {
+  CAIDA_CON_LESION: 'Caída con lesión, por ejemplo esguince, fractura o contusión',
+  GOLPE_ROCA: 'Golpe de roca o caída de material',
+  HIPOTERMIA: 'Hipotermia',
+  MAL_AGUDO_MONTANA: 'Mal agudo de montaña, AMS / HACE / HAPE',
+  DESHIDRATACION_SEVERA: 'Deshidratación severa',
+  CONGELAMIENTO: 'Congelamiento',
+  QUEMADURA_SOLAR: 'Quemadura solar grave',
+  AVALANCHA: 'Accidente de avalancha',
+  GRAVE_FATAL: 'Accidente grave o fatal',
   OTRO: 'Otro',
 }
 

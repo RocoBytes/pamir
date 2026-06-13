@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -12,6 +12,7 @@ import {
   Loader2,
   AlertCircle,
   Paperclip,
+  Info,
 } from 'lucide-react'
 
 import type {
@@ -21,8 +22,7 @@ import type {
   MotivoAbandono,
   MotivoCambio,
   TipoIncidente,
-  GravedadLesion,
-  CausaRaiz,
+  TipoAccidente,
   DesempenoEquipo,
 } from '../types/salida'
 import {
@@ -30,8 +30,7 @@ import {
   MOTIVO_ABANDONO_LABELS,
   MOTIVO_CAMBIO_LABELS,
   TIPO_INCIDENTE_LABELS,
-  GRAVEDAD_LESION_LABELS,
-  CAUSA_RAIZ_LABELS,
+  TIPO_ACCIDENTE_LABELS,
   DESEMPENO_EQUIPO_LABELS,
 } from '../types/salida'
 import { fetchSalidas, uploadGpx, createCierre } from '../lib/api'
@@ -69,22 +68,27 @@ const SI_NO = ['SI', 'NO'] as const
 const SI_NO_LABELS = { SI: 'Sí', NO: 'No' } as const
 
 const TIPOS_INCIDENTE = [
-  'MEDICO',
-  'LESION',
-  'TECNICO',
-  'LOGISTICO',
-  'AMBIENTAL',
+  'EXTRAVIO',
+  'CAIDA_SIN_LESION',
+  'GOLPE_LEVE',
+  'FALLA_EQUIPAMIENTO',
+  'CLIMA_ADVERSO',
+  'PROBLEMA_COMUNICACION',
+  'INICIO_MAL_ALTURA',
+  'DESCENSO_PREVENTIVO',
+  'OTRO',
 ] as const
 
-const GRAVEDAD_LESION_OPTIONS = ['LEVE', 'MODERADA', 'GRAVE'] as const
-
-const CAUSAS_RAIZ = [
-  'EXCESO_CONFIANZA',
-  'ERROR_TECNICO',
-  'FATIGA',
-  'EQUIPAMIENTO_INADECUADO',
-  'CONDICIONES_TERRENO',
-  'MALA_VISIBILIDAD',
+const TIPOS_ACCIDENTE = [
+  'CAIDA_CON_LESION',
+  'GOLPE_ROCA',
+  'HIPOTERMIA',
+  'MAL_AGUDO_MONTANA',
+  'DESHIDRATACION_SEVERA',
+  'CONGELAMIENTO',
+  'QUEMADURA_SOLAR',
+  'AVALANCHA',
+  'GRAVE_FATAL',
   'OTRO',
 ] as const
 
@@ -112,11 +116,9 @@ const cierreSchema = z
       error: 'Selecciona una opción',
     }),
     tiposIncidente: z.array(z.enum(TIPOS_INCIDENTE)).optional(),
-    gravedadLesion: z.enum(GRAVEDAD_LESION_OPTIONS).optional(),
-    patologiaMedica: z.string().max(100, 'Máximo 100 caracteres').optional(),
-    descripcionSuceso: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
-    causasRaiz: z.array(z.enum(CAUSAS_RAIZ)).optional(),
-    causaRaizOtro: z.string().max(100, 'Máximo 100 caracteres').optional(),
+    incidenteOtroDescripcion: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
+    tiposAccidente: z.array(z.enum(TIPOS_ACCIDENTE)).optional(),
+    accidenteOtroDescripcion: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
     // Paso 4
     desempenoEquipo: z.enum(DESEMPENO_EQUIPO_OPTIONS, { error: 'Selecciona una opción' }),
     detalleFallaEquipo: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
@@ -149,22 +151,23 @@ const cierreSchema = z
     (d) => d.huboCambios !== 'SI' || (d.motivosCambios && d.motivosCambios.length > 0),
     { message: 'Selecciona al menos un motivo', path: ['motivosCambios'] },
   )
-  // Safe when both fields are still undefined (steps 1 & 2 nav)
+  // Paso 3 — Incidente (independiente del accidente). Safe cuando el campo es undefined.
   .refine(
-    (d) =>
-      (d.ocurrioIncidente !== 'SI' && d.ocurrioAccidente !== 'SI') ||
-      (d.tiposIncidente && d.tiposIncidente.length > 0),
+    (d) => d.ocurrioIncidente !== 'SI' || (d.tiposIncidente && d.tiposIncidente.length > 0),
     { message: 'Selecciona al menos un tipo de incidente', path: ['tiposIncidente'] },
   )
   .refine(
-    (d) =>
-      (d.ocurrioIncidente !== 'SI' && d.ocurrioAccidente !== 'SI') ||
-      !!d.descripcionSuceso?.trim(),
-    { message: 'Describe lo que ocurrió', path: ['descripcionSuceso'] },
+    (d) => !d.tiposIncidente?.includes('OTRO') || !!d.incidenteOtroDescripcion?.trim(),
+    { message: 'Describe el incidente', path: ['incidenteOtroDescripcion'] },
+  )
+  // Paso 3 — Accidente (independiente del incidente).
+  .refine(
+    (d) => d.ocurrioAccidente !== 'SI' || (d.tiposAccidente && d.tiposAccidente.length > 0),
+    { message: 'Selecciona al menos un tipo de accidente', path: ['tiposAccidente'] },
   )
   .refine(
-    (d) => !d.tiposIncidente?.includes('LESION') || !!d.gravedadLesion,
-    { message: 'Indica la gravedad de la lesión', path: ['gravedadLesion'] },
+    (d) => !d.tiposAccidente?.includes('OTRO') || !!d.accidenteOtroDescripcion?.trim(),
+    { message: 'Describe el accidente', path: ['accidenteOtroDescripcion'] },
   )
   .refine(
     (d) => d.desempenoEquipo !== 'FALLO_EQUIPO' || !!d.detalleFallaEquipo?.trim(),
@@ -173,11 +176,59 @@ const cierreSchema = z
 
 type CierreFormValues = z.infer<typeof cierreSchema>
 
+// ─── InfoTooltip ──────────────────────────────────────────────────────────────
+
+function InfoTooltip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handlePointer(e: MouseEvent | TouchEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handlePointer)
+    document.addEventListener('touchstart', handlePointer)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handlePointer)
+      document.removeEventListener('touchstart', handlePointer)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [open])
+
+  return (
+    <span ref={ref} className="relative inline-flex align-middle ml-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label="Más información"
+        className="inline-flex items-center justify-center rounded-full text-[#4a6fad] hover:text-[#264c99] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99]/40 transition-colors"
+      >
+        <Info size={16} />
+      </button>
+      {open && (
+        <span
+          role="note"
+          className="absolute left-0 top-full z-20 mt-2 w-64 rounded-xl border border-[#4a6fad]/25 bg-white px-3 py-2 text-xs font-normal leading-relaxed text-slate-700 shadow-lg"
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  )
+}
+
 // ─── RadioGroup ───────────────────────────────────────────────────────────────
 
 interface RadioGroupProps<T extends string> {
   label: string
   required?: boolean
+  labelExtra?: React.ReactNode
   options: readonly T[]
   labels: Record<T, string>
   value: T | undefined
@@ -188,6 +239,7 @@ interface RadioGroupProps<T extends string> {
 function RadioGroup<T extends string>({
   label,
   required,
+  labelExtra,
   options,
   labels,
   value,
@@ -203,6 +255,7 @@ function RadioGroup<T extends string>({
             *
           </span>
         )}
+        {labelExtra}
       </legend>
       <div className="flex flex-col gap-1.5">
         {options.map((opt) => {
@@ -446,10 +499,11 @@ export function FichaCierre({ user, onDone, onCancel, salidaId: preselectedSalid
     handleSubmit,
     trigger,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<CierreFormValues>({
     resolver: zodResolver(cierreSchema),
-    defaultValues: { salidaId: preselectedSalidaId ?? '', motivosCambios: [], tiposIncidente: [], causasRaiz: [] },
+    defaultValues: { salidaId: preselectedSalidaId ?? '', motivosCambios: [], tiposIncidente: [], tiposAccidente: [] },
   })
 
   const estadoSeleccionado = watch('estadoCierre')
@@ -459,12 +513,11 @@ export function FichaCierre({ user, onDone, onCancel, salidaId: preselectedSalid
   const ocurrioIncidenteVal = watch('ocurrioIncidente')
   const ocurrioAccidenteVal = watch('ocurrioAccidente')
   const tiposIncidenteVal = watch('tiposIncidente') ?? []
-  const causasRaizVal = watch('causasRaiz') ?? []
-  const descripcionSucesoVal = watch('descripcionSuceso') ?? ''
-  const incidenteActivo = ocurrioIncidenteVal === 'SI' || ocurrioAccidenteVal === 'SI'
-  const showGravedadLesion = tiposIncidenteVal.includes('LESION')
-  const showPatologiaMedica = tiposIncidenteVal.includes('MEDICO')
-  const showCausaRaizOtro = causasRaizVal.includes('OTRO')
+  const tiposAccidenteVal = watch('tiposAccidente') ?? []
+  const showIncidenteOtro = tiposIncidenteVal.includes('OTRO')
+  const showAccidenteOtro = tiposAccidenteVal.includes('OTRO')
+  const incidenteOtroDescripcionVal = watch('incidenteOtroDescripcion') ?? ''
+  const accidenteOtroDescripcionVal = watch('accidenteOtroDescripcion') ?? ''
 
   const desempenoEquipoVal = watch('desempenoEquipo')
   const observacionesRutaVal = watch('observacionesRuta') ?? ''
@@ -513,10 +566,9 @@ export function FichaCierre({ user, onDone, onCancel, salidaId: preselectedSalid
       'ocurrioIncidente',
       'ocurrioAccidente',
       'tiposIncidente',
-      'gravedadLesion',
-      'descripcionSuceso',
-      'causasRaiz',
-      'causaRaizOtro',
+      'incidenteOtroDescripcion',
+      'tiposAccidente',
+      'accidenteOtroDescripcion',
     ])
     if (valid) setCurrentStep(4)
   }, [trigger])
@@ -548,11 +600,9 @@ export function FichaCierre({ user, onDone, onCancel, salidaId: preselectedSalid
             ocurrioIncidente: values.ocurrioIncidente,
             ocurrioAccidente: values.ocurrioAccidente,
             tiposIncidente: values.tiposIncidente,
-            gravedadLesion: values.gravedadLesion,
-            patologiaMedica: values.patologiaMedica,
-            descripcionSuceso: values.descripcionSuceso,
-            causasRaiz: values.causasRaiz,
-            causaRaizOtro: values.causaRaizOtro,
+            incidenteOtroDescripcion: values.incidenteOtroDescripcion,
+            tiposAccidente: values.tiposAccidente,
+            accidenteOtroDescripcion: values.accidenteOtroDescripcion,
             desempenoEquipo: values.desempenoEquipo,
             detalleFallaEquipo: values.detalleFallaEquipo,
             observacionesRuta: values.observacionesRuta,
@@ -934,202 +984,196 @@ export function FichaCierre({ user, onDone, onCancel, salidaId: preselectedSalid
             {/* ── PASO 3: Gestión de Incidentes y Accidentes ── */}
             {currentStep === 3 && (
               <>
-                {/* Q7a: ¿Ocurrió algún incidente? */}
+                {/* Q1: ¿Hubo un incidente? */}
                 <Controller
                   control={control}
                   name="ocurrioIncidente"
                   render={({ field }) => (
                     <RadioGroup<'SI' | 'NO'>
-                      label="¿Ocurrió algún incidente (sin lesión)?"
+                      label="¿Hubo un incidente?"
                       required
+                      labelExtra={
+                        <InfoTooltip text="Un incidente es un evento no deseado que no provocó lesiones ni daño material, pero que tuvo potencial para hacerlo." />
+                      }
                       options={SI_NO}
                       labels={SI_NO_LABELS}
                       value={field.value}
-                      onChange={field.onChange}
+                      onChange={(val) => {
+                        field.onChange(val)
+                        if (val === 'NO') {
+                          setValue('tiposIncidente', [])
+                          setValue('incidenteOtroDescripcion', '')
+                        }
+                      }}
                       error={errors.ocurrioIncidente?.message}
                     />
                   )}
                 />
 
-                {/* Q7b: ¿Ocurrió algún accidente? */}
-                <Controller
-                  control={control}
-                  name="ocurrioAccidente"
-                  render={({ field }) => (
-                    <RadioGroup<'SI' | 'NO'>
-                      label="¿Ocurrió algún accidente (con lesión)?"
-                      required
-                      options={SI_NO}
-                      labels={SI_NO_LABELS}
-                      value={field.value}
-                      onChange={field.onChange}
-                      error={errors.ocurrioAccidente?.message}
-                    />
-                  )}
-                />
-
-                {/* Q8, Q9, Q10 — solo visibles si hubo incidente */}
-                {incidenteActivo && (
-                  <>
-                    {/* Q8: Tipo de Incidente/Accidente */}
+                {/* Q1 detalle — solo si hubo incidente */}
+                {ocurrioIncidenteVal === 'SI' && (
+                  <div className="flex flex-col gap-4 pl-7 border-l-2 border-[#264c99]/20">
+                    {/* Tipo de incidente */}
                     <Controller
                       control={control}
                       name="tiposIncidente"
                       render={({ field }) => (
                         <CheckboxGroup<TipoIncidente>
-                          label="Tipo de Incidente/Accidente"
+                          label="Tipo de incidente — Puedes marcar más de uno"
                           required
                           options={TIPOS_INCIDENTE}
                           labels={TIPO_INCIDENTE_LABELS}
                           selected={field.value ?? []}
-                          onChange={field.onChange}
+                          onChange={(next) => {
+                            field.onChange(next)
+                            if (!next.includes('OTRO')) setValue('incidenteOtroDescripcion', '')
+                          }}
                           error={errors.tiposIncidente?.message}
                         />
                       )}
                     />
 
-                    {/* Q8 sub: Gravedad de la lesión (solo si LESION está seleccionado) */}
-                    {showGravedadLesion && (
-                      <div className="pl-7 border-l-2 border-[#264c99]/20">
-                        <Controller
-                          control={control}
-                          name="gravedadLesion"
-                          render={({ field }) => (
-                            <RadioGroup<GravedadLesion>
-                              label="Gravedad de la lesión"
-                              required
-                              options={GRAVEDAD_LESION_OPTIONS}
-                              labels={GRAVEDAD_LESION_LABELS}
-                              value={field.value}
-                              onChange={field.onChange}
-                              error={errors.gravedadLesion?.message}
-                            />
-                          )}
-                        />
-                      </div>
-                    )}
-
-                    {/* Q8 sub: Patología médica (solo si MEDICO está seleccionado) */}
-                    {showPatologiaMedica && (
-                      <div className="flex flex-col gap-1.5 pl-7 border-l-2 border-[#264c99]/20">
+                    {/* Descripción del incidente (solo si "Otro") */}
+                    {showIncidenteOtro && (
+                      <div className="flex flex-col gap-1.5">
                         <label
-                          htmlFor="patologiaMedica"
+                          htmlFor="incidenteOtroDescripcion"
                           className="text-sm font-semibold text-[#264c99]"
                         >
-                          Indique patología médica{' '}
-                          <span className="text-[#757874] font-normal">(opcional)</span>
+                          Descripción del incidente
+                          <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
                         </label>
-                        <input
-                          id="patologiaMedica"
-                          type="text"
-                          maxLength={100}
-                          placeholder="Ej: MAM, agotamiento extremo, hipotermia..."
-                          {...register('patologiaMedica')}
+                        <textarea
+                          id="incidenteOtroDescripcion"
+                          maxLength={1000}
+                          rows={4}
+                          placeholder="Describe brevemente qué ocurrió, cómo se resolvió y si hay lecciones aprendidas."
+                          {...register('incidenteOtroDescripcion')}
+                          aria-invalid={errors.incidenteOtroDescripcion ? 'true' : undefined}
                           className={[
-                            'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800',
+                            'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
                             'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
-                            errors.patologiaMedica ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
+                            errors.incidenteOtroDescripcion ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
                           ].join(' ')}
                         />
-                        {errors.patologiaMedica && (
-                          <p className="text-xs text-[#A4636E]" role="alert">
-                            {errors.patologiaMedica.message}
-                          </p>
-                        )}
+                        <div className="flex justify-between items-center">
+                          {errors.incidenteOtroDescripcion ? (
+                            <p className="text-xs text-[#A4636E]" role="alert">
+                              {errors.incidenteOtroDescripcion.message}
+                            </p>
+                          ) : (
+                            <span />
+                          )}
+                          <span
+                            className={[
+                              'text-xs tabular-nums',
+                              incidenteOtroDescripcionVal.length > 900
+                                ? 'text-[#A4636E]'
+                                : 'text-[#757874]',
+                            ].join(' ')}
+                          >
+                            {incidenteOtroDescripcionVal.length} / 1000
+                          </span>
+                        </div>
                       </div>
                     )}
+                  </div>
+                )}
 
-                    {/* Q9: Descripción del suceso */}
-                    <div className="flex flex-col gap-1.5">
-                      <label
-                        htmlFor="descripcionSuceso"
-                        className="text-sm font-semibold text-[#264c99]"
-                      >
-                        Descripción del suceso
-                        <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
-                      </label>
-                      <p className="text-xs text-[#757874] -mt-0.5">
-                        Indicar qué pasó, en qué lugar exacto y quiénes se vieron involucrados.
-                      </p>
-                      <textarea
-                        id="descripcionSuceso"
-                        maxLength={1000}
-                        rows={4}
-                        placeholder="Describe el suceso con el mayor detalle posible..."
-                        {...register('descripcionSuceso')}
-                        aria-invalid={errors.descripcionSuceso ? 'true' : undefined}
-                        className={[
-                          'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
-                          'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
-                          errors.descripcionSuceso ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
-                        ].join(' ')}
-                      />
-                      <div className="flex justify-between items-center">
-                        {errors.descripcionSuceso ? (
-                          <p className="text-xs text-[#A4636E]" role="alert">
-                            {errors.descripcionSuceso.message}
-                          </p>
-                        ) : (
-                          <span />
-                        )}
-                        <span
-                          className={[
-                            'text-xs tabular-nums',
-                            descripcionSucesoVal.length > 900
-                              ? 'text-[#A4636E]'
-                              : 'text-[#757874]',
-                          ].join(' ')}
-                        >
-                          {descripcionSucesoVal.length} / 1000
-                        </span>
-                      </div>
-                    </div>
+                {/* Q2: ¿Hubo un accidente? */}
+                <Controller
+                  control={control}
+                  name="ocurrioAccidente"
+                  render={({ field }) => (
+                    <RadioGroup<'SI' | 'NO'>
+                      label="¿Hubo un accidente?"
+                      required
+                      labelExtra={
+                        <InfoTooltip text="Un accidente es un evento no deseado que resultó en lesión a persona/s o daño material significativo." />
+                      }
+                      options={SI_NO}
+                      labels={SI_NO_LABELS}
+                      value={field.value}
+                      onChange={(val) => {
+                        field.onChange(val)
+                        if (val === 'NO') {
+                          setValue('tiposAccidente', [])
+                          setValue('accidenteOtroDescripcion', '')
+                        }
+                      }}
+                      error={errors.ocurrioAccidente?.message}
+                    />
+                  )}
+                />
 
-                    {/* Q10: Causa Raíz Percibida */}
+                {/* Q2 detalle — solo si hubo accidente */}
+                {ocurrioAccidenteVal === 'SI' && (
+                  <div className="flex flex-col gap-4 pl-7 border-l-2 border-[#264c99]/20">
+                    {/* Tipo de accidente */}
                     <Controller
                       control={control}
-                      name="causasRaiz"
+                      name="tiposAccidente"
                       render={({ field }) => (
-                        <CheckboxGroup<CausaRaiz>
-                          label="Causa Raíz Percibida"
-                          options={CAUSAS_RAIZ}
-                          labels={CAUSA_RAIZ_LABELS}
+                        <CheckboxGroup<TipoAccidente>
+                          label="Tipo de accidente — Puedes marcar más de uno"
+                          required
+                          options={TIPOS_ACCIDENTE}
+                          labels={TIPO_ACCIDENTE_LABELS}
                           selected={field.value ?? []}
-                          onChange={field.onChange}
-                          error={errors.causasRaiz?.message}
+                          onChange={(next) => {
+                            field.onChange(next)
+                            if (!next.includes('OTRO')) setValue('accidenteOtroDescripcion', '')
+                          }}
+                          error={errors.tiposAccidente?.message}
                         />
                       )}
                     />
 
-                    {/* Q10 sub: Otro */}
-                    {showCausaRaizOtro && (
-                      <div className="flex flex-col gap-1.5 pl-7">
+                    {/* Descripción del accidente (solo si "Otro") */}
+                    {showAccidenteOtro && (
+                      <div className="flex flex-col gap-1.5">
                         <label
-                          htmlFor="causaRaizOtro"
-                          className="text-xs font-semibold text-[#264c99]"
+                          htmlFor="accidenteOtroDescripcion"
+                          className="text-sm font-semibold text-[#264c99]"
                         >
-                          Especifica la causa
+                          Descripción del accidente
+                          <span className="text-[#A4636E] ml-1" aria-hidden="true">*</span>
                         </label>
-                        <input
-                          id="causaRaizOtro"
-                          type="text"
-                          maxLength={100}
-                          placeholder="Describe la causa raíz..."
-                          {...register('causaRaizOtro')}
+                        <textarea
+                          id="accidenteOtroDescripcion"
+                          maxLength={1000}
+                          rows={4}
+                          placeholder="Describe brevemente qué ocurrió, qué consecuencias tuvo, cómo se resolvió y si hay medidas preventivas o lecciones aprendidas."
+                          {...register('accidenteOtroDescripcion')}
+                          aria-invalid={errors.accidenteOtroDescripcion ? 'true' : undefined}
                           className={[
-                            'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800',
+                            'w-full px-3 py-2 rounded-xl border bg-white text-sm text-slate-800 resize-none',
                             'placeholder:text-[#adb5ad] focus:outline-none focus:ring-2 focus:ring-[#264c99]/40 focus:border-[#264c99] transition-shadow',
-                            errors.causaRaizOtro ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
+                            errors.accidenteOtroDescripcion ? 'border-[#A4636E]' : 'border-[#4a6fad]/30',
                           ].join(' ')}
                         />
-                        {errors.causaRaizOtro && (
-                          <p className="text-xs text-[#A4636E]" role="alert">
-                            {errors.causaRaizOtro.message}
-                          </p>
-                        )}
+                        <div className="flex justify-between items-center">
+                          {errors.accidenteOtroDescripcion ? (
+                            <p className="text-xs text-[#A4636E]" role="alert">
+                              {errors.accidenteOtroDescripcion.message}
+                            </p>
+                          ) : (
+                            <span />
+                          )}
+                          <span
+                            className={[
+                              'text-xs tabular-nums',
+                              accidenteOtroDescripcionVal.length > 900
+                                ? 'text-[#A4636E]'
+                                : 'text-[#757874]',
+                            ].join(' ')}
+                          >
+                            {accidenteOtroDescripcionVal.length} / 1000
+                          </span>
+                        </div>
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
 
                 {/* Navegación */}

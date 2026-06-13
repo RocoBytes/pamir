@@ -246,11 +246,9 @@ export interface CreateCierrePayload {
   ocurrioIncidente: string
   ocurrioAccidente: string
   tiposIncidente?: string[]
-  gravedadLesion?: string
-  patologiaMedica?: string
-  descripcionSuceso?: string
-  causasRaiz?: string[]
-  causaRaizOtro?: string
+  incidenteOtroDescripcion?: string
+  tiposAccidente?: string[]
+  accidenteOtroDescripcion?: string
   desempenoEquipo: string
   detalleFallaEquipo?: string
   observacionesRuta: string

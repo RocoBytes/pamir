@@ -56,11 +56,9 @@ interface CreateCierreBody {
   ocurrioIncidente: string;
   ocurrioAccidente: string;
   tiposIncidente?: unknown[];
-  gravedadLesion?: string;
-  patologiaMedica?: string;
-  descripcionSuceso?: string;
-  causasRaiz?: unknown[];
-  causaRaizOtro?: string;
+  incidenteOtroDescripcion?: string;
+  tiposAccidente?: unknown[];
+  accidenteOtroDescripcion?: string;
   desempenoEquipo: string;
   detalleFallaEquipo?: string;
   observacionesRuta: string;
@@ -115,11 +113,9 @@ export async function createCierre(req: Request, res: Response): Promise<void> {
           ocurrioIncidente: data.ocurrioIncidente,
           ocurrioAccidente: data.ocurrioAccidente ?? 'NO',
           tiposIncidente: asJson(data.tiposIncidente ?? []),
-          gravedadLesion: data.gravedadLesion,
-          patologiaMedica: data.patologiaMedica || null,
-          descripcionSuceso: data.descripcionSuceso,
-          causasRaiz: asJson(data.causasRaiz ?? []),
-          causaRaizOtro: data.causaRaizOtro,
+          incidenteOtroDescripcion: data.incidenteOtroDescripcion || null,
+          tiposAccidente: asJson(data.tiposAccidente ?? []),
+          accidenteOtroDescripcion: data.accidenteOtroDescripcion || null,
           desempenoEquipo: data.desempenoEquipo,
           detalleFallaEquipo: data.detalleFallaEquipo,
           observacionesRuta: data.observacionesRuta,

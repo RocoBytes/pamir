@@ -155,14 +155,18 @@ model Cierre {
   motivosCambiosOtro String? @map("motivos_cambios_otro")
 
   // Paso 3
-  ocurrioIncidente  String  @map("ocurrio_incidente")
-  ocurrioAccidente  String  @default("NO") @map("ocurrio_accidente")
-  tiposIncidente    Json    @default("[]") @map("tipos_incidente")
-  gravedadLesion    String? @map("gravedad_lesion")
-  patologiaMedica   String? @map("patologia_medica")
-  descripcionSuceso String? @map("descripcion_suceso")
-  causasRaiz        Json    @default("[]") @map("causas_raiz")
-  causaRaizOtro     String? @map("causa_raiz_otro")
+  ocurrioIncidente         String  @map("ocurrio_incidente")
+  ocurrioAccidente         String  @default("NO") @map("ocurrio_accidente")
+  tiposIncidente           Json    @default("[]") @map("tipos_incidente")
+  incidenteOtroDescripcion String? @map("incidente_otro_descripcion")
+  tiposAccidente           Json    @default("[]") @map("tipos_accidente")
+  accidenteOtroDescripcion String? @map("accidente_otro_descripcion")
+  // Columnas legadas — conservadas para no perder datos de cierres antiguos
+  gravedadLesion           String? @map("gravedad_lesion")
+  patologiaMedica          String? @map("patologia_medica")
+  descripcionSuceso        String? @map("descripcion_suceso")
+  causasRaiz               Json    @default("[]") @map("causas_raiz")
+  causaRaizOtro            String? @map("causa_raiz_otro")
 
   // Paso 4
   desempenoEquipo    String  @map("desempeno_equipo")
