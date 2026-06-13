@@ -90,9 +90,11 @@ model Salida {
   gpxFileUrl  String? @map("gpx_file_url")
 
   // Estado
-  status           SalidaStatus @default(EN_CURSO)
-  incidentReport   String?      @map("incident_report")
-  alertaEnviadaAt  DateTime?    @map("alerta_enviada_at")
+  status              SalidaStatus @default(EN_CURSO)
+  incidentReport      String?      @map("incident_report")
+  alertaEnviadaAt     DateTime?    @map("alerta_enviada_at")
+  // Registro histórico (solo admin): salida retroactiva que no notifica integrantes
+  esRegistroHistorico Boolean      @default(false) @map("es_registro_historico")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")

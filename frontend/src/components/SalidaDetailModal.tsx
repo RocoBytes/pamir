@@ -122,6 +122,11 @@ export function SalidaDetailModal({ salidaId, onClose, isAdmin = false, onEdit, 
               <span className="text-xs font-medium text-[#757874] bg-slate-100 px-3 py-1 rounded-full">
                 {TIPO_SALIDA_LABELS[salida.tipoSalida]}
               </span>
+              {salida.esRegistroHistorico && (
+                <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
+                  Registro histórico
+                </span>
+              )}
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2 leading-tight">

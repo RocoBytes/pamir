@@ -46,6 +46,8 @@ export async function checkAlertas(req: Request, res: Response): Promise<void> {
         status: 'EN_CURSO',
         alertaEnviadaAt: null,
         cierres: { none: {} },
+        // Los registros históricos del admin nunca disparan alarma.
+        esRegistroHistorico: false,
       },
     });
 

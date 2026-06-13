@@ -17,18 +17,12 @@ function todayString() {
 
 const step2Schema = z
   .object({
-    fechaInicio: z
-      .string()
-      .min(1, 'Selecciona la fecha de inicio')
-      .refine((d) => d >= todayString(), {
-        message: 'No puedes seleccionar una fecha pasada',
-      }),
-    fechaRetornoEstimada: z
-      .string()
-      .min(1, 'Selecciona la fecha estimada de retorno')
-      .refine((d) => d >= todayString(), {
-        message: 'No puedes seleccionar una fecha pasada',
-      }),
+    // Registro histórico (solo admin): permite fechas pasadas y silencia avisos.
+    // Siempre presente vía defaultValues (EMPTY_FORM / WizardLayout), por eso sin .default()
+    // para evitar el desajuste input/output del resolver de react-hook-form.
+    esRegistroHistorico: z.boolean(),
+    fechaInicio: z.string().min(1, 'Selecciona la fecha de inicio'),
+    fechaRetornoEstimada: z.string().min(1, 'Selecciona la fecha estimada de retorno'),
     horaRetornoEstimada: z.string().min(1, 'Ingresa la hora de retorno'),
     horaAlerta: z.string().min(1, 'Ingresa la hora de alerta'),
     avisosExternos: z
@@ -43,6 +37,24 @@ const step2Schema = z
     path: ['fechaRetornoEstimada'],
   })
   .superRefine((data, ctx) => {
+    // Bloquear fechas pasadas salvo en registros históricos del admin.
+    if (!data.esRegistroHistorico) {
+      const hoy = todayString()
+      if (data.fechaInicio && data.fechaInicio < hoy) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'No puedes seleccionar una fecha pasada',
+          path: ['fechaInicio'],
+        })
+      }
+      if (data.fechaRetornoEstimada && data.fechaRetornoEstimada < hoy) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'No puedes seleccionar una fecha pasada',
+          path: ['fechaRetornoEstimada'],
+        })
+      }
+    }
     if (data.avisosExternos.includes('CARABINEROS') && !data.retenCarabineros?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -140,11 +152,12 @@ interface Step2Props {
   defaultValues: Step2Data
   onSubmit: (data: Step2Data) => void
   onBack: () => void
+  isAdmin?: boolean
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function Step2Participants({ defaultValues, onSubmit, onBack }: Step2Props) {
+export function Step2Participants({ defaultValues, onSubmit, onBack, isAdmin = false }: Step2Props) {
   const today = todayString()
 
   const {
@@ -161,16 +174,34 @@ export function Step2Participants({ defaultValues, onSubmit, onBack }: Step2Prop
   const avisosSeleccionados = watch('avisosExternos') ?? []
   const showCarabineros = avisosSeleccionados.includes('CARABINEROS')
   const showFamiliar = avisosSeleccionados.includes('FAMILIAR_OTRO')
+  const esHistorico = watch('esRegistroHistorico') ?? false
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
+      {/* Registro histórico — visible solo para el administrador */}
+      {isAdmin && (
+        <label className="flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-[#264c99]"
+            {...register('esRegistroHistorico')}
+          />
+          <span className="text-sm text-amber-900">
+            <span className="font-semibold">Registro histórico</span>
+            <span className="block text-amber-800/90">
+              Permite fechas pasadas y no envía notificaciones a los integrantes.
+            </span>
+          </span>
+        </label>
+      )}
+
       {/* Fechas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
           label="Fecha de Inicio"
           type="date"
           required
-          min={today}
+          min={esHistorico ? undefined : today}
           error={errors.fechaInicio?.message}
           {...register('fechaInicio')}
         />
@@ -178,7 +209,7 @@ export function Step2Participants({ defaultValues, onSubmit, onBack }: Step2Prop
           label="Fecha Estimada de Retorno"
           type="date"
           required
-          min={today}
+          min={esHistorico ? undefined : today}
           error={errors.fechaRetornoEstimada?.message}
           {...register('fechaRetornoEstimada')}
         />

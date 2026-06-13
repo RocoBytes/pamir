@@ -774,6 +774,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                                     Sin cierre
                                   </span>
                                 )}
+                                {s.esRegistroHistorico && (
+                                  <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                    Histórico
+                                  </span>
+                                )}
                               </div>
                             </li>
                           ))}

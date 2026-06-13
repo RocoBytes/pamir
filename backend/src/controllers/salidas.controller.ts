@@ -64,16 +64,37 @@ interface CreateSalidaBody {
   // Estado
   status?: SalidaStatus;
   incidentReport?: string;
+  // Registro histórico (solo admin): fecha pasada permitida, sin notificaciones
+  esRegistroHistorico?: boolean;
 }
 
 export async function createSalida(req: Request, res: Response): Promise<void> {
   try {
     const data = req.body as CreateSalidaBody;
     const userId = req.user?.id ?? null;
+    const isAdmin = req.user?.email === ADMIN_EMAIL;
+    // Solo el admin puede crear registros históricos (fecha pasada, sin notificaciones).
+    const esRegistroHistorico = isAdmin && data.esRegistroHistorico === true;
 
     if (!data.pronosticoMeteorologico?.trim()) {
       res.status(400).json({ error: 'El pronóstico meteorológico es obligatorio' });
       return;
+    }
+
+    // Un usuario no-admin nunca puede marcar una salida como registro histórico.
+    if (!isAdmin && data.esRegistroHistorico) {
+      res.status(403).json({ error: 'No tienes permiso para crear registros históricos' });
+      return;
+    }
+
+    // Las fechas pasadas solo se permiten en registros históricos del admin.
+    if (!esRegistroHistorico) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const fechaInicioStr = String(data.fechaInicio).slice(0, 10);
+      if (fechaInicioStr < todayStr) {
+        res.status(400).json({ error: 'No se puede crear una salida con fecha de inicio en el pasado' });
+        return;
+      }
     }
 
     const salida = await prisma.salida.create({
@@ -108,15 +129,19 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
         gpxFileUrl: data.gpxFileUrl,
         status: data.status ?? 'EN_CURSO',
         incidentReport: data.incidentReport,
+        esRegistroHistorico,
       },
     });
 
     res.status(201).json(salida);
 
-    sendSalidaParticipantEmails(
-      (data.participantes ?? []) as unknown[],
-      salida,
-    ).catch((err) => console.error('[salida-email]', err));
+    // Los registros históricos del admin no notifican a los integrantes.
+    if (!esRegistroHistorico) {
+      sendSalidaParticipantEmails(
+        (data.participantes ?? []) as unknown[],
+        salida,
+      ).catch((err) => console.error('[salida-email]', err));
+    }
   } catch (error) {
     console.error('[createSalida]', error);
     res.status(500).json({ error: 'No se pudo crear la salida' });

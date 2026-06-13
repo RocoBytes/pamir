@@ -137,8 +137,16 @@ export async function createCierre(req: Request, res: Response): Promise<void> {
 
     res.status(201).json(cierre);
 
-    sendCierreParticipantEmails(data.salidaId, cierre)
-      .catch((err) => console.error('[cierre-email]', err));
+    // Silenciar el correo de cierre cuando lo cierra el admin y la salida es un
+    // registro histórico, o su retorno estimado fue hace más de 5 días.
+    const retornoStr = salida.fechaRetornoEstimada.toISOString().slice(0, 10);
+    const cutoffStr = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const silenciarCierre = isAdmin && (salida.esRegistroHistorico || retornoStr < cutoffStr);
+
+    if (!silenciarCierre) {
+      sendCierreParticipantEmails(data.salidaId, cierre)
+        .catch((err) => console.error('[cierre-email]', err));
+    }
   } catch (error) {
     console.error('[createCierre]', error);
     res.status(500).json({ error: 'No se pudo crear el cierre' });

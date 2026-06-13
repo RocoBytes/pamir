@@ -123,6 +123,9 @@ export interface SalidaFormData {
   // Status & incidents (set by default, not shown in wizard)
   status: SalidaStatus
   incidentReport: string
+
+  // Admin-only: backdated record that does not notify integrantes
+  esRegistroHistorico?: boolean
 }
 
 // ─── API response types ───────────────────────────────────────────────────────
@@ -172,6 +175,7 @@ export interface SalidaRecord {
   userId: string
   // Admin-only fields (populated by the admin branch of GET /api/salidas)
   alertaEnviadaAt?: string | null
+  esRegistroHistorico?: boolean
   _count?: { cierres: number }
 }
 

@@ -65,6 +65,7 @@ const EMPTY_FORM: Omit<SalidaFormData, 'gpxFile'> = {
   planEvacuacion: '',
   status: 'EN_CURSO',
   incidentReport: '',
+  esRegistroHistorico: false,
 }
 
 function hasDraft(): boolean {
@@ -308,6 +309,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
         {currentStep === 2 && (
           <Step2Participants
             defaultValues={{
+              esRegistroHistorico: formData.esRegistroHistorico ?? false,
               fechaInicio: formData.fechaInicio,
               fechaRetornoEstimada: formData.fechaRetornoEstimada,
               horaRetornoEstimada: formData.horaRetornoEstimada,
@@ -319,6 +321,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
             }}
             onSubmit={(data) => handleStepComplete(2, data)}
             onBack={goBack}
+            isAdmin={isAdmin}
           />
         )}
         {currentStep === 3 && (
