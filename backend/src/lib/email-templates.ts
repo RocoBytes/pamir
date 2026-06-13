@@ -77,7 +77,7 @@ function sectionHeader(title: string): string {
   return `
     <tr>
       <td colspan="2" style="background:${LIGHT_GREEN};padding:10px 12px;font-weight:700;font-size:13px;color:${GREEN};letter-spacing:0.05em;text-transform:uppercase;border-bottom:1px solid ${BORDER};">
-        ${title}
+        ${escapeHtml(title)}
       </td>
     </tr>`;
 }
@@ -706,6 +706,99 @@ export function buildAlertaSalidaEmail(salida: AlertaSalidaEmailData): string {
     intro,
     tabla,
     'Esta alerta fue generada automáticamente por el sistema PAMIR. Hora de la alerta superada sin cierre.',
+  );
+}
+
+// ─── Salud summary (admin → responsable) ─────────────────────────────────────
+
+export interface ParticipanteSaludEmailData {
+  rut: string;
+  nombre: string;
+  fichaEncontrada: boolean;
+  salud?: {
+    grupoSanguineo: string;
+    alergiasTiene: boolean;
+    alergiasDetalle?: string | null;
+    enfermedadesCronicasTiene: boolean;
+    enfermedadesCronicasDetalle?: string | null;
+    medicamentosTiene: boolean;
+    medicamentosDetalle?: string | null;
+    cirugiasLesionesTiene: boolean;
+    cirugiasLesionesDetalle?: string | null;
+    fuma: boolean;
+    usaLentes: boolean;
+    previsionSalud: string;
+    nombreContacto: string;
+    parentesco: string;
+    telefonoContacto: string;
+  } | null;
+}
+
+export function buildSaludSalidaEmail(
+  nombreActividad: string,
+  liderCordada: string,
+  participantes: ParticipanteSaludEmailData[],
+): string {
+  const conFicha = participantes.filter((p) => p.fichaEncontrada);
+  const sinFicha = participantes.filter((p) => !p.fichaEncontrada);
+
+  const participantBlocks = conFicha.map((p) => {
+    const s = p.salud!;
+    return `
+    ${sectionHeader(`${p.nombre} — RUT: ${p.rut}`)}
+    ${row('Grupo sanguíneo', s.grupoSanguineo)}
+    ${boolRow('Alergias', s.alergiasTiene, s.alergiasDetalle ?? undefined)}
+    ${boolRow('Enfermedades crónicas', s.enfermedadesCronicasTiene, s.enfermedadesCronicasDetalle ?? undefined)}
+    ${boolRow('Medicamentos', s.medicamentosTiene, s.medicamentosDetalle ?? undefined)}
+    ${boolRow('Cirugías / lesiones', s.cirugiasLesionesTiene, s.cirugiasLesionesDetalle ?? undefined)}
+    ${row('Fuma', s.fuma ? 'Sí' : 'No')}
+    ${row('Usa lentes / lentes de contacto', s.usaLentes ? 'Sí' : 'No')}
+    ${row('Previsión de salud', s.previsionSalud)}
+    <tr>
+      <td style="padding:8px 12px;color:${GRAY};font-size:13px;width:45%;border-bottom:1px solid ${BORDER};">Contacto de emergencia</td>
+      <td style="padding:8px 12px;color:#1f2937;font-size:13px;border-bottom:1px solid ${BORDER};">${escapeHtml(s.nombreContacto)} (${escapeHtml(s.parentesco)}) — ${escapeHtml(s.telefonoContacto)}</td>
+    </tr>
+    `;
+  }).join('');
+
+  const sinFichaRows = sinFicha.length
+    ? `
+    ${sectionHeader('Participantes sin ficha de salud registrada')}
+    ${sinFicha.map((p) => `
+    <tr>
+      <td colspan="2" style="padding:8px 12px;color:#1f2937;font-size:13px;border-bottom:1px solid ${BORDER};">
+        ${escapeHtml(p.nombre)} <span style="color:${GRAY};font-size:12px;">(RUT: ${escapeHtml(p.rut)})</span>
+        <span style="margin-left:8px;display:inline-block;background:#fef2f2;border:1px solid #fca5a5;border-radius:4px;padding:2px 8px;font-size:11px;color:#991b1b;font-weight:600;">Sin ficha de salud</span>
+      </td>
+    </tr>`).join('')}
+    `
+    : '';
+
+  const intro = `
+    <p style="margin:0 0 12px;color:#1f2937;font-size:15px;">
+      Estimado/a responsable de la salida <strong>${escapeHtml(nombreActividad)}</strong>,<br>
+      A continuación encontrará el resumen de fichas de salud de los participantes,
+      validado y enviado por la administración del club. Líder de cordada: <strong>${escapeHtml(liderCordada)}</strong>.
+    </p>`;
+
+  const tabla = `
+    ${participantBlocks}
+    ${sinFichaRows}
+  `;
+
+  const footerNote = `
+    Este correo contiene información médica confidencial de los participantes de la salida.
+    Por favor, trátela con la debida reserva y utilícela exclusivamente para la gestión de
+    seguridad en montaña. Esta información fue validada y enviada por la administración del
+    club en cumplimiento con los protocolos de seguridad de Andino Club Pamir.
+    No comparta este correo con terceros.
+  `;
+
+  return emailShell(
+    `Resumen de fichas de salud — ${escapeHtml(nombreActividad)}`,
+    intro,
+    tabla,
+    footerNote,
   );
 }
 

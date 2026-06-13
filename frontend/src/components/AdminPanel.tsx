@@ -9,11 +9,15 @@ import {
   CheckCircle2,
   Users,
   BarChart3,
+  HeartPulse,
+  ChevronDown,
+  ChevronUp,
+  Send,
 } from 'lucide-react'
 import logoPamir from '../assets/logo_PAMIR.png'
 
-import { fetchSalidas, fetchAdminStats } from '../lib/api'
-import type { AdminStats } from '../lib/api'
+import { fetchSalidas, fetchAdminStats, fetchSaludSalida, enviarSaludSalida } from '../lib/api'
+import type { AdminStats, SaludSalidaResponse, ParticipanteSalud } from '../lib/api'
 import type { SalidaRecord } from '../types/salida'
 import { STATUS_LABELS, STATUS_COLORS, DISCIPLINA_LABELS } from '../types/salida'
 import { Button } from './ui/Button'
@@ -126,6 +130,44 @@ function BarRow({ label, value, max }: { label: string; value: number; max: numb
   )
 }
 
+// ─── Fichas de salud section helpers ─────────────────────────────────────────
+
+function SinFichaBadge() {
+  return (
+    <span className="inline-block bg-[#fef2f2] border border-[#fca5a5] text-[#991b1b] text-[10px] font-semibold px-2 py-0.5 rounded-md">
+      Sin ficha
+    </span>
+  )
+}
+
+function SaludFlags({ salud }: { salud: NonNullable<ParticipanteSalud['salud']> }) {
+  const flags: string[] = []
+  if (salud.alergiasTiene) flags.push(`Alergias${salud.alergiasDetalle ? `: ${salud.alergiasDetalle}` : ''}`)
+  if (salud.enfermedadesCronicasTiene) flags.push(`Enf. crónicas${salud.enfermedadesCronicasDetalle ? `: ${salud.enfermedadesCronicasDetalle}` : ''}`)
+  if (salud.medicamentosTiene) flags.push(`Medicamentos${salud.medicamentosDetalle ? `: ${salud.medicamentosDetalle}` : ''}`)
+  if (salud.cirugiasLesionesTiene) flags.push(`Cirugías/lesiones${salud.cirugiasLesionesDetalle ? `: ${salud.cirugiasLesionesDetalle}` : ''}`)
+  if (salud.fuma) flags.push('Fuma')
+  if (salud.usaLentes) flags.push('Usa lentes')
+
+  return (
+    <div className="flex flex-wrap gap-1 mt-0.5">
+      {flags.map((f) => (
+        <span
+          key={f}
+          className="inline-block bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-medium px-1.5 py-0.5 rounded"
+        >
+          {f}
+        </span>
+      ))}
+      {flags.length === 0 && (
+        <span className="text-[10px] text-[#757874]">Sin alertas médicas</span>
+      )}
+    </div>
+  )
+}
+
+// ─── AdminPanel component ─────────────────────────────────────────────────────
+
 export function AdminPanel({ onBack }: AdminPanelProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[] | null>(null)
   const [stats, setStats] = useState<AdminStats | null>(null)
@@ -133,6 +175,16 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [statsError, setStatsError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Fichas de salud section state
+  const [expandedSaludId, setExpandedSaludId] = useState<string | null>(null)
+  const [saludData, setSaludData] = useState<Record<string, SaludSalidaResponse>>({})
+  const [saludLoading, setSaludLoading] = useState<Record<string, boolean>>({})
+  const [saludError, setSaludError] = useState<Record<string, string | null>>({})
+  const [confirmEnvioId, setConfirmEnvioId] = useState<string | null>(null)
+  const [enviandoId, setEnviandoId] = useState<string | null>(null)
+  const [envioSuccess, setEnvioSuccess] = useState<Record<string, string | null>>({})
+  const [envioError, setEnvioError] = useState<Record<string, string | null>>({})
 
   const loadSalidas = useCallback(async () => {
     setIsLoading(true)
@@ -158,6 +210,54 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       setStatsError(err instanceof Error ? err.message : 'No se pudieron cargar las métricas')
     } finally {
       setStatsLoading(false)
+    }
+  }, [])
+
+  const handleToggleSalud = useCallback(async (salidaId: string) => {
+    if (expandedSaludId === salidaId) {
+      setExpandedSaludId(null)
+      setConfirmEnvioId(null)
+      return
+    }
+    setExpandedSaludId(salidaId)
+    setConfirmEnvioId(null)
+
+    // Lazy-fetch: only load once per salida
+    if (saludData[salidaId]) return
+
+    setSaludLoading((prev) => ({ ...prev, [salidaId]: true }))
+    setSaludError((prev) => ({ ...prev, [salidaId]: null }))
+    try {
+      const data = await fetchSaludSalida(salidaId)
+      setSaludData((prev) => ({ ...prev, [salidaId]: data }))
+    } catch (err) {
+      setSaludError((prev) => ({
+        ...prev,
+        [salidaId]: err instanceof Error ? err.message : 'No se pudieron cargar las fichas',
+      }))
+    } finally {
+      setSaludLoading((prev) => ({ ...prev, [salidaId]: false }))
+    }
+  }, [expandedSaludId, saludData])
+
+  const handleEnviarSalud = useCallback(async (salidaId: string) => {
+    setEnviandoId(salidaId)
+    setEnvioSuccess((prev) => ({ ...prev, [salidaId]: null }))
+    setEnvioError((prev) => ({ ...prev, [salidaId]: null }))
+    setConfirmEnvioId(null)
+    try {
+      const result = await enviarSaludSalida(salidaId)
+      setEnvioSuccess((prev) => ({
+        ...prev,
+        [salidaId]: `Correo enviado a ${result.to} (${result.participantesConFicha} con ficha, ${result.participantesSinFicha} sin ficha)`,
+      }))
+    } catch (err) {
+      setEnvioError((prev) => ({
+        ...prev,
+        [salidaId]: err instanceof Error ? err.message : 'No se pudo enviar el correo',
+      }))
+    } finally {
+      setEnviandoId(null)
     }
   }, [])
 
@@ -424,6 +524,196 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           <span className="font-medium text-slate-700">Líder:</span>{' '}
                           {s.liderCordada}
                         </p>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </section>
+
+            {/* ── Section: Fichas de salud ────────────────────────────────── */}
+            <section className="mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <HeartPulse size={16} className="text-[#264c99]" />
+                <h2 className="text-base font-bold text-slate-900">Fichas de salud</h2>
+                <span className="text-xs font-bold bg-[#e8eef7] text-[#264c99] px-2 py-0.5 rounded-full">
+                  {openSalidas.length}
+                </span>
+              </div>
+              <p className="text-xs text-[#757874] mb-3">
+                Consulta y envía al responsable de cada salida en curso el resumen de fichas de salud de sus participantes.
+              </p>
+
+              {openSalidas.length === 0 ? (
+                <div className="flex flex-col items-center py-10 gap-3 text-center">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-[#e8eef7]">
+                    <HeartPulse size={22} className="text-[#264c99]" />
+                  </div>
+                  <p className="text-sm text-[#757874]">No hay salidas en curso</p>
+                </div>
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {openSalidas.map((s) => {
+                    const isExpanded = expandedSaludId === s.id
+                    const loading = saludLoading[s.id]
+                    const fetchErr = saludError[s.id]
+                    const data = saludData[s.id]
+                    const isEnviando = enviandoId === s.id
+                    const confirmPending = confirmEnvioId === s.id
+                    const successMsg = envioSuccess[s.id]
+                    const errorMsg = envioError[s.id]
+
+                    return (
+                      <li
+                        key={s.id}
+                        className="bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm overflow-hidden"
+                      >
+                        {/* Header row: always visible */}
+                        <button
+                          type="button"
+                          onClick={() => void handleToggleSalud(s.id)}
+                          className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-[#f0f4fb] transition-colors"
+                          aria-expanded={isExpanded}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-slate-900 text-sm leading-tight truncate">
+                              {s.nombreActividad}
+                            </p>
+                            <p className="text-xs text-[#757874] mt-0.5">
+                              Líder: {s.liderCordada} ·{' '}
+                              {Array.isArray(s.participantes) ? s.participantes.length : 0} participante(s)
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs text-[#264c99] font-medium">Ver fichas</span>
+                            {isExpanded ? (
+                              <ChevronUp size={16} className="text-[#264c99]" />
+                            ) : (
+                              <ChevronDown size={16} className="text-[#264c99]" />
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Expandable panel */}
+                        {isExpanded && (
+                          <div className="border-t border-[#e8eef7] px-4 py-3">
+                            {loading && (
+                              <div className="flex items-center gap-2 py-4 text-[#757874]">
+                                <Loader2 className="animate-spin text-[#264c99]" size={16} />
+                                <p className="text-xs">Cargando fichas de salud...</p>
+                              </div>
+                            )}
+
+                            {fetchErr && (
+                              <div className="flex items-start gap-2 rounded-xl bg-[#f5e8ea] border border-[#A4636E]/30 p-3 text-sm text-[#8b3a44] mb-3">
+                                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                                <p className="text-xs">{fetchErr}</p>
+                              </div>
+                            )}
+
+                            {data && (
+                              <>
+                                {/* Participant list */}
+                                <ul className="flex flex-col gap-2 mb-4">
+                                  {data.participantes.map((p) => (
+                                    <li
+                                      key={p.rut}
+                                      className="rounded-xl border border-[#e8eef7] px-3 py-2"
+                                    >
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium text-slate-900 truncate">
+                                            {p.nombre}
+                                          </p>
+                                          <p className="text-[11px] text-[#757874]">RUT: {p.rut}</p>
+                                        </div>
+                                        {!p.fichaEncontrada && <SinFichaBadge />}
+                                        {p.fichaEncontrada && (
+                                          <span className="inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md shrink-0">
+                                            {p.salud?.grupoSanguineo}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {p.fichaEncontrada && p.salud && (
+                                        <SaludFlags salud={p.salud} />
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+
+                                {/* Send action */}
+                                <div className="border-t border-[#e8eef7] pt-3">
+                                  <p className="text-xs text-[#757874] mb-2">
+                                    Se enviará a:{' '}
+                                    <span className="font-medium text-slate-700">
+                                      {data.creatorEmail ?? 'correo vinculado a la cuenta'}
+                                    </span>
+                                  </p>
+
+                                  {successMsg && (
+                                    <div className="flex items-start gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800 mb-2">
+                                      <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
+                                      <p>{successMsg}</p>
+                                    </div>
+                                  )}
+
+                                  {errorMsg && (
+                                    <div className="flex items-start gap-2 rounded-xl bg-[#f5e8ea] border border-[#A4636E]/30 p-3 text-xs text-[#8b3a44] mb-2">
+                                      <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                                      <p>{errorMsg}</p>
+                                    </div>
+                                  )}
+
+                                  {!confirmPending && !successMsg && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmEnvioId(s.id)}
+                                      disabled={isEnviando}
+                                      className="inline-flex items-center gap-1.5 bg-[#264c99] text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-[#1e3d7d] disabled:opacity-50 transition-colors"
+                                    >
+                                      <Send size={12} />
+                                      Enviar resumen al responsable
+                                    </button>
+                                  )}
+
+                                  {confirmPending && (
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p className="text-xs font-semibold text-slate-700">
+                                        ¿Confirmar envío?
+                                      </p>
+                                      <button
+                                        type="button"
+                                        onClick={() => void handleEnviarSalud(s.id)}
+                                        disabled={isEnviando}
+                                        className="inline-flex items-center gap-1.5 bg-[#264c99] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-[#1e3d7d] disabled:opacity-50 transition-colors"
+                                      >
+                                        {isEnviando ? (
+                                          <>
+                                            <Loader2 size={12} className="animate-spin" />
+                                            Enviando...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Send size={12} />
+                                            Sí, enviar
+                                          </>
+                                        )}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmEnvioId(null)}
+                                        disabled={isEnviando}
+                                        className="text-xs font-semibold text-slate-500 hover:text-slate-700 px-2 py-1.5 disabled:opacity-50 transition-colors"
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </li>
                     )
                   })}

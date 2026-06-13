@@ -348,6 +348,51 @@ export async function fetchAdminStats(): Promise<AdminStats> {
   return handleResponse<AdminStats>(res)
 }
 
+export interface ParticipanteSalud {
+  rut: string
+  nombre: string
+  fichaEncontrada: boolean
+  salud?: {
+    grupoSanguineo: string
+    alergiasTiene: boolean
+    alergiasDetalle?: string | null
+    enfermedadesCronicasTiene: boolean
+    enfermedadesCronicasDetalle?: string | null
+    medicamentosTiene: boolean
+    medicamentosDetalle?: string | null
+    cirugiasLesionesTiene: boolean
+    cirugiasLesionesDetalle?: string | null
+    fuma: boolean
+    usaLentes: boolean
+    previsionSalud: string
+  } | null
+}
+
+export interface SaludSalidaResponse {
+  salidaId: string
+  nombreActividad: string
+  liderCordada: string
+  creatorEmail: string | null
+  participantes: ParticipanteSalud[]
+}
+
+export async function fetchSaludSalida(id: string): Promise<SaludSalidaResponse> {
+  const res = await fetch(`${API_BASE}/admin/salidas/${encodeURIComponent(id)}/salud`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<SaludSalidaResponse>(res)
+}
+
+export async function enviarSaludSalida(
+  id: string,
+): Promise<{ sent: boolean; to: string; participantesConFicha: number; participantesSinFicha: number }> {
+  const res = await fetch(`${API_BASE}/admin/salidas/${encodeURIComponent(id)}/enviar-salud`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  return handleResponse<{ sent: boolean; to: string; participantesConFicha: number; participantesSinFicha: number }>(res)
+}
+
 // ─── Health ───────────────────────────────────────────────────────────────────
 
 export async function healthCheck(): Promise<{ status: string }> {
