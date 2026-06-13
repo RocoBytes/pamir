@@ -86,9 +86,9 @@ function SalidaCard({ salida, currentUserId, onClick }: { salida: SalidaRecord, 
                 {isOwner ? 'Líder' : 'Participante'}
               </span>
             </div>
-            <p className="text-sm text-[#757874] mt-0.5 truncate flex items-center gap-1">
+            <p className="text-sm text-[#757874] mt-0.5 flex items-center gap-1 min-w-0">
               <MapPin size={12} className="shrink-0" />
-              {salida.ubicacionGeografica}
+              <span className="truncate">{salida.ubicacionGeografica}</span>
             </p>
           </div>
           <span
@@ -436,7 +436,7 @@ export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir 
         {!isLoading && !error && salidas.length > 0 && (
           <div className="grid gap-3">
             {salidas.map((salida) => (
-              <div key={salida.id}>
+              <div key={salida.id} className="min-w-0">
                 <SalidaCard salida={salida} currentUserId={user.id} onClick={setSelectedSalidaId} />
                 {isAdmin && (
                   <button
