@@ -8,6 +8,8 @@ import {
   MapPin,
   FileWarning,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ClipboardList,
   Clock,
   ClipboardCheck,
@@ -16,6 +18,7 @@ import {
   Star,
   BookOpen,
   LayoutDashboard,
+  History,
 } from 'lucide-react'
 import logoPamir from '../assets/logo_PAMIR.png'
 
@@ -25,7 +28,7 @@ import {
   STATUS_COLORS,
   DISCIPLINA_LABELS,
 } from '../types/salida'
-import { fetchSalidas } from '../lib/api'
+import { fetchSalidas, fetchHistoricos } from '../lib/api'
 import { Button } from './ui/Button'
 import { SalidaDetailModal } from './SalidaDetailModal'
 import { EvaluacionResultadosModal } from './EvaluacionResultadosModal'
@@ -128,6 +131,14 @@ export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir 
   const [selectedSalidaId, setSelectedSalidaId] = useState<string | null>(null)
   const [evaluacionSalida, setEvaluacionSalida] = useState<SalidaRecord | null>(null)
 
+  // Históricos: salidas cerradas (COMPLETADA) en las que el usuario participó.
+  // Se cargan de forma diferida la primera vez que se abre el desplegable.
+  const [historicosExpanded, setHistoricosExpanded] = useState(false)
+  const [historicos, setHistoricos] = useState<SalidaRecord[]>([])
+  const [historicosLoading, setHistoricosLoading] = useState(false)
+  const [historicosError, setHistoricosError] = useState<string | null>(null)
+  const [historicosLoaded, setHistoricosLoaded] = useState(false)
+
   const loadSalidas = useCallback(async () => {
     setIsLoading(true)
     setError(null)
@@ -146,6 +157,30 @@ export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir 
   useEffect(() => {
     void loadSalidas()
   }, [loadSalidas])
+
+  const loadHistoricos = useCallback(async () => {
+    setHistoricosLoading(true)
+    setHistoricosError(null)
+    try {
+      const data = await fetchHistoricos()
+      setHistoricos(data)
+      setHistoricosLoaded(true)
+    } catch (err) {
+      setHistoricosError(
+        err instanceof Error ? err.message : 'Error al cargar los históricos',
+      )
+    } finally {
+      setHistoricosLoading(false)
+    }
+  }, [])
+
+  const toggleHistoricos = useCallback(() => {
+    const willExpand = !historicosExpanded
+    setHistoricosExpanded(willExpand)
+    if (willExpand && !historicosLoaded && !historicosLoading) {
+      void loadHistoricos()
+    }
+  }, [historicosExpanded, historicosLoaded, historicosLoading, loadHistoricos])
 
   return (
     <div className="min-h-screen bg-[#f0f4fb]">
@@ -452,6 +487,78 @@ export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir 
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Históricos — desplegable con salidas cerradas en las que participó.
+            Oculto para admin: el admin gestiona el historial desde el AdminPanel. */}
+        {!isAdmin && (
+          <div className="mt-8">
+            <button
+              type="button"
+              onClick={toggleHistoricos}
+              aria-expanded={historicosExpanded}
+              className="w-full flex items-center justify-between gap-3 bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm hover:shadow-md transition-shadow duration-200 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] focus-visible:ring-offset-2"
+            >
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#e8eef7] flex items-center justify-center">
+                  <History size={20} className="text-[#264c99]" />
+                </div>
+                <div className="text-left min-w-0">
+                  <p className="font-semibold text-slate-900 text-sm">Históricos</p>
+                  <p className="text-xs text-[#757874]">
+                    Salidas cerradas en las que participaste
+                  </p>
+                </div>
+              </div>
+              {historicosExpanded ? (
+                <ChevronUp size={18} className="text-[#757874] shrink-0" />
+              ) : (
+                <ChevronDown size={18} className="text-[#757874] shrink-0" />
+              )}
+            </button>
+
+            {historicosExpanded && (
+              <div className="mt-3">
+                {historicosLoading && (
+                  <div className="flex flex-col items-center justify-center py-10 gap-3 text-[#757874]">
+                    <Loader2 className="animate-spin text-[#264c99]" size={24} />
+                    <p className="text-sm">Cargando históricos...</p>
+                  </div>
+                )}
+
+                {historicosError && !historicosLoading && (
+                  <div className="flex flex-col items-center py-8 gap-3 text-center">
+                    <AlertCircle size={28} className="text-[#A4636E]" />
+                    <p className="text-sm text-[#757874]">{historicosError}</p>
+                    <Button variant="secondary" size="sm" onClick={() => void loadHistoricos()}>
+                      Reintentar
+                    </Button>
+                  </div>
+                )}
+
+                {!historicosLoading && !historicosError && historicos.length === 0 && (
+                  <div className="flex flex-col items-center py-8 gap-2 text-center">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-[#e8eef7]">
+                      <History size={20} className="text-[#264c99]" />
+                    </div>
+                    <p className="text-sm text-[#757874]">
+                      No participaste en salidas cerradas todavía
+                    </p>
+                  </div>
+                )}
+
+                {!historicosLoading && !historicosError && historicos.length > 0 && (
+                  <div className="grid gap-3">
+                    {historicos.map((salida) => (
+                      <div key={salida.id} className="min-w-0">
+                        <SalidaCard salida={salida} currentUserId={user.id} onClick={setSelectedSalidaId} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </main>

@@ -185,8 +185,14 @@ export async function getSalidas(req: Request, res: Response): Promise<void> {
       }
     }
 
+    // Históricos: el desplegable del Dashboard pide ?historico=true para ver
+    // las salidas ya cerradas (COMPLETADA) en las que el usuario participó.
+    // Sin el flag se mantiene el comportamiento actual: solo salidas EN_CURSO.
+    const historico =
+      req.query['historico'] === 'true' || req.query['historico'] === '1';
+
     const whereClause: Prisma.SalidaWhereInput = {
-      status: 'EN_CURSO',
+      status: historico ? 'COMPLETADA' : 'EN_CURSO',
       OR: [
         { userId: userId },
       ],

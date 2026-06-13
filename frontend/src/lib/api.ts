@@ -83,6 +83,15 @@ export async function fetchSalidas(): Promise<SalidaRecord[]> {
   return handleResponse<SalidaRecord[]>(res)
 }
 
+// Salidas cerradas (COMPLETADA) en las que el usuario participó — alimenta el
+// desplegable "Históricos" del Dashboard. Reusa GET /api/salidas con un flag.
+export async function fetchHistoricos(): Promise<SalidaRecord[]> {
+  const res = await fetch(`${API_BASE}/salidas?historico=true`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<SalidaRecord[]>(res)
+}
+
 export async function getSalida(id: string): Promise<SalidaRecord> {
   const res = await fetch(`${API_BASE}/salidas/${id}`, {
     headers: authHeaders(),
