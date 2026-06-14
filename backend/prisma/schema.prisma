@@ -36,8 +36,26 @@ model User {
 
   salidas Salida[]
   cierres Cierre[]
+  dashboardLayouts DashboardLayout[]
 
   @@map("users")
+}
+
+// Per-user customizable dashboard layout (react-grid-layout config).
+// dashboardKey discriminates between dashboards so more can be added later
+// without a new table. layout is an array of { widgetId, x, y, w, h, visible? }.
+model DashboardLayout {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  dashboardKey String   @default("admin_analytics") @map("dashboard_key")
+  layout       Json     @default("[]")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dashboardKey])
+  @@map("dashboard_layouts")
 }
 
 model Salida {

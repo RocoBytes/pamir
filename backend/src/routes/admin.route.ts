@@ -1,6 +1,14 @@
 import { Router } from 'express';
 import { authMiddleware, requireAuth, requireAdmin } from '../middleware/auth.middleware.js';
-import { getStats, getDashboard, getSaludSalida, enviarSaludSalida } from '../controllers/admin.controller.js';
+import {
+  getStats,
+  getDashboard,
+  getSaludSalida,
+  enviarSaludSalida,
+  getDashboardLayout,
+  saveDashboardLayout,
+  deleteDashboardLayout,
+} from '../controllers/admin.controller.js';
 
 const router = Router();
 
@@ -9,6 +17,9 @@ router.use(authMiddleware, requireAuth, requireAdmin);
 
 router.get('/stats', getStats);
 router.get('/dashboard', getDashboard);
+router.get('/dashboard-layout', getDashboardLayout);
+router.put('/dashboard-layout', saveDashboardLayout);
+router.delete('/dashboard-layout', deleteDashboardLayout);
 router.get('/salidas/:id/salud', getSaludSalida);
 router.post('/salidas/:id/enviar-salud', enviarSaludSalida);
 

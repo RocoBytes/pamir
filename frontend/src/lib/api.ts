@@ -488,6 +488,41 @@ export async function fetchAdminDashboard(filtros: DashboardFiltros = {}): Promi
   return handleResponse<AdminDashboard>(res)
 }
 
+// ─── Admin dashboard layout (per-admin customizable grid) ───────────────────────
+
+export interface DashboardWidgetLayout {
+  widgetId: string
+  x: number
+  y: number
+  w: number
+  h: number
+  visible?: boolean
+}
+
+export async function fetchDashboardLayout(): Promise<{ layout: DashboardWidgetLayout[] | null }> {
+  const res = await fetch(`${API_BASE}/admin/dashboard-layout`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<{ layout: DashboardWidgetLayout[] | null }>(res)
+}
+
+export async function saveDashboardLayout(layout: DashboardWidgetLayout[]): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/dashboard-layout`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ layout }),
+  })
+  await handleResponse<unknown>(res)
+}
+
+export async function resetDashboardLayout(): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/dashboard-layout`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  await handleResponse<unknown>(res)
+}
+
 export interface ParticipanteSalud {
   rut: string
   nombre: string

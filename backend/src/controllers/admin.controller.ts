@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { Prisma, SalidaStatus } from '../generated/prisma/client.js';
 import { sendEmail } from '../lib/google-gmail.js';
@@ -691,5 +692,127 @@ export async function enviarSaludSalida(req: Request, res: Response): Promise<vo
   } catch (error) {
     console.error('[enviarSaludSalida]', error);
     res.status(500).json({ error: 'Error al procesar la solicitud' });
+  }
+}
+
+// ─── Dashboard layout (per-admin customizable grid) ─────────────────────────────
+
+const ADMIN_DASHBOARD_KEY = 'admin_analytics';
+const GRID_COLS = 12;
+const MAX_H = 50;
+
+// Allowlist of widget ids. MUST stay in sync with the frontend registry in
+// frontend/src/components/admin/dashboardWidgets.tsx. Unknown ids are dropped.
+const WIDGET_IDS = new Set<string>([
+  // metric tiles
+  'total_salidas',
+  'pendientes_cierre',
+  'con_cierre',
+  'canceladas',
+  'total_participantes',
+  'promedio_participantes',
+  'participantes_express',
+  'salidas_incidentes',
+  'salidas_accidentes',
+  'calidad_promedio',
+  'eval_baja',
+  // charts
+  'salidas_por_estado',
+  'salidas_por_mes',
+  'incidentes_accidentes',
+  'participantes_tipo',
+  'calidad_distribucion',
+  'calidad_evolucion',
+  'salidas_por_lider',
+  'comparacion_salida_cierre',
+]);
+
+const layoutItemSchema = z.object({
+  widgetId: z.string(),
+  x: z.number().int(),
+  y: z.number().int(),
+  w: z.number().int(),
+  h: z.number().int(),
+  visible: z.boolean().optional(),
+});
+
+const saveLayoutSchema = z.object({
+  // Upper-bounded well above the ~19 known widgets so a tampered payload can't
+  // force large in-memory parsing; unknown ids are dropped afterwards anyway.
+  layout: z.array(layoutItemSchema).max(50),
+});
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+// GET /api/admin/dashboard-layout
+export async function getDashboardLayout(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user!.id;
+    const row = await prisma.dashboardLayout.findUnique({
+      where: { userId_dashboardKey: { userId, dashboardKey: ADMIN_DASHBOARD_KEY } },
+    });
+    if (!row) {
+      res.json({ layout: null });
+      return;
+    }
+    res.json({ layout: row.layout, updatedAt: row.updatedAt });
+  } catch (error) {
+    console.error('[getDashboardLayout]', error);
+    res.status(500).json({ error: 'No se pudo obtener la configuración del dashboard' });
+  }
+}
+
+// PUT /api/admin/dashboard-layout
+export async function saveDashboardLayout(req: Request, res: Response): Promise<void> {
+  try {
+    const parsed = saveLayoutSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Configuración de dashboard inválida' });
+      return;
+    }
+
+    // Keep only known widgets and clamp geometry into grid bounds so a tampered
+    // payload can never store out-of-range positions.
+    const sanitized = parsed.data.layout
+      .filter((item) => WIDGET_IDS.has(item.widgetId))
+      .map((item) => ({
+        widgetId: item.widgetId,
+        x: clamp(item.x, 0, GRID_COLS - 1),
+        y: Math.max(item.y, 0),
+        w: clamp(item.w, 1, GRID_COLS),
+        h: clamp(item.h, 1, MAX_H),
+        ...(item.visible === undefined ? {} : { visible: item.visible }),
+      }));
+
+    const userId = req.user!.id;
+    const saved = await prisma.dashboardLayout.upsert({
+      where: { userId_dashboardKey: { userId, dashboardKey: ADMIN_DASHBOARD_KEY } },
+      create: {
+        userId,
+        dashboardKey: ADMIN_DASHBOARD_KEY,
+        layout: sanitized as Prisma.JsonArray,
+      },
+      update: { layout: sanitized as Prisma.JsonArray },
+    });
+    res.json({ layout: saved.layout, updatedAt: saved.updatedAt });
+  } catch (error) {
+    console.error('[saveDashboardLayout]', error);
+    res.status(500).json({ error: 'No se pudo guardar la configuración del dashboard' });
+  }
+}
+
+// DELETE /api/admin/dashboard-layout — restore default by forgetting saved config
+export async function deleteDashboardLayout(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user!.id;
+    await prisma.dashboardLayout.deleteMany({
+      where: { userId, dashboardKey: ADMIN_DASHBOARD_KEY },
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[deleteDashboardLayout]', error);
+    res.status(500).json({ error: 'No se pudo restaurar la configuración del dashboard' });
   }
 }

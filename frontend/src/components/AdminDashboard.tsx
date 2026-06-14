@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   ArrowLeft,
   RefreshCw,
@@ -7,50 +7,20 @@ import {
   Filter,
   LayoutDashboard,
 } from 'lucide-react'
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from 'recharts'
 import logoPamir from '../assets/logo_PAMIR.png'
 import { Button } from './ui/Button'
 import { Select } from './ui/Select'
 import { fetchAdminDashboard } from '../lib/api'
 import type { AdminDashboard as AdminDashboardData, DashboardFiltros } from '../lib/api'
 import { STATUS_LABELS, DISCIPLINA_LABELS } from '../types/salida'
+import { DashboardGrid } from './admin/DashboardGrid'
 
 interface AdminDashboardProps {
   onBack: () => void
 }
 
-// Theme tokens (mirror index.css). Recharts needs concrete color strings.
-const COLOR_PRIMARY = '#264c99'
-const COLOR_SECONDARY = '#4a6fad'
-const COLOR_TERTIARY = '#A4636E'
-const COLOR_GRID = '#e8eef7'
-const PIE_COLORS = ['#264c99', '#4a6fad', '#A4636E', '#7b9bd1', '#c08a93', '#9fb4d8']
-
 const STATUS_LABEL = STATUS_LABELS as Record<string, string>
 const DISCIPLINA_LABEL = DISCIPLINA_LABELS as Record<string, string>
-
-const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-
-// "YYYY-MM" → "Jun 26"
-function formatMes(key: string): string {
-  const [year, month] = key.split('-')
-  const idx = Number(month) - 1
-  return `${MESES[idx] ?? month} ${year?.slice(2) ?? ''}`
-}
 
 const TRISTATE_OPTIONS = [
   { value: '', label: 'Todas' },
@@ -60,47 +30,6 @@ const TRISTATE_OPTIONS = [
 
 type BoolFilterKey = 'conCierre' | 'conIncidente' | 'conAccidente' | 'conExpress'
 type StringFilterKey = 'desde' | 'hasta' | 'status' | 'lider' | 'disciplina' | 'tipoSalida' | 'temporada'
-
-function MetricCard({
-  label,
-  value,
-  subtitle,
-}: {
-  label: string
-  value: string | number
-  subtitle?: string
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm p-4">
-      <p className="text-2xl font-bold text-[#264c99] leading-tight">{value}</p>
-      <p className="text-xs text-[#757874] mt-1">{label}</p>
-      {subtitle && <p className="text-[10px] text-[#757874]/70 mt-0.5">{subtitle}</p>}
-    </div>
-  )
-}
-
-function ChartCard({
-  title,
-  empty,
-  children,
-}: {
-  title: string
-  empty?: boolean
-  children: ReactNode
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-[#4a6fad]/15 shadow-sm p-4">
-      <h3 className="text-xs font-bold text-[#264c99] uppercase tracking-wide mb-3">{title}</h3>
-      {empty ? (
-        <p className="text-xs text-[#757874] py-8 text-center">
-          Sin datos para los filtros seleccionados
-        </p>
-      ) : (
-        children
-      )}
-    </div>
-  )
-}
 
 export function AdminDashboard({ onBack }: AdminDashboardProps) {
   const [filtros, setFiltros] = useState<DashboardFiltros>({})
@@ -160,50 +89,6 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
 
   const filterOptions = data?.filtros ?? { lideres: [], disciplinas: [], tipos: [], temporadas: [] }
   const hasActiveFilters = Object.keys(filtros).length > 0
-
-  // ── Chart datasets ──
-  const estadoData = (data?.porEstado ?? [])
-    .filter((e) => e.total > 0)
-    .map((e) => ({ label: STATUS_LABEL[e.estado] ?? e.estado, total: e.total }))
-
-  const mesData = (data?.porMes ?? []).map((m) => ({ label: formatMes(m.mes), total: m.total }))
-
-  const incidentesData = (data?.incidentesPorMes ?? []).map((m) => ({
-    label: formatMes(m.mes),
-    incidentes: m.incidentes,
-    accidentes: m.accidentes,
-  }))
-
-  const participantesData = data
-    ? [
-        { label: 'Registrados', total: data.participantesPorTipo.registrados },
-        { label: 'Express', total: data.participantesPorTipo.express },
-      ].filter((d) => d.total > 0)
-    : []
-
-  const calidadDistData = (data?.calidad.distribucion ?? []).map((d) => ({
-    label: `${d.nota}★`,
-    total: d.total,
-  }))
-
-  const calidadMesData = (data?.calidad.porMes ?? []).map((m) => ({
-    label: formatMes(m.mes),
-    promedio: m.promedio,
-  }))
-
-  const liderData = (data?.porLider ?? []).map((l) => ({ lider: l.lider, total: l.total }))
-
-  const salidaVsCierreData = data
-    ? [
-        { label: 'Con cierre', total: data.salidaVsCierre.conCierre },
-        { label: 'Sin cierre', total: data.salidaVsCierre.sinCierre },
-        { label: 'Cambios roster', total: data.salidaVsCierre.conCambiosRoster },
-        { label: 'Incidentes', total: data.salidaVsCierre.conIncidentes },
-        { label: 'Accidentes', total: data.salidaVsCierre.conAccidentes },
-      ]
-    : []
-
-  const m = data?.metrics
   const sinSalidas = !!data && data.metrics.totalSalidas === 0
 
   return (
@@ -405,178 +290,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
               </div>
             )}
 
-            {/* Metric cards */}
-            {m && (
-              <section className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-                <MetricCard label="Total de salidas" value={m.totalSalidas} />
-                <MetricCard label="Pendientes de cierre" value={m.pendientesCierre} />
-                <MetricCard
-                  label="Con cierre"
-                  value={m.conCierre}
-                  subtitle={`${m.pctConCierre}% del total`}
-                />
-                <MetricCard label="Canceladas" value={m.canceladas} />
-                <MetricCard label="Total participantes" value={m.totalParticipantes} />
-                <MetricCard label="Promedio por salida" value={m.promedioParticipantes} />
-                <MetricCard label="Participantes express" value={m.totalExpress} />
-                <MetricCard label="Salidas con incidentes" value={m.incidentes} />
-                <MetricCard label="Salidas con accidentes" value={m.accidentes} />
-                <MetricCard
-                  label="Calidad promedio"
-                  value={m.promedioCalidad === null ? '—' : `${m.promedioCalidad}★`}
-                  subtitle={`${data.calidad.totalRespuestas} respuestas`}
-                />
-                <MetricCard label="Salidas con evaluación baja" value={m.salidasEvalBaja} />
-              </section>
-            )}
-
-            {/* Charts */}
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <ChartCard title="Salidas por estado" empty={estadoData.length === 0}>
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie
-                      data={estadoData}
-                      dataKey="total"
-                      nameKey="label"
-                      innerRadius={55}
-                      outerRadius={85}
-                      paddingAngle={2}
-                    >
-                      {estadoData.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard title="Salidas por mes" empty={mesData.length === 0}>
-                <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={mesData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={COLOR_GRID} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Line
-                      type="monotone"
-                      dataKey="total"
-                      name="Salidas"
-                      stroke={COLOR_PRIMARY}
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard
-                title="Incidentes y accidentes por mes"
-                empty={incidentesData.length === 0}
-              >
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={incidentesData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={COLOR_GRID} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="incidentes" name="Incidentes" fill={COLOR_SECONDARY} />
-                    <Bar dataKey="accidentes" name="Accidentes" fill={COLOR_TERTIARY} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard title="Participantes por tipo" empty={participantesData.length === 0}>
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie
-                      data={participantesData}
-                      dataKey="total"
-                      nameKey="label"
-                      innerRadius={55}
-                      outerRadius={85}
-                      paddingAngle={2}
-                    >
-                      {participantesData.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard
-                title="Calidad de experiencia (distribución)"
-                empty={data.calidad.totalRespuestas === 0}
-              >
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={calidadDistData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={COLOR_GRID} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Bar dataKey="total" name="Respuestas" fill={COLOR_PRIMARY} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard
-                title="Evolución de la calidad"
-                empty={calidadMesData.length === 0}
-              >
-                <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={calidadMesData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={COLOR_GRID} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis domain={[0, 5]} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Line
-                      type="monotone"
-                      dataKey="promedio"
-                      name="Promedio"
-                      stroke={COLOR_TERTIARY}
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard title="Salidas por líder" empty={liderData.length === 0}>
-                <ResponsiveContainer width="100%" height={Math.max(260, liderData.length * 32)}>
-                  <BarChart data={liderData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke={COLOR_GRID} />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <YAxis
-                      type="category"
-                      dataKey="lider"
-                      width={110}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <Tooltip />
-                    <Bar dataKey="total" name="Salidas" fill={COLOR_PRIMARY} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard
-                title="Comparación salida vs cierre"
-                empty={salidaVsCierreData.length === 0}
-              >
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={salidaVsCierreData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={COLOR_GRID} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Bar dataKey="total" name="Salidas" fill={COLOR_SECONDARY} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            </section>
+            <DashboardGrid data={data} />
           </div>
         )}
       </main>
