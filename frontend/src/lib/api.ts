@@ -325,6 +325,9 @@ export interface DocumentoRecord {
   nombre: string
   descripcion?: string | null
   driveFileUrl?: string | null
+  // Solo presentes en la vista admin (GET /api/documentos/admin):
+  visible?: boolean
+  orden?: number
 }
 
 export async function fetchDocumentos(): Promise<DocumentoRecord[]> {
@@ -332,6 +335,49 @@ export async function fetchDocumentos(): Promise<DocumentoRecord[]> {
     headers: authHeaders(),
   })
   return handleResponse<DocumentoRecord[]>(res)
+}
+
+// ─── Documentos: gestión admin ───────────────────────────────────────────────
+
+export async function fetchDocumentosAdmin(): Promise<DocumentoRecord[]> {
+  const res = await fetch(`${API_BASE}/documentos/admin`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<DocumentoRecord[]>(res)
+}
+
+export async function uploadDocumento(data: {
+  categoria: string
+  nombre: string
+  descripcion?: string
+  orden?: number
+  file: File
+}): Promise<DocumentoRecord> {
+  const formData = new FormData()
+  formData.append('categoria', data.categoria)
+  formData.append('nombre', data.nombre)
+  if (data.descripcion) formData.append('descripcion', data.descripcion)
+  if (typeof data.orden === 'number') formData.append('orden', String(data.orden))
+  // El archivo va al final: así los campos de texto ya están en el stream
+  // cuando busboy dispara el evento 'file' en el backend.
+  formData.append('file', data.file)
+
+  const res = await fetch(`${API_BASE}/documentos`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  })
+  return handleResponse<DocumentoRecord>(res)
+}
+
+export async function deleteDocumento(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/documentos/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`)
+  }
 }
 
 // ─── Admin (solo administrador) ──────────────────────────────────────────────

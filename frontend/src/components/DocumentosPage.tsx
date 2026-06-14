@@ -12,19 +12,8 @@ import logoPamir from '../assets/logo_PAMIR.png'
 
 import { fetchDocumentos } from '../lib/api'
 import type { DocumentoRecord } from '../lib/api'
+import { CATEGORIA_LABELS, CATEGORIA_ORDEN } from '../lib/documentos'
 import { Button } from './ui/Button'
-
-// Orden y etiquetas de las categorías de la biblioteca del club.
-// Una categoría desconocida (agregada a futuro en la DB) se muestra igual, al final.
-const CATEGORIA_LABELS: Record<string, string> = {
-  AVISO_EXPEDICION: 'Formularios de Aviso de Expedición — Retenes de Carabineros',
-  MATRIZ_RIESGO: 'Matriz de Riesgo 3x3',
-  CHECKLIST: 'Check-lists de Salidas',
-  GLOSARIO: 'Glosario',
-  LIBROS: 'Libros y Manuales',
-  OTRO: 'Otros',
-}
-const CATEGORIA_ORDEN = Object.keys(CATEGORIA_LABELS)
 
 function agruparPorCategoria(docs: DocumentoRecord[]): [string, DocumentoRecord[]][] {
   const grupos = new Map<string, DocumentoRecord[]>()

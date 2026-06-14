@@ -100,3 +100,15 @@ export async function uploadToGoogleDrive(
       file.webViewLink ?? `https://drive.google.com/file/d/${file.id}/view`,
   };
 }
+
+// ─── Delete ─────────────────────────────────────────────────────────────────
+
+/**
+ * Borra un archivo de Google Drive por su fileId.
+ * Reutiliza el mismo cliente OAuth2 (scope drive.file) que la subida: la app
+ * puede borrar archivos que ella misma creó.
+ */
+export async function deleteFromGoogleDrive(fileId: string): Promise<void> {
+  const drive = createDriveClient();
+  await drive.files.delete({ fileId });
+}
