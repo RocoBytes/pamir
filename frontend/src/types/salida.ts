@@ -101,6 +101,7 @@ export interface SalidaFormData {
 
   // Step 2 – Cronología y Seguridad
   fechaInicio: string
+  horaInicio: string
   fechaRetornoEstimada: string
   horaRetornoEstimada: string
   horaAlerta: string
@@ -147,6 +148,7 @@ export interface SalidaRecord {
   nombreActividad: string
   ubicacionGeografica: string
   fechaInicio: string
+  horaInicio?: string
   fechaRetornoEstimada: string
   horaRetornoEstimada: string
   horaAlerta: string

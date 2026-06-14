@@ -44,6 +44,7 @@ const EMPTY_FORM: Omit<SalidaFormData, 'gpxFile'> = {
   nombreActividad: '',
   ubicacionGeografica: '',
   fechaInicio: '',
+  horaInicio: '',
   fechaRetornoEstimada: '',
   horaRetornoEstimada: '',
   horaAlerta: '',
@@ -311,6 +312,7 @@ export function WizardLayout({ onDone, onCancel, onCreateIntegrante, isAdmin }: 
             defaultValues={{
               esRegistroHistorico: formData.esRegistroHistorico ?? false,
               fechaInicio: formData.fechaInicio,
+              horaInicio: formData.horaInicio,
               fechaRetornoEstimada: formData.fechaRetornoEstimada,
               horaRetornoEstimada: formData.horaRetornoEstimada,
               horaAlerta: formData.horaAlerta,

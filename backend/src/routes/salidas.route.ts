@@ -5,6 +5,7 @@ import {
   getSalidas,
   getSalidaById,
   updateSalida,
+  updateSalidaIntegrantes,
   deleteSalida,
   claimSalida,
 } from '../controllers/salidas.controller.js';
@@ -20,6 +21,7 @@ router.get('/', getSalidas);
 router.get('/:id', getSalidaById);
 router.patch('/:id/claim', claimSalida);
 router.put('/:id', updateSalida);
+router.put('/:id/integrantes', updateSalidaIntegrantes);
 router.delete('/:id', deleteSalida);
 
 export default router;

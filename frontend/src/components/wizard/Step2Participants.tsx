@@ -22,6 +22,7 @@ const step2Schema = z
     // para evitar el desajuste input/output del resolver de react-hook-form.
     esRegistroHistorico: z.boolean(),
     fechaInicio: z.string().min(1, 'Selecciona la fecha de inicio'),
+    horaInicio: z.string().min(1, 'Ingresa la hora de salida'),
     fechaRetornoEstimada: z.string().min(1, 'Selecciona la fecha estimada de retorno'),
     horaRetornoEstimada: z.string().min(1, 'Ingresa la hora de retorno'),
     horaAlerta: z.string().min(1, 'Ingresa la hora de alerta'),
@@ -217,6 +218,20 @@ export function Step2Participants({ defaultValues, onSubmit, onBack, isAdmin = f
 
       {/* Horas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Controller
+          name="horaInicio"
+          control={control}
+          render={({ field }) => (
+            <TimeInput24
+              label="Hora de Salida"
+              required
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.horaInicio?.message}
+            />
+          )}
+        />
         <Controller
           name="horaRetornoEstimada"
           control={control}

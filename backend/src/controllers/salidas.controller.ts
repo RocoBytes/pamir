@@ -58,14 +58,99 @@ async function sendSalidaParticipantEmails(participantObjs: unknown[], salida: S
 
 // Express participants carry no ficha; stamp who added them and when so the
 // salida keeps an auditable record. Trust server-side values, not the client.
+// On re-save (edits) the original stamp is preserved — only new express entries
+// get stamped.
 function normalizeParticipantes(participantObjs: unknown[], addedBy: string | null): ParticipanteInput[] {
   const nowIso = new Date().toISOString();
   return (participantObjs as ParticipanteInput[]).map((p) => {
     if (p && p.esExpress === true) {
-      return { ...p, esExpress: true, agregadoPor: addedBy, agregadoEn: nowIso };
+      return {
+        ...p,
+        esExpress: true,
+        agregadoPor: p.agregadoPor ?? addedBy,
+        agregadoEn: p.agregadoEn ?? nowIso,
+      };
     }
     return p;
   });
+}
+
+/**
+ * UTC offset of America/Santiago for a calendar date (DST-safe). Mirrors the
+ * helper in cron.controller.ts: a noon-UTC probe avoids the midnight DST edge.
+ */
+function santiagoOffsetFor(dateStr: string): string {
+  const probe = new Date(`${dateStr}T12:00:00Z`);
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Santiago',
+    timeZoneName: 'longOffset',
+  }).formatToParts(probe);
+  const tzPart = parts.find((p) => p.type === 'timeZoneName')?.value ?? 'GMT-04:00';
+  return tzPart.replace('GMT', '');
+}
+
+/**
+ * Scheduled departure instant of a salida, in Santiago time. fechaInicio is
+ * stored as midnight UTC of the chosen calendar date; horaInicio is "HH:MM".
+ * Legacy salidas without horaInicio fall back to 23:59 (editable through the day).
+ */
+function departureMoment(salida: Salida): Date {
+  const dateStr = salida.fechaInicio.toISOString().slice(0, 10);
+  const hora = salida.horaInicio ?? '23:59';
+  return new Date(`${dateStr}T${hora}:00${santiagoOffsetFor(dateStr)}`);
+}
+
+// Los integrantes son editables solo si la salida está EN_CURSO y la fecha+hora
+// de salida todavía no se alcanzó.
+function isIntegrantesEditable(salida: Salida, now: Date): boolean {
+  return salida.status === 'EN_CURSO' && now < departureMoment(salida);
+}
+
+type AuditAccion = 'agrego' | 'elimino' | 'modifico';
+
+interface IntegranteAuditEntry {
+  accion: AuditAccion;
+  rut: string;
+  nombre: string;
+  por: string | null;
+  en: string;
+}
+
+function participanteChanged(a: ParticipanteInput, b: ParticipanteInput): boolean {
+  return (
+    (a.nombre ?? '') !== (b.nombre ?? '') ||
+    Boolean(a.esExpress) !== Boolean(b.esExpress) ||
+    (a.telefono ?? '') !== (b.telefono ?? '') ||
+    (a.email ?? '') !== (b.email ?? '') ||
+    (a.membresiaClub ?? '') !== (b.membresiaClub ?? '')
+  );
+}
+
+// Diff participantes by RUT to build the audit trail (added / removed / modified).
+function diffIntegrantesAudit(
+  prev: ParticipanteInput[],
+  next: ParticipanteInput[],
+  por: string | null,
+): IntegranteAuditEntry[] {
+  const nowIso = new Date().toISOString();
+  const entries: IntegranteAuditEntry[] = [];
+  const prevByRut = new Map(prev.filter((p) => p?.rut).map((p) => [p.rut as string, p]));
+  const nextByRut = new Map(next.filter((p) => p?.rut).map((p) => [p.rut as string, p]));
+
+  for (const [rut, p] of nextByRut) {
+    const before = prevByRut.get(rut);
+    if (!before) {
+      entries.push({ accion: 'agrego', rut, nombre: p.nombre ?? '', por, en: nowIso });
+    } else if (participanteChanged(before, p)) {
+      entries.push({ accion: 'modifico', rut, nombre: p.nombre ?? before.nombre ?? '', por, en: nowIso });
+    }
+  }
+  for (const [rut, p] of prevByRut) {
+    if (!nextByRut.has(rut)) {
+      entries.push({ accion: 'elimino', rut, nombre: p.nombre ?? '', por, en: nowIso });
+    }
+  }
+  return entries;
 }
 
 interface CreateSalidaBody {
@@ -77,6 +162,7 @@ interface CreateSalidaBody {
   ubicacionGeografica: string;
   // Paso 2
   fechaInicio: string;
+  horaInicio?: string;
   fechaRetornoEstimada: string;
   horaRetornoEstimada: string;
   horaAlerta: string;
@@ -152,6 +238,7 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
         nombreActividad: data.nombreActividad,
         ubicacionGeografica: data.ubicacionGeografica,
         fechaInicio: new Date(data.fechaInicio),
+        horaInicio: data.horaInicio || null,
         fechaRetornoEstimada: new Date(data.fechaRetornoEstimada),
         horaRetornoEstimada: data.horaRetornoEstimada,
         horaAlerta: data.horaAlerta,
@@ -374,6 +461,7 @@ export async function updateSalida(req: Request, res: Response): Promise<void> {
         ...(body.nombreActividad !== undefined && { nombreActividad: body.nombreActividad }),
         ...(body.ubicacionGeografica !== undefined && { ubicacionGeografica: body.ubicacionGeografica }),
         ...(body.fechaInicio !== undefined && { fechaInicio: new Date(body.fechaInicio) }),
+        ...(body.horaInicio !== undefined && { horaInicio: body.horaInicio || null }),
         ...(body.fechaRetornoEstimada !== undefined && { fechaRetornoEstimada: new Date(body.fechaRetornoEstimada) }),
         ...(body.horaRetornoEstimada !== undefined && { horaRetornoEstimada: body.horaRetornoEstimada }),
         ...(body.horaAlerta !== undefined && { horaAlerta: body.horaAlerta }),
@@ -401,6 +489,90 @@ export async function updateSalida(req: Request, res: Response): Promise<void> {
   } catch (error) {
     console.error('[updateSalida]', error);
     res.status(500).json({ error: 'No se pudo actualizar la salida' });
+  }
+}
+
+/**
+ * PUT /api/salidas/:id/integrantes
+ *
+ * Edita el apartado de integrantes (participantes + líder) de una salida.
+ * Permitido solo para admin o el dueño, mientras la salida esté EN_CURSO y la
+ * fecha+hora de salida todavía no se haya alcanzado. Deja un registro de
+ * auditoría con cada cambio y notifica solo a los recién agregados.
+ */
+export async function updateSalidaIntegrantes(req: Request, res: Response): Promise<void> {
+  try {
+    const id = req.params.id as string;
+    const requestUserId = req.user?.id ?? null;
+    const requestUserEmail = req.user?.email ?? null;
+    const isAdmin = requestUserEmail === ADMIN_EMAIL;
+
+    const existing = await prisma.salida.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Salida no encontrada' });
+      return;
+    }
+
+    // Solo el dueño o el administrador pueden editar los integrantes.
+    if (!isAdmin && existing.userId !== null && existing.userId !== requestUserId) {
+      res.status(403).json({ error: 'No tienes permiso para modificar esta salida' });
+      return;
+    }
+    if (existing.status !== 'EN_CURSO') {
+      res.status(409).json({ error: 'Solo se pueden editar salidas en curso' });
+      return;
+    }
+    // Gate de fecha+hora de salida: una vez alcanzada, queda en solo lectura.
+    if (!isIntegrantesEditable(existing, new Date())) {
+      res.status(409).json({
+        error:
+          'La edición de integrantes ya no está disponible porque la salida ya comenzó o la hora programada de salida ya fue alcanzada.',
+      });
+      return;
+    }
+
+    const body = req.body as { participantes?: unknown[]; liderCordada?: string };
+    if (!Array.isArray(body.participantes)) {
+      res.status(400).json({ error: 'participantes es obligatorio' });
+      return;
+    }
+
+    const addedBy = requestUserEmail ?? existing.liderCordada;
+    const prevParticipantes = (existing.participantes as unknown as ParticipanteInput[]) ?? [];
+    const nextParticipantes = normalizeParticipantes(body.participantes, addedBy);
+
+    const auditEntries = diffIntegrantesAudit(prevParticipantes, nextParticipantes, addedBy);
+    const prevLog = Array.isArray(existing.integrantesAuditLog)
+      ? (existing.integrantesAuditLog as unknown[])
+      : [];
+    const nextLog = [...prevLog, ...auditEntries];
+
+    const salida = await prisma.salida.update({
+      where: { id },
+      data: {
+        participantes: asJson(nextParticipantes),
+        ...(typeof body.liderCordada === 'string' && body.liderCordada.trim()
+          ? { liderCordada: body.liderCordada }
+          : {}),
+        integrantesAuditLog: asJson(nextLog),
+      },
+    });
+
+    res.json(salida);
+
+    // Notificar solo a los recién agregados (no re-enviar a los ya existentes).
+    const prevRuts = new Set(
+      prevParticipantes.filter((p) => p?.rut).map((p) => p.rut as string),
+    );
+    const added = nextParticipantes.filter((p) => p?.rut && !prevRuts.has(p.rut as string));
+    if (added.length > 0) {
+      sendSalidaParticipantEmails(added as unknown[], salida).catch((err) =>
+        console.error('[salida-email]', err),
+      );
+    }
+  } catch (error) {
+    console.error('[updateSalidaIntegrantes]', error);
+    res.status(500).json({ error: 'No se pudieron actualizar los integrantes' });
   }
 }
 

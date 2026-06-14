@@ -55,6 +55,7 @@ model Salida {
 
   // Paso 2 – Cronología y seguridad
   fechaInicio          DateTime @map("fecha_inicio")
+  horaInicio           String?  @map("hora_inicio")
   fechaRetornoEstimada DateTime @map("fecha_retorno_estimada")
   horaRetornoEstimada  String   @map("hora_retorno_estimada")
   horaAlerta           String   @map("hora_alerta")
@@ -64,10 +65,12 @@ model Salida {
   telefonoFamiliar     String?  @map("telefono_familiar")
 
   // Paso 3 – Equipo humano
-  liderCordada       String  @map("lider_cordada")
-  participantes      Json    @default("[]")
-  coordinacionGrupal Boolean @default(false) @map("coordinacion_grupal")
-  matrizRiesgos      Boolean @default(false) @map("matriz_riesgos")
+  liderCordada        String  @map("lider_cordada")
+  participantes       Json    @default("[]")
+  // Auditoría de cambios al apartado de integrantes (post-creación).
+  integrantesAuditLog Json    @default("[]") @map("integrantes_audit_log")
+  coordinacionGrupal  Boolean @default(false) @map("coordinacion_grupal")
+  matrizRiesgos       Boolean @default(false) @map("matriz_riesgos")
 
   // Paso 4 – Comunicaciones y equipo crítico
   mediosComunicacion      Json    @default("[]") @map("medios_comunicacion")

@@ -1,4 +1,4 @@
-import type { SalidaFormData, SalidaRecord, GpxUploadResponse, PronosticoUploadResponse, User, IntegranteRecord } from '../types/salida'
+import type { SalidaFormData, SalidaRecord, GpxUploadResponse, PronosticoUploadResponse, User, IntegranteRecord, Participante } from '../types/salida'
 import { getAuthToken } from './auth-token'
 
 // En desarrollo el proxy de Vite redirige /api → localhost:3000.
@@ -119,6 +119,20 @@ export async function updateSalida(
   data: Partial<Omit<SalidaFormData, 'gpxFile'>>,
 ): Promise<SalidaRecord> {
   const res = await fetch(`${API_BASE}/salidas/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<SalidaRecord>(res)
+}
+
+// Edita solo el apartado de integrantes (participantes + líder). El backend valida
+// permiso (admin o dueño) y que la salida no haya comenzado todavía.
+export async function updateSalidaIntegrantes(
+  id: string,
+  data: { participantes: Participante[]; liderCordada?: string },
+): Promise<SalidaRecord> {
+  const res = await fetch(`${API_BASE}/salidas/${id}/integrantes`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),

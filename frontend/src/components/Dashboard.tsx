@@ -588,6 +588,7 @@ export function Dashboard({ user, locked = false, isAdmin = false, isSocioPamir 
           salidaId={selectedSalidaId}
           onClose={() => setSelectedSalidaId(null)}
           isAdmin={isAdmin}
+          currentUserId={user.id}
           onEdit={() => { const id = selectedSalidaId; setSelectedSalidaId(null); onEditSalida(id) }}
           onCerrar={() => { const id = selectedSalidaId; setSelectedSalidaId(null); onCloseSalida(id) }}
         />

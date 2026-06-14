@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Mountain, X, Loader2, MapPin, Calendar, Clock, AlertCircle, FileImage, Pencil, ClipboardCheck } from 'lucide-react'
+import { Mountain, X, Loader2, MapPin, Calendar, Clock, AlertCircle, FileImage, Pencil, ClipboardCheck, UserCog, Lock } from 'lucide-react'
 import type { SalidaRecord } from '../types/salida'
 import { getSalida } from '../lib/api'
+import { isIntegrantesEditable } from '../lib/date'
+import { EditarIntegrantesModal } from './EditarIntegrantesModal'
 import {
   STATUS_LABELS,
   STATUS_COLORS,
@@ -21,6 +23,8 @@ interface SalidaDetailModalProps {
   onClose: () => void
   /** Acciones de administrador, solo disponibles sobre salidas EN_CURSO. */
   isAdmin?: boolean
+  /** Id del usuario actual: habilita al dueño a editar integrantes. */
+  currentUserId?: string
   onEdit?: () => void
   onCerrar?: () => void
 }
@@ -40,10 +44,11 @@ function formatDateFull(iso: string): string {
   }
 }
 
-export function SalidaDetailModal({ salidaId, onClose, isAdmin = false, onEdit, onCerrar }: SalidaDetailModalProps) {
+export function SalidaDetailModal({ salidaId, onClose, isAdmin = false, currentUserId, onEdit, onCerrar }: SalidaDetailModalProps) {
   const [salida, setSalida] = useState<SalidaRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
 
   useEffect(() => {
     async function fetchDetalle() {
@@ -85,6 +90,10 @@ export function SalidaDetailModal({ salidaId, onClose, isAdmin = false, onEdit, 
       </div>
     )
   }
+
+  const isOwner = !!currentUserId && salida.userId === currentUserId
+  const canManageIntegrantes = isAdmin || isOwner
+  const integrantesEditable = canManageIntegrantes && isIntegrantesEditable(salida)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
@@ -183,7 +192,19 @@ export function SalidaDetailModal({ salidaId, onClose, isAdmin = false, onEdit, 
 
             {/* Participantes */}
             <section className="bg-white rounded-2xl border border-[#4a6fad]/15 p-5 shadow-sm">
-              <h3 className="text-sm font-bold text-[#264c99] mb-4">Equipo Humano ({salida.participantes.length})</h3>
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <h3 className="text-sm font-bold text-[#264c99]">Equipo Humano ({salida.participantes.length})</h3>
+                {integrantesEditable && (
+                  <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#264c99] hover:text-[#1e3c7a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] rounded px-1 transition-colors"
+                  >
+                    <UserCog size={15} />
+                    Editar integrantes
+                  </button>
+                )}
+              </div>
               {salida.participantes.length > 0 ? (
                 <ul className="space-y-2">
                   {salida.participantes.map((p, idx) => (
@@ -210,6 +231,13 @@ export function SalidaDetailModal({ salidaId, onClose, isAdmin = false, onEdit, 
                 </ul>
               ) : (
                 <p className="text-sm text-[#757874] italic">Sin participantes adicionales</p>
+              )}
+              {canManageIntegrantes && salida.status === 'EN_CURSO' && !integrantesEditable && (
+                <p className="mt-3 flex items-start gap-1.5 text-xs text-[#8b3a44] bg-[#f5e8ea] border border-[#A4636E]/20 rounded-lg px-3 py-2">
+                  <Lock size={13} className="shrink-0 mt-0.5" />
+                  La edición de integrantes ya no está disponible porque la salida ya comenzó o la
+                  hora programada de salida ya fue alcanzada.
+                </p>
               )}
             </section>
 
@@ -339,6 +367,19 @@ export function SalidaDetailModal({ salidaId, onClose, isAdmin = false, onEdit, 
           )}
         </div>
       </div>
+
+      {editing && (
+        <EditarIntegrantesModal
+          salidaId={salida.id}
+          initialParticipantes={salida.participantes}
+          initialLiderCordada={salida.liderCordada}
+          onClose={() => setEditing(false)}
+          onSaved={(updated) => {
+            setSalida(updated)
+            setEditing(false)
+          }}
+        />
+      )}
     </div>
   )
 }

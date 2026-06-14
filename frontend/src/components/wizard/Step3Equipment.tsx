@@ -221,7 +221,7 @@ interface LiderPickerProps {
   error?: string
 }
 
-function LiderPicker({ value, participantes, onChange, error }: LiderPickerProps) {
+export function LiderPicker({ value, participantes, onChange, error }: LiderPickerProps) {
   const [open, setOpen] = useState(false)
   const hasParticipants = participantes.length > 0
 
@@ -320,7 +320,7 @@ interface ParticipantePickerProps {
   onCreateIntegrante: () => void
 }
 
-function ParticipantePicker({ selected, isAdmin, onAdd, onCreateIntegrante }: ParticipantePickerProps) {
+export function ParticipantePicker({ selected, isAdmin, onAdd, onCreateIntegrante }: ParticipantePickerProps) {
   const [rut, setRut] = useState('')
   // Express sub-flow: 'none' → 'confirm' (responsibility) → 'form' (data entry)
   const [expressStep, setExpressStep] = useState<'none' | 'confirm' | 'form'>('none')
