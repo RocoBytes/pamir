@@ -7,25 +7,65 @@ import { ADMIN_EMAIL } from '../lib/constants.js';
 
 const asJson = (v: unknown): Prisma.InputJsonValue => v as Prisma.InputJsonValue;
 
+interface ParticipanteInput {
+  rut?: string;
+  nombre?: string;
+  membresiaClub?: string;
+  esExpress?: boolean;
+  telefono?: string;
+  email?: string;
+  agregadoPor?: string | null;
+  agregadoEn?: string;
+}
+
 async function sendSalidaParticipantEmails(participantObjs: unknown[], salida: Salida): Promise<void> {
-  const ruts = (participantObjs as { rut?: string }[])
-    .map((p) => p.rut)
-    .filter((r): r is string => Boolean(r));
-  if (ruts.length === 0) return;
+  const participants = participantObjs as ParticipanteInput[];
 
-  const integrantes = await prisma.integrante.findMany({
-    where: { rut: { in: ruts } },
-    select: { email: true, nombreCompleto: true },
-  });
+  const recipients: { email: string; nombre: string }[] = [];
 
-  for (const i of integrantes) {
-    await sendEmail(
-      i.email,
-      `Has sido registrado en la salida "${salida.nombreActividad}" — Pamir`,
-      buildSalidaNotificationEmail(i.nombreCompleto, salida),
-    ).catch((err) => console.error(`[salida-email] Fallo al enviar a ${i.email}:`, err));
-    await new Promise((r) => setTimeout(r, 350));
+  // Registered integrantes: resolve their email by RUT (express entries excluded).
+  const ruts = participants
+    .filter((p) => p && !p.esExpress && p.rut)
+    .map((p) => p.rut as string);
+  if (ruts.length > 0) {
+    const integrantes = await prisma.integrante.findMany({
+      where: { rut: { in: ruts } },
+      select: { email: true, nombreCompleto: true },
+    });
+    for (const i of integrantes) {
+      recipients.push({ email: i.email, nombre: i.nombreCompleto });
+    }
   }
+
+  // Express participants: notify using the email captured in the express form.
+  for (const p of participants) {
+    if (p && p.esExpress && p.email && p.nombre) {
+      recipients.push({ email: p.email, nombre: p.nombre });
+    }
+  }
+
+  if (recipients.length === 0) return;
+
+  for (const r of recipients) {
+    await sendEmail(
+      r.email,
+      `Has sido registrado en la salida "${salida.nombreActividad}" — Pamir`,
+      buildSalidaNotificationEmail(r.nombre, salida),
+    ).catch((err) => console.error(`[salida-email] Fallo al enviar a ${r.email}:`, err));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  }
+}
+
+// Express participants carry no ficha; stamp who added them and when so the
+// salida keeps an auditable record. Trust server-side values, not the client.
+function normalizeParticipantes(participantObjs: unknown[], addedBy: string | null): ParticipanteInput[] {
+  const nowIso = new Date().toISOString();
+  return (participantObjs as ParticipanteInput[]).map((p) => {
+    if (p && p.esExpress === true) {
+      return { ...p, esExpress: true, agregadoPor: addedBy, agregadoEn: nowIso };
+    }
+    return p;
+  });
 }
 
 interface CreateSalidaBody {
@@ -97,6 +137,11 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
       }
     }
 
+    const participantesNormalizados = normalizeParticipantes(
+      data.participantes ?? [],
+      req.user?.email ?? data.liderCordada ?? null,
+    );
+
     const salida = await prisma.salida.create({
       data: {
         userId,
@@ -115,7 +160,7 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
         nombreFamiliar: data.nombreFamiliar || null,
         telefonoFamiliar: data.telefonoFamiliar || null,
         liderCordada: data.liderCordada,
-        participantes: asJson(data.participantes ?? []),
+        participantes: asJson(participantesNormalizados),
         coordinacionGrupal: data.coordinacionGrupal ?? false,
         matrizRiesgos: data.matrizRiesgos ?? false,
         mediosComunicacion: asJson(data.mediosComunicacion ?? []),
@@ -138,7 +183,7 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
     // Los registros históricos del admin no notifican a los integrantes.
     if (!esRegistroHistorico) {
       sendSalidaParticipantEmails(
-        (data.participantes ?? []) as unknown[],
+        participantesNormalizados as unknown[],
         salida,
       ).catch((err) => console.error('[salida-email]', err));
     }

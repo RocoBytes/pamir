@@ -187,13 +187,24 @@ export function SalidaDetailModal({ salidaId, onClose, isAdmin = false, onEdit, 
               {salida.participantes.length > 0 ? (
                 <ul className="space-y-2">
                   {salida.participantes.map((p, idx) => (
-                    <li key={idx} className="bg-slate-50 rounded-xl px-3 py-2 flex items-center gap-2">
-                      {p.membresiaClub && (
-                        <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide bg-[#264c99]/10 text-[#264c99] px-1.5 py-0.5 rounded-md">
-                          {CLUB_BADGE_LABELS[p.membresiaClub]}
+                    <li key={idx} className="bg-slate-50 rounded-xl px-3 py-2 flex items-center gap-2 flex-wrap">
+                      {p.esExpress ? (
+                        <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide bg-[#fef2f2] border border-[#fca5a5] text-[#991b1b] px-1.5 py-0.5 rounded-md">
+                          Express
                         </span>
+                      ) : (
+                        p.membresiaClub && (
+                          <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide bg-[#264c99]/10 text-[#264c99] px-1.5 py-0.5 rounded-md">
+                            {CLUB_BADGE_LABELS[p.membresiaClub]}
+                          </span>
+                        )
                       )}
                       <span className="text-sm font-medium text-slate-900">{p.nombre}</span>
+                      {p.esExpress && p.telefono && (
+                        <span className="w-full text-xs text-[#757874] pl-0.5">
+                          Sin ficha · Tel: {p.telefono}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>

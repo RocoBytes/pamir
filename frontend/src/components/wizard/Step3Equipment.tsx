@@ -7,6 +7,11 @@ import { Button } from '../ui/Button'
 import { getIntegranteByRut } from '../../lib/api'
 import { CLUB_BADGE_LABELS } from '../../types/salida'
 import type { IntegranteRecord, Participante } from '../../types/salida'
+import {
+  ExpressResponsibilityModal,
+  IntegranteExpressModal,
+  type ExpressParticipantePayload,
+} from './IntegranteExpressModal'
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -22,6 +27,11 @@ const step3Schema = z.object({
         membresiaClub: z
           .enum(['SOCIO_ANDINO_PAMIR', 'SOCIO_EL_MONTANISTA', 'SOCIO_OTRO_CLUB', 'POSTULANTE_CLUB', 'NO_PERTENECE'])
           .optional(),
+        // Express participant fields (sin ficha registrada). Must be declared here so
+        // Zod's .strip() does not drop them before the form is submitted.
+        esExpress: z.boolean().optional(),
+        telefono: z.string().optional(),
+        email: z.string().optional(),
       }),
     )
     .min(1, 'Agrega al menos un participante'),
@@ -135,9 +145,10 @@ interface RutLookupResultProps {
   isAdmin: boolean
   onSelect: (integrante: IntegranteRecord) => void
   onCreateIntegrante: () => void
+  onStartExpress: () => void
 }
 
-function RutLookupResult({ rut, integrante, loading, actionLabel, isAdmin, onSelect, onCreateIntegrante }: RutLookupResultProps) {
+function RutLookupResult({ rut, integrante, loading, actionLabel, isAdmin, onSelect, onCreateIntegrante, onStartExpress }: RutLookupResultProps) {
   if (loading) {
     return (
       <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-[#4a6fad]/20 bg-[#f0f4fb] text-sm text-[#757874]">
@@ -176,6 +187,14 @@ function RutLookupResult({ rut, integrante, loading, actionLabel, isAdmin, onSel
           Integrante no encontrado:{' '}
           <span className="font-mono font-medium text-slate-700">{rut}</span>
         </p>
+        <button
+          type="button"
+          onClick={onStartExpress}
+          className="flex items-center gap-1.5 text-sm text-[#8b3a44] hover:text-[#A4636E] font-semibold self-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A4636E] rounded transition-colors"
+        >
+          <UserPlus size={15} className="text-[#A4636E]" />
+          Agregar participante express
+        </button>
         {isAdmin && (
           <button
             type="button"
@@ -183,7 +202,7 @@ function RutLookupResult({ rut, integrante, loading, actionLabel, isAdmin, onSel
             className="flex items-center gap-1.5 text-sm text-[#264c99] hover:text-[#1e3c7a] font-medium self-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99] rounded transition-colors"
           >
             <UserPlus size={15} />
-            Crear integrante
+            Crear integrante con ficha completa
           </button>
         )}
       </div>
@@ -303,6 +322,8 @@ interface ParticipantePickerProps {
 
 function ParticipantePicker({ selected, isAdmin, onAdd, onCreateIntegrante }: ParticipantePickerProps) {
   const [rut, setRut] = useState('')
+  // Express sub-flow: 'none' → 'confirm' (responsibility) → 'form' (data entry)
+  const [expressStep, setExpressStep] = useState<'none' | 'confirm' | 'form'>('none')
   const { integrante, loading, isComplete } = useRutLookup(rut)
   const alreadyAdded = integrante ? selected.some((p) => p.rut === integrante.rut) : false
 
@@ -310,6 +331,20 @@ function ParticipantePicker({ selected, isAdmin, onAdd, onCreateIntegrante }: Pa
     if (!selected.some((p) => p.rut === i.rut)) {
       onAdd({ rut: i.rut, nombre: i.nombreCompleto, membresiaClub: i.membresiaClub })
     }
+    setRut('')
+  }
+
+  function handleAddExpress(payload: ExpressParticipantePayload) {
+    if (!selected.some((p) => p.rut === payload.rut)) {
+      onAdd({
+        rut: payload.rut,
+        nombre: payload.nombre,
+        telefono: payload.telefono,
+        email: payload.email,
+        esExpress: true,
+      })
+    }
+    setExpressStep('none')
     setRut('')
   }
 
@@ -336,6 +371,7 @@ function ParticipantePicker({ selected, isAdmin, onAdd, onCreateIntegrante }: Pa
             setRut('')
             onCreateIntegrante()
           }}
+          onStartExpress={() => setExpressStep('confirm')}
         />
       )}
 
@@ -343,6 +379,21 @@ function ParticipantePicker({ selected, isAdmin, onAdd, onCreateIntegrante }: Pa
         <p className="text-xs text-[#757874] px-1">
           Este integrante ya está en la nómina.
         </p>
+      )}
+
+      {expressStep === 'confirm' && (
+        <ExpressResponsibilityModal
+          onCancel={() => setExpressStep('none')}
+          onConfirm={() => setExpressStep('form')}
+        />
+      )}
+
+      {expressStep === 'form' && (
+        <IntegranteExpressModal
+          initialRut={rut}
+          onCancel={() => setExpressStep('none')}
+          onSubmit={handleAddExpress}
+        />
       )}
     </div>
   )
@@ -410,10 +461,16 @@ export function Step3HumanTeam({ defaultValues, isAdmin, onSubmit, onBack, onCre
                 key={p.rut}
                 className="inline-flex items-center gap-1.5 bg-[#e8eef7] text-[#1e3c7a] text-sm font-medium px-3 py-1 rounded-full border border-[#264c99]/20"
               >
-                {p.membresiaClub && (
-                  <span className="text-[10px] font-bold uppercase tracking-wide bg-[#264c99]/10 text-[#264c99] px-1.5 py-0.5 rounded-md">
-                    {CLUB_BADGE_LABELS[p.membresiaClub]}
+                {p.esExpress ? (
+                  <span className="text-[10px] font-bold uppercase tracking-wide bg-[#fef2f2] border border-[#fca5a5] text-[#991b1b] px-1.5 py-0.5 rounded-md">
+                    Express
                   </span>
+                ) : (
+                  p.membresiaClub && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide bg-[#264c99]/10 text-[#264c99] px-1.5 py-0.5 rounded-md">
+                      {CLUB_BADGE_LABELS[p.membresiaClub]}
+                    </span>
+                  )
                 )}
                 {p.nombre}
                 <button
@@ -451,7 +508,7 @@ export function Step3HumanTeam({ defaultValues, isAdmin, onSubmit, onBack, onCre
         render={({ field }) => (
           <LiderPicker
             value={field.value}
-            participantes={participantes.map((p) => p.nombre)}
+            participantes={participantes.filter((p) => !p.esExpress).map((p) => p.nombre)}
             onChange={(name) => field.onChange(name)}
             error={errors.liderCordada?.message}
           />

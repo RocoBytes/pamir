@@ -82,6 +82,13 @@ export interface Participante {
   rut: string
   nombre: string
   membresiaClub?: MembresiaClub
+  // Express participant: temporary attendee with no registered ficha (Integrante),
+  // associated only to this salida. Present only on express entries.
+  esExpress?: boolean
+  telefono?: string
+  email?: string
+  agregadoPor?: string // stamped by the backend on create: email of the leader who added them
+  agregadoEn?: string // stamped by the backend on create: ISO timestamp
 }
 
 export interface SalidaFormData {
