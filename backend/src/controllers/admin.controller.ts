@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { Prisma, SalidaStatus } from '../generated/prisma/client.js';
 import { sendEmail } from '../lib/google-gmail.js';
 import { buildSaludSalidaEmail, type ParticipanteSaludEmailData } from '../lib/email-templates.js';
 
@@ -82,6 +83,383 @@ export async function getStats(_req: Request, res: Response): Promise<void> {
   } catch (error) {
     console.error('[getStats]', error);
     res.status(500).json({ error: 'No se pudieron obtener las estadísticas' });
+  }
+}
+
+// ─── Analytics dashboard ────────────────────────────────────────────────────────
+
+const SALIDA_STATUSES: SalidaStatus[] = [
+  'BORRADOR',
+  'CONFIRMADA',
+  'EN_CURSO',
+  'COMPLETADA',
+  'CANCELADA',
+  'INCIDENTE',
+];
+
+// Statuses that are expected to eventually file a cierre. BORRADOR/CANCELADA
+// salidas without a cierre are NOT "pending closure".
+const PENDING_CLOSE_STATUSES = new Set<string>(['CONFIRMADA', 'EN_CURSO', 'INCIDENTE', 'COMPLETADA']);
+
+// Average of the three 1-5 notas below this counts as a low-rated salida.
+const LOW_RATING_THRESHOLD = 3;
+
+interface DashboardParticipante {
+  rut?: string;
+  nombre?: string;
+  esExpress?: boolean;
+}
+
+function pickString(v: unknown): string | undefined {
+  if (typeof v === 'string' && v.trim() !== '') return v.trim();
+  return undefined;
+}
+
+function pickBool(v: unknown): boolean | undefined {
+  const s = pickString(v);
+  if (s === 'true') return true;
+  if (s === 'false') return false;
+  return undefined;
+}
+
+// fechaInicio is stored as midnight UTC of the intended calendar date, so the
+// UTC month is the intended month directly (same contract as getStats).
+function monthKey(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+function parseParticipantes(v: unknown): DashboardParticipante[] {
+  return Array.isArray(v) ? (v as DashboardParticipante[]) : [];
+}
+
+function parseStringArray(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+}
+
+function distinctSorted(values: (string | null)[]): string[] {
+  const set = new Set(
+    values.filter((x): x is string => typeof x === 'string' && x.trim() !== ''),
+  );
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+// GET /api/admin/dashboard
+// Consolidated analytics relating the Salida form with the Cierre form, with
+// dynamic filters. The dataset is small (mountain club) so aggregation runs in
+// JS instead of multiple raw SQL queries with JSON operators.
+export async function getDashboard(req: Request, res: Response): Promise<void> {
+  try {
+    // ── Parse filters ──
+    const desde = pickString(req.query['desde']);
+    const hasta = pickString(req.query['hasta']);
+    const statusCsv = pickString(req.query['status']);
+    const lider = pickString(req.query['lider']);
+    const disciplina = pickString(req.query['disciplina']);
+    const tipoSalida = pickString(req.query['tipoSalida']);
+    const temporada = pickString(req.query['temporada']);
+    const conCierre = pickBool(req.query['conCierre']);
+    const conIncidente = pickBool(req.query['conIncidente']);
+    const conAccidente = pickBool(req.query['conAccidente']);
+    const conExpress = pickBool(req.query['conExpress']);
+    const calidadMinRaw = pickString(req.query['calidadMin']);
+    const calidadMinParsed = calidadMinRaw ? Number(calidadMinRaw) : NaN;
+    const calidadMin = Number.isFinite(calidadMinParsed) ? calidadMinParsed : undefined;
+
+    const statuses = (statusCsv ? statusCsv.split(',') : [])
+      .map((s) => s.trim())
+      .filter((s): s is SalidaStatus => (SALIDA_STATUSES as string[]).includes(s));
+
+    // ── Build Prisma where from scalar filters ──
+    const where: Prisma.SalidaWhereInput = {};
+    if (desde || hasta) {
+      const range: Prisma.DateTimeFilter = {};
+      if (desde) range.gte = new Date(desde);
+      if (hasta) range.lte = new Date(hasta);
+      where.fechaInicio = range;
+    }
+    if (statuses.length > 0) where.status = { in: statuses };
+    if (lider) where.liderCordada = lider;
+    if (disciplina) where.disciplina = disciplina;
+    if (tipoSalida) where.tipoSalida = tipoSalida;
+    if (temporada) where.temporada = temporada;
+    if (conCierre === true) where.cierres = { some: {} };
+    if (conCierre === false) where.cierres = { none: {} };
+
+    // ── Fetch filtered salidas (+ cierres) and the full set for filter dropdowns ──
+    const [salidas, filtroRows] = await Promise.all([
+      prisma.salida.findMany({
+        where,
+        select: {
+          id: true,
+          status: true,
+          fechaInicio: true,
+          disciplina: true,
+          tipoSalida: true,
+          temporada: true,
+          liderCordada: true,
+          participantes: true,
+          integrantesAuditLog: true,
+          cierres: {
+            select: {
+              ocurrioIncidente: true,
+              ocurrioAccidente: true,
+              tiposIncidente: true,
+              tiposAccidente: true,
+            },
+          },
+        },
+      }),
+      prisma.salida.findMany({
+        select: { disciplina: true, tipoSalida: true, temporada: true, liderCordada: true },
+      }),
+    ]);
+
+    // ── JS-side refinement for filters that depend on JSON / cierre details ──
+    let filtered = salidas;
+    if (conExpress !== undefined) {
+      filtered = filtered.filter((s) => {
+        const hasExpress = parseParticipantes(s.participantes).some((p) => p?.esExpress === true);
+        return conExpress ? hasExpress : !hasExpress;
+      });
+    }
+    if (conIncidente !== undefined) {
+      filtered = filtered.filter((s) => {
+        const has = s.cierres.some((c) => c.ocurrioIncidente === 'SI');
+        return conIncidente ? has : !has;
+      });
+    }
+    if (conAccidente !== undefined) {
+      filtered = filtered.filter((s) => {
+        const has = s.cierres.some((c) => c.ocurrioAccidente === 'SI');
+        return conAccidente ? has : !has;
+      });
+    }
+
+    // ── Calidad de experiencia: anonymous EvaluacionRespuesta (1-5), per salida ──
+    const candidateIds = filtered.map((s) => s.id);
+    const evaluaciones = candidateIds.length
+      ? await prisma.evaluacionRespuesta.findMany({
+          where: { salidaId: { in: candidateIds } },
+          select: { salidaId: true, notaObjetivos: true, notaItinerario: true, notaLider: true },
+        })
+      : [];
+
+    // Per-salida average of the per-response 3-nota mean.
+    const evalAcc = new Map<string, { sum: number; count: number }>();
+    for (const e of evaluaciones) {
+      const respAvg = (e.notaObjetivos + e.notaItinerario + e.notaLider) / 3;
+      const acc = evalAcc.get(e.salidaId) ?? { sum: 0, count: 0 };
+      acc.sum += respAvg;
+      acc.count += 1;
+      evalAcc.set(e.salidaId, acc);
+    }
+    const salidaCalidadAvg = (id: string): number | null => {
+      const acc = evalAcc.get(id);
+      return acc && acc.count > 0 ? acc.sum / acc.count : null;
+    };
+
+    // calidadMin trims salidas whose average rating is below the floor (salidas
+    // without evaluations don't meet the bar).
+    let finalSalidas = filtered;
+    let finalEvaluaciones = evaluaciones;
+    if (calidadMin !== undefined) {
+      finalSalidas = filtered.filter((s) => {
+        const avg = salidaCalidadAvg(s.id);
+        return avg !== null && avg >= calidadMin;
+      });
+      const keep = new Set(finalSalidas.map((s) => s.id));
+      finalEvaluaciones = evaluaciones.filter((e) => keep.has(e.salidaId));
+    }
+
+    // ── Aggregations ──
+    const totalSalidas = finalSalidas.length;
+    const salidaMonth = new Map<string, string>();
+    const estadoCount = new Map<string, number>();
+    const mesCount = new Map<string, number>();
+    const incidentesPorMesMap = new Map<string, { incidentes: number; accidentes: number }>();
+    const liderCount = new Map<string, number>();
+    const tipoIncidenteCount = new Map<string, number>();
+    const tipoAccidenteCount = new Map<string, number>();
+
+    let canceladas = 0;
+    let conCierreCount = 0;
+    let pendientesCierre = 0;
+    let totalParticipantes = 0;
+    let totalExpress = 0;
+    let incidentesSalidas = 0;
+    let accidentesSalidas = 0;
+    let conCambiosRoster = 0;
+    let salidasEvalBaja = 0;
+
+    for (const s of finalSalidas) {
+      const mes = monthKey(s.fechaInicio);
+      salidaMonth.set(s.id, mes);
+
+      estadoCount.set(s.status, (estadoCount.get(s.status) ?? 0) + 1);
+      mesCount.set(mes, (mesCount.get(mes) ?? 0) + 1);
+
+      if (s.status === 'CANCELADA') canceladas += 1;
+
+      const tieneCierre = s.cierres.length > 0;
+      if (tieneCierre) conCierreCount += 1;
+      else if (PENDING_CLOSE_STATUSES.has(s.status)) pendientesCierre += 1;
+
+      const participantes = parseParticipantes(s.participantes);
+      totalParticipantes += participantes.length;
+      totalExpress += participantes.filter((p) => p?.esExpress === true).length;
+
+      const tieneIncidente = s.cierres.some((c) => c.ocurrioIncidente === 'SI');
+      const tieneAccidente = s.cierres.some((c) => c.ocurrioAccidente === 'SI');
+      if (tieneIncidente) incidentesSalidas += 1;
+      if (tieneAccidente) accidentesSalidas += 1;
+
+      const mesInc = incidentesPorMesMap.get(mes) ?? { incidentes: 0, accidentes: 0 };
+      if (tieneIncidente) mesInc.incidentes += 1;
+      if (tieneAccidente) mesInc.accidentes += 1;
+      incidentesPorMesMap.set(mes, mesInc);
+
+      for (const c of s.cierres) {
+        for (const t of parseStringArray(c.tiposIncidente)) {
+          tipoIncidenteCount.set(t, (tipoIncidenteCount.get(t) ?? 0) + 1);
+        }
+        for (const t of parseStringArray(c.tiposAccidente)) {
+          tipoAccidenteCount.set(t, (tipoAccidenteCount.get(t) ?? 0) + 1);
+        }
+      }
+
+      if (s.liderCordada && s.liderCordada.trim() !== '') {
+        liderCount.set(s.liderCordada, (liderCount.get(s.liderCordada) ?? 0) + 1);
+      }
+
+      // integrantesAuditLog is a JSON array of change objects; a non-empty log
+      // means the roster was edited after creation.
+      if (Array.isArray(s.integrantesAuditLog) && s.integrantesAuditLog.length > 0) {
+        conCambiosRoster += 1;
+      }
+
+      const avgCalidad = salidaCalidadAvg(s.id);
+      if (avgCalidad !== null && avgCalidad < LOW_RATING_THRESHOLD) salidasEvalBaja += 1;
+    }
+
+    // Calidad: overall average + 1-5 distribution + monthly average.
+    let calidadSum = 0;
+    const distribucionMap = new Map<number, number>([
+      [1, 0],
+      [2, 0],
+      [3, 0],
+      [4, 0],
+      [5, 0],
+    ]);
+    const calidadMesAcc = new Map<string, { sum: number; count: number }>();
+    for (const e of finalEvaluaciones) {
+      const respAvg = (e.notaObjetivos + e.notaItinerario + e.notaLider) / 3;
+      calidadSum += respAvg;
+      const bucket = Math.min(5, Math.max(1, Math.round(respAvg)));
+      distribucionMap.set(bucket, (distribucionMap.get(bucket) ?? 0) + 1);
+      const mes = salidaMonth.get(e.salidaId);
+      if (mes) {
+        const acc = calidadMesAcc.get(mes) ?? { sum: 0, count: 0 };
+        acc.sum += respAvg;
+        acc.count += 1;
+        calidadMesAcc.set(mes, acc);
+      }
+    }
+    const promedioCalidad =
+      finalEvaluaciones.length > 0
+        ? Math.round((calidadSum / finalEvaluaciones.length) * 100) / 100
+        : null;
+
+    const sortMonthsAsc = (a: string, b: string): number => a.localeCompare(b);
+
+    const porMes = Array.from(mesCount.entries())
+      .sort(([a], [b]) => sortMonthsAsc(a, b))
+      .map(([mes, total]) => ({ mes, total }));
+
+    const incidentesPorMes = Array.from(incidentesPorMesMap.entries())
+      .sort(([a], [b]) => sortMonthsAsc(a, b))
+      .map(([mes, v]) => ({ mes, incidentes: v.incidentes, accidentes: v.accidentes }));
+
+    const calidadPorMes = Array.from(calidadMesAcc.entries())
+      .sort(([a], [b]) => sortMonthsAsc(a, b))
+      .map(([mes, v]) => ({ mes, promedio: Math.round((v.sum / v.count) * 100) / 100 }));
+
+    const porEstado = SALIDA_STATUSES.map((estado) => ({
+      estado,
+      total: estadoCount.get(estado) ?? 0,
+    }));
+
+    const porLider = Array.from(liderCount.entries())
+      .map(([liderNombre, total]) => ({ lider: liderNombre, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+
+    const tiposIncidente = Array.from(tipoIncidenteCount.entries())
+      .map(([tipo, total]) => ({ tipo, total }))
+      .sort((a, b) => b.total - a.total);
+
+    const tiposAccidente = Array.from(tipoAccidenteCount.entries())
+      .map(([tipo, total]) => ({ tipo, total }))
+      .sort((a, b) => b.total - a.total);
+
+    const distribucion = Array.from(distribucionMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([nota, total]) => ({ nota, total }));
+
+    const promedioParticipantes =
+      totalSalidas > 0 ? Math.round((totalParticipantes / totalSalidas) * 10) / 10 : 0;
+    const pctConCierre =
+      totalSalidas > 0 ? Math.round((conCierreCount / totalSalidas) * 100) : 0;
+
+    res.json({
+      metrics: {
+        totalSalidas,
+        pendientesCierre,
+        conCierre: conCierreCount,
+        canceladas,
+        totalParticipantes,
+        promedioParticipantes,
+        totalExpress,
+        pctConCierre,
+        incidentes: incidentesSalidas,
+        accidentes: accidentesSalidas,
+        promedioCalidad,
+        salidasEvalBaja,
+      },
+      porEstado,
+      porMes,
+      incidentesPorMes,
+      participantesPorTipo: {
+        registrados: totalParticipantes - totalExpress,
+        express: totalExpress,
+      },
+      calidad: {
+        promedio: promedioCalidad,
+        totalRespuestas: finalEvaluaciones.length,
+        distribucion,
+        porMes: calidadPorMes,
+      },
+      porLider,
+      tiposIncidente,
+      tiposAccidente,
+      salidaVsCierre: {
+        conCierre: conCierreCount,
+        sinCierre: totalSalidas - conCierreCount,
+        conCambiosRoster,
+        conIncidentes: incidentesSalidas,
+        conAccidentes: accidentesSalidas,
+      },
+      filtros: {
+        lideres: distinctSorted(filtroRows.map((r) => r.liderCordada)),
+        disciplinas: distinctSorted(filtroRows.map((r) => r.disciplina)),
+        tipos: distinctSorted(filtroRows.map((r) => r.tipoSalida)),
+        temporadas: distinctSorted(filtroRows.map((r) => r.temporada)),
+      },
+    });
+  } catch (error) {
+    console.error('[getDashboard]', error);
+    res.status(500).json({ error: 'No se pudo obtener el dashboard' });
   }
 }
 

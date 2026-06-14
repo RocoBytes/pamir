@@ -9,11 +9,12 @@ import { EvaluacionExpress } from './components/EvaluacionExpress'
 import { DocumentosPage } from './components/DocumentosPage'
 import { ContactosPage } from './components/ContactosPage'
 import { AdminPanel } from './components/AdminPanel'
+import { AdminDashboard } from './components/AdminDashboard'
 import { SalidaEditForm } from './components/SalidaEditForm'
 import { fetchMyIntegrante } from './lib/api'
 import type { IntegranteRecord } from './types/salida'
 
-type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone' | 'documentos' | 'contactos' | 'admin-panel' | 'editar-salida'
+type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone' | 'documentos' | 'contactos' | 'admin-panel' | 'admin-dashboard' | 'editar-salida'
 
 const ADMIN_EMAIL = 'seguridad.acp.cl@gmail.com'
 
@@ -139,7 +140,16 @@ export default function App() {
   }
 
   if (route === 'admin-panel' && isAdmin) {
-    return <AdminPanel onBack={() => setRoute('dashboard')} />
+    return (
+      <AdminPanel
+        onBack={() => setRoute('dashboard')}
+        onDashboard={() => setRoute('admin-dashboard')}
+      />
+    )
+  }
+
+  if (route === 'admin-dashboard' && isAdmin) {
+    return <AdminDashboard onBack={() => setRoute('admin-panel')} />
   }
 
   if (route === 'editar-salida' && isAdmin && actionSalidaId) {

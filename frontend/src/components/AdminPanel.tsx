@@ -42,6 +42,7 @@ import { Button } from './ui/Button'
 
 interface AdminPanelProps {
   onBack: () => void
+  onDashboard: () => void
 }
 
 function formatDate(iso: string): string {
@@ -468,7 +469,7 @@ function DocumentosAdminSection() {
 
 // ─── AdminPanel component ─────────────────────────────────────────────────────
 
-export function AdminPanel({ onBack }: AdminPanelProps) {
+export function AdminPanel({ onBack, onDashboard }: AdminPanelProps) {
   const [salidas, setSalidas] = useState<SalidaRecord[] | null>(null)
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
@@ -618,6 +619,13 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           <p className="text-sm text-[#757874] mt-0.5">
             Salidas abiertas, alarmas pendientes e historial completo de registros.
           </p>
+          <button
+            onClick={onDashboard}
+            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#264c99] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1e3d7d]"
+          >
+            <BarChart3 size={16} />
+            Ver Dashboard analítico
+          </button>
         </div>
 
         {/* Loading state */}

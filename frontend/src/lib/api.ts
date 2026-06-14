@@ -415,6 +415,79 @@ export async function fetchAdminStats(): Promise<AdminStats> {
   return handleResponse<AdminStats>(res)
 }
 
+// ─── Admin analytics dashboard ──────────────────────────────────────────────────
+
+export interface DashboardFiltros {
+  desde?: string
+  hasta?: string
+  status?: string
+  lider?: string
+  disciplina?: string
+  tipoSalida?: string
+  temporada?: string
+  conCierre?: boolean
+  conIncidente?: boolean
+  conAccidente?: boolean
+  conExpress?: boolean
+  calidadMin?: number
+}
+
+export interface AdminDashboard {
+  metrics: {
+    totalSalidas: number
+    pendientesCierre: number
+    conCierre: number
+    canceladas: number
+    totalParticipantes: number
+    promedioParticipantes: number
+    totalExpress: number
+    pctConCierre: number
+    incidentes: number
+    accidentes: number
+    promedioCalidad: number | null
+    salidasEvalBaja: number
+  }
+  porEstado: { estado: string; total: number }[]
+  porMes: { mes: string; total: number }[]
+  incidentesPorMes: { mes: string; incidentes: number; accidentes: number }[]
+  participantesPorTipo: { registrados: number; express: number }
+  calidad: {
+    promedio: number | null
+    totalRespuestas: number
+    distribucion: { nota: number; total: number }[]
+    porMes: { mes: string; promedio: number }[]
+  }
+  porLider: { lider: string; total: number }[]
+  tiposIncidente: { tipo: string; total: number }[]
+  tiposAccidente: { tipo: string; total: number }[]
+  salidaVsCierre: {
+    conCierre: number
+    sinCierre: number
+    conCambiosRoster: number
+    conIncidentes: number
+    conAccidentes: number
+  }
+  filtros: {
+    lideres: string[]
+    disciplinas: string[]
+    tipos: string[]
+    temporadas: string[]
+  }
+}
+
+export async function fetchAdminDashboard(filtros: DashboardFiltros = {}): Promise<AdminDashboard> {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(filtros)) {
+    if (value === undefined || value === null || value === '') continue
+    params.set(key, String(value))
+  }
+  const qs = params.toString()
+  const res = await fetch(`${API_BASE}/admin/dashboard${qs ? `?${qs}` : ''}`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<AdminDashboard>(res)
+}
+
 export interface ParticipanteSalud {
   rut: string
   nombre: string
