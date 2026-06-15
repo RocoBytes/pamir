@@ -12,7 +12,7 @@ import { Button } from './ui/Button'
 import { Select } from './ui/Select'
 import { fetchAdminDashboard } from '../lib/api'
 import type { AdminDashboard as AdminDashboardData, DashboardFiltros } from '../lib/api'
-import { STATUS_LABELS, DISCIPLINA_LABELS } from '../types/salida'
+import { STATUS_LABELS, DISCIPLINA_LABELS, CLUB_FILTER_LABELS } from '../types/salida'
 import { DashboardGrid } from './admin/DashboardGrid'
 
 interface AdminDashboardProps {
@@ -29,7 +29,15 @@ const TRISTATE_OPTIONS = [
 ]
 
 type BoolFilterKey = 'conCierre' | 'conIncidente' | 'conAccidente' | 'conExpress'
-type StringFilterKey = 'desde' | 'hasta' | 'status' | 'lider' | 'disciplina' | 'tipoSalida' | 'temporada'
+type StringFilterKey =
+  | 'desde'
+  | 'hasta'
+  | 'status'
+  | 'lider'
+  | 'disciplina'
+  | 'tipoSalida'
+  | 'temporada'
+  | 'club'
 
 export function AdminDashboard({ onBack }: AdminDashboardProps) {
   const [filtros, setFiltros] = useState<DashboardFiltros>({})
@@ -180,6 +188,16 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
               options={[
                 { value: '', label: 'Todos' },
                 ...filterOptions.lideres.map((l) => ({ value: l, label: l })),
+              ]}
+            />
+
+            <Select
+              label="Club"
+              value={filtros.club ?? ''}
+              onChange={(e) => setFiltro('club', e.target.value)}
+              options={[
+                { value: '', label: 'Todos' },
+                ...Object.entries(CLUB_FILTER_LABELS).map(([value, label]) => ({ value, label })),
               ]}
             />
 

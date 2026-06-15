@@ -425,6 +425,7 @@ export interface DashboardFiltros {
   disciplina?: string
   tipoSalida?: string
   temporada?: string
+  club?: string
   conCierre?: boolean
   conIncidente?: boolean
   conAccidente?: boolean

@@ -109,7 +109,18 @@ interface DashboardParticipante {
   rut?: string;
   nombre?: string;
   esExpress?: boolean;
+  membresiaClub?: string;
 }
+
+// Allowed club membership values (mirrors the MembresiaClub enum on the
+// frontend). The dashboard club filter validates against this whitelist.
+const MEMBRESIA_CLUBS = [
+  'SOCIO_ANDINO_PAMIR',
+  'SOCIO_EL_MONTANISTA',
+  'SOCIO_OTRO_CLUB',
+  'POSTULANTE_CLUB',
+  'NO_PERTENECE',
+] as const;
 
 function pickString(v: unknown): string | undefined {
   if (typeof v === 'string' && v.trim() !== '') return v.trim();
@@ -164,6 +175,9 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
     const conIncidente = pickBool(req.query['conIncidente']);
     const conAccidente = pickBool(req.query['conAccidente']);
     const conExpress = pickBool(req.query['conExpress']);
+    const clubRaw = pickString(req.query['club']);
+    const club =
+      clubRaw && (MEMBRESIA_CLUBS as readonly string[]).includes(clubRaw) ? clubRaw : undefined;
     const calidadMinRaw = pickString(req.query['calidadMin']);
     const calidadMinParsed = calidadMinRaw ? Number(calidadMinRaw) : NaN;
     const calidadMin = Number.isFinite(calidadMinParsed) ? calidadMinParsed : undefined;
@@ -224,6 +238,13 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
         const hasExpress = parseParticipantes(s.participantes).some((p) => p?.esExpress === true);
         return conExpress ? hasExpress : !hasExpress;
       });
+    }
+    // Club filter: keep salidas with at least one participant in the selected
+    // club (express participants carry no membresiaClub, so they never match).
+    if (club !== undefined) {
+      filtered = filtered.filter((s) =>
+        parseParticipantes(s.participantes).some((p) => p?.membresiaClub === club),
+      );
     }
     if (conIncidente !== undefined) {
       filtered = filtered.filter((s) => {

@@ -222,6 +222,17 @@ export const CLUB_BADGE_LABELS: Record<MembresiaClub, string> = {
   NO_PERTENECE: 'NA',
 }
 
+// Readable labels for the admin dashboard club filter dropdown. Being a
+// Record<MembresiaClub, string>, adding a new club to the enum forces a label
+// here (compile error otherwise), so the filter incorporates it automatically.
+export const CLUB_FILTER_LABELS: Record<MembresiaClub, string> = {
+  SOCIO_ANDINO_PAMIR: 'Socio Andino Club Pamir',
+  SOCIO_EL_MONTANISTA: 'Socio Club El Montañista',
+  SOCIO_OTRO_CLUB: 'Socio otro club',
+  POSTULANTE_CLUB: 'Postulante a un club',
+  NO_PERTENECE: 'No pertenece',
+}
+
 export const STATUS_LABELS: Record<SalidaStatus, string> = {
   BORRADOR: 'Borrador',
   CONFIRMADA: 'Confirmada',
