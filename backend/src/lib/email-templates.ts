@@ -707,6 +707,67 @@ export function buildAlertaSalidaEmail(salida: AlertaSalidaEmailData): string {
   );
 }
 
+// ─── Recordatorio de cierre (1h antes de la alerta → líder) ───────────────────
+
+export function buildRecordatorioCierreEmail(salida: AlertaSalidaEmailData): string {
+  const participantesArr: Array<{ nombre?: string; rut?: string }> = Array.isArray(salida.participantes)
+    ? (salida.participantes as Array<{ nombre?: string; rut?: string }>)
+    : [];
+
+  const participantRows = participantesArr.length
+    ? participantesArr
+        .map((p) =>
+          `<li style="margin-bottom:2px;">${escapeHtml(p.nombre ?? '')}${p.rut ? ` <span style="color:${GRAY};font-size:12px;">(${escapeHtml(p.rut)})</span>` : ''}</li>`,
+        )
+        .join('')
+    : `<li style="color:${GRAY};">Sin participantes registrados</li>`;
+
+  const intro = `
+    <p style="margin:0 0 12px;color:#1f2937;font-size:15px;">
+      Hola <strong>${escapeHtml(salida.liderCordada)}</strong>, se acerca la
+      <strong>hora de alerta</strong> de tu salida de montaña.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border:2px solid #f1d48a;border-radius:8px;margin-bottom:0;">
+      <tr>
+        <td style="padding:14px 16px;">
+          <p style="margin:0;font-size:13px;font-weight:700;color:#92600a;text-transform:uppercase;letter-spacing:0.05em;">⏰ Cierra tu salida</p>
+          <p style="margin:6px 0 0;font-size:13px;color:#78350f;line-height:1.6;">
+            Si tu grupo ya retornó, registra el <strong>formulario de cierre</strong> en el sistema PAMIR antes
+            de la hora de alerta. Si no se completa el cierre a esa hora, se activará automáticamente la
+            <strong>ALERTA: Salida sin cierre</strong> hacia el equipo de seguridad.
+          </p>
+        </td>
+      </tr>
+    </table>`;
+
+  const tabla = `
+    ${sectionHeader('I. Identificación de la Salida')}
+    ${row('Nombre de la actividad', salida.nombreActividad)}
+    ${row('Ubicación geográfica', salida.ubicacionGeografica)}
+    ${row('Líder de cordada', salida.liderCordada)}
+
+    ${sectionHeader('II. Cronología')}
+    ${row('Fecha de inicio', formatDate(toIsoString(salida.fechaInicio)))}
+    ${row('Fecha de retorno estimada', formatDate(toIsoString(salida.fechaRetornoEstimada)))}
+    ${row('Hora de retorno estimada', salida.horaRetornoEstimada)}
+    ${row('Hora de alerta', salida.horaAlerta)}
+
+    ${sectionHeader('III. Participantes')}
+    <tr>
+      <td colspan="2" style="padding:8px 12px;color:#1f2937;font-size:13px;border-bottom:1px solid ${BORDER};">
+        <ul style="margin:0;padding-left:18px;">${participantRows}</ul>
+      </td>
+    </tr>
+  `;
+
+  return emailShell(
+    'Recordatorio — Cierra tu salida',
+    intro,
+    tabla,
+    'Este recordatorio fue generado automáticamente por el sistema PAMIR antes de la hora de alerta.',
+  );
+}
+
 // ─── Salud summary (admin → responsable) ─────────────────────────────────────
 
 export interface ParticipanteSaludEmailData {
