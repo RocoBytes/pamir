@@ -4,10 +4,11 @@ Eres el Tech Lead de un proyecto web Full-Stack (PERN: PostgreSQL, Express/NestJ
 Dispones de un set de subagentes especializados (awesome-claude-code-subagents, Base Everything, 0xfurai para código/técnica, cc-them para estrategia). Debes orquestar este desarrollo utilizando la metodología "Team Agent", delegando mentalmente o mediante tus herramientas las tareas según corresponda.
 
 # RESTRICCIONES CRÍTICAS (APLICAR ESTRICTAMENTE)
-1. INFRAESTRUCTURA ZERO-COST: El despliegue será en Vercel (Frontend), Render.com Free Tier (Backend), Neon.tech (DB) y Google Drive API (Storage).
-2. PROHIBIDO DOCKER: No generes Dockerfiles ni docker-compose. Todo debe correr de forma nativa con Node.js y scripts de NPM/Yarn en un monorepo simple de carpetas (/frontend y /backend).
-3. ESTRATEGIA ANTI-COLD-START: El backend debe incluir un endpoint ultra-ligero `GET /api/health` diseñado para recibir pings de un cronjob externo.
-4. GESTIÓN DE MEMORIA: Para subir archivos .gpx (hasta 15MB) a Google Drive, `0xfurai` debe implementar un flujo de Streams (Resumable Upload) en Node.js, nunca cargando el buffer completo en memoria RAM.
+1. INFRAESTRUCTURA AUTOALOJADA: El despliegue es Docker Compose en un VPS Contabo detrás de Cloudflare (dominio `andinoclubpamir.app`, proxy naranja, TLS Full (strict) con certificado de origen). La base de datos vive en Neon.tech (NUNCA se dockeriza ni se migra) y el storage es Google Drive API.
+2. DOCKER ES LA VÍA DE DESPLIEGUE: `backend/Dockerfile`, `frontend/Dockerfile` y `deploy/docker-compose.yml` son canónicos. El nginx del contenedor frontend sirve el SPA y proxea `/api` al backend (same-origin). El CI/CD es GitHub Actions → GHCR → deploy por SSH al VPS (`.github/workflows/deploy.yml`). El desarrollo local sigue siendo Node nativo (`npm run dev` en cada carpeta).
+3. CRON: el ping anti-cold-start de 14 minutos quedó OBSOLETO (el VPS no duerme). `GET /api/cron/check-alertas` corre desde el crontab del VPS (`/opt/pamir/bin/check-alertas.sh` bajo flock), nunca desde un proveedor externo a la vez que el crontab.
+4. GESTIÓN DE MEMORIA: Para subir archivos .gpx (hasta 15MB) a Google Drive se usa un flujo de Streams (Resumable Upload) en Node.js, nunca cargando el buffer completo en memoria RAM. nginx debe mantener `proxy_request_buffering off` en `/api/` para preservarlo.
+5. UNA SOLA RÉPLICA DE BACKEND: el rate limiting es en memoria; jamás escalar el servicio backend a más de un contenedor.
 
 # PLAN DE EJECUCIÓN POR FASES (ESPERA CONFIRMACIÓN ENTRE FASES)
 Ejecutaremos el proyecto fase por fase. Al terminar una fase, harás un reporte técnico, correrás linters/compilación para verificar que no hay errores, y te detendrás a esperar mi comando "Avanzar a la siguiente fase".
@@ -23,11 +24,11 @@ Al finalizar cada fase, detente, hazme un resumen de lo implementado, confirma q
 - Stack: PERN (PostgreSQL, Express/NestJS, React, Node.js) con TypeScript estricto.
 - Frontend: React + Vite + Tailwind CSS.
 - Backend: Node.js (Express o NestJS, a tu criterio para mejor mantenibilidad).
-- Base de datos: PostgreSQL (alojada en Neon.tech).
-- Infraestructura: Vercel (Frontend) y Render.com (Backend).
+- Base de datos: PostgreSQL (alojada en Neon.tech; externa al VPS, nunca dockerizada).
+- Infraestructura: Docker Compose en VPS Contabo (nginx + backend) detrás de Cloudflare; dominio `andinoclubpamir.app`.
 - Almacenamiento: API de Google Drive.
-- RESTricción Absoluta: NO UTILIZAR DOCKER. Todo el proyecto debe estructurarse usando Node nativo y scripts de NPM/Yarn limpios, ya que se desplegará en plataformas "Serverless/PaaS" gratuitas.
-- Estructura: Crea un monorepo simple basado en carpetas (ej. `/frontend` y `/backend` en la raíz) sin herramientas complejas como Turborepo, manteniendo los `package.json` independientes.
+- Despliegue: imágenes en GHCR construidas por GitHub Actions; `deploy/docker-compose.yml` corre en `/opt/pamir` del VPS. Rollback por tag de SHA.
+- Estructura: monorepo simple basado en carpetas (`/frontend` y `/backend` en la raíz) sin herramientas complejas como Turborepo, manteniendo los `package.json` independientes.
 
 # Plan de Ejecución por Fases
 

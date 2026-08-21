@@ -1,0 +1,95 @@
+# CI/CD de Pamir: build de imágenes → GHCR → deploy por SSH al VPS.
+# Reemplaza el auto-deploy de Vercel (frontend) y Render (backend).
+#
+# Secrets requeridos (Settings → Secrets and variables → Actions):
+#   VPS_HOST         IP del VPS (169.58.210.134)
+#   VPS_USER         usuario SSH (rcontreras)
+#   VPS_SSH_KEY      clave privada ed25519 dedicada al deploy
+#   VPS_KNOWN_HOSTS  salida de: ssh-keyscan -H <ip>
+# El push a GHCR usa GITHUB_TOKEN (permiso packages: write); el VPS hace
+# pull con un `docker login ghcr.io` manual único (PAT read:packages).
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false # nunca matar un deploy a mitad de migración
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          pull: true # refresca la base node:24 (parches de seguridad)
+          tags: |
+            ghcr.io/rocobytes/pamir-backend:latest
+            ghcr.io/rocobytes/pamir-backend:${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Sin build-arg VITE_API_URL a propósito: el SPA usa '/api' relativo
+      # (same-origin detrás del nginx del propio contenedor).
+      - uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: true
+          pull: true
+          tags: |
+            ghcr.io/rocobytes/pamir-frontend:latest
+            ghcr.io/rocobytes/pamir-frontend:${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+  deploy:
+    needs: [build-backend, build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Sync compose file
+        run: |
+          scp deploy/docker-compose.yml \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/pamir/docker-compose.yml
+      - name: Migrate + deploy
+        run: |
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} '
+            set -e
+            cd /opt/pamir
+            docker compose pull
+            docker compose run --rm migrate
+            docker compose up -d --remove-orphans
+            docker image prune -f
+          '

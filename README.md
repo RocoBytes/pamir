@@ -5,7 +5,7 @@ Sistema de registro de salidas de montaña — stack PERN.
 **Frontend**: React 19 + Vite 8 + TypeScript + Tailwind CSS (Fase 4)
 **Backend**: Express 4 + TypeScript
 **Base de datos**: PostgreSQL en Neon.tech (Fase 2)
-**Despliegue**: Vercel (frontend) + Render.com (backend)
+**Despliegue**: Docker Compose en VPS (Contabo) detrás de Cloudflare — `https://andinoclubpamir.app`
 
 ---
 
@@ -67,57 +67,62 @@ cp frontend/.env.example frontend/.env  # Fase 2: VITE_API_URL, etc.
 
 ## Despliegue
 
-### Vercel (Frontend)
+Arquitectura: un stack de Docker Compose en el VPS. El contenedor `nginx`
+(imagen del frontend) termina TLS con el certificado de origen de Cloudflare,
+sirve el SPA y proxea `/api` al contenedor `backend` (same-origin, sin CORS).
+La base de datos permanece en Neon.tech; los archivos van a Google Drive.
+Los contenedores son 100% stateless.
 
-1. Conecta el repositorio en [vercel.com](https://vercel.com)
-2. Configura **Root Directory** → `frontend`
-3. Build command: `npm run build` · Output: `dist`
-4. Añade estas variables de entorno en el dashboard de Vercel:
+### CI/CD (GitHub Actions)
 
-| Variable | Valor |
-|---|---|
-| `VITE_GOOGLE_CLIENT_ID` | Tu Client ID de Google Cloud Console |
-| `VITE_API_URL` | URL de tu servicio en Render.com (sin `/api`) |
+Cada push a `main` dispara [.github/workflows/deploy.yml](.github/workflows/deploy.yml):
 
-> El archivo [frontend/vercel.json](frontend/vercel.json) ya configura las rewrites para SPA routing.
+1. Construye `ghcr.io/rocobytes/pamir-backend` y `ghcr.io/rocobytes/pamir-frontend`
+   (tags `latest` + SHA del commit) y las publica en GHCR.
+2. Por SSH copia [deploy/docker-compose.yml](deploy/docker-compose.yml) a
+   `/opt/pamir/` y ejecuta:
+   ```bash
+   docker compose pull
+   docker compose run --rm migrate   # prisma migrate deploy contra Neon
+   docker compose up -d --remove-orphans
+   ```
 
----
+Secrets requeridos en GitHub: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`,
+`VPS_KNOWN_HOSTS`. El frontend se construye **sin** `VITE_API_URL`: el SPA usa
+`/api` relativo (same-origin).
 
-### Render.com (Backend)
+**Rollback**: fija el tag del SHA anterior en `/opt/pamir/docker-compose.yml`
+y `docker compose up -d`.
 
-1. Conecta el repositorio en [render.com](https://render.com)
-2. Render detecta automáticamente [render.yaml](render.yaml) (Blueprint)
-3. Añade manualmente las variables marcadas con `sync: false` en el dashboard:
+### Layout en el VPS
 
-| Variable | Descripción |
-|---|---|
-| `DATABASE_URL` | Neon.tech pooled endpoint |
-| `GOOGLE_CLIENT_ID` | Mismo que en Vercel |
-| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Email de la Service Account de Drive |
-| `GOOGLE_SERVICE_ACCOUNT_KEY` | Clave privada del JSON (con `\n` literales) |
-| `GOOGLE_DRIVE_FOLDER_ID` | ID de la carpeta de Drive destino |
-| `FRONTEND_URL` | URL de tu app en Vercel (para CORS) |
-
-#### Anti-cold-start
-
-El endpoint `GET /api/health` responde `200 OK` en < 5 ms.
-Configura un ping externo cada **14 minutos** en [cron-job.org](https://cron-job.org) apuntando a:
 ```
-https://tu-app.onrender.com/api/health
+/opt/pamir/
+├── docker-compose.yml      # sincronizado por el workflow en cada deploy
+├── .env                    # secrets de producción (chmod 600, nunca en git)
+├── certs/
+│   ├── origin.pem          # certificado de origen de Cloudflare
+│   └── origin.key
+└── bin/
+    └── check-alertas.sh    # cron de alarmas (bajo flock, cada 10 min)
 ```
 
----
+El backend publica su puerto solo en `127.0.0.1:3001` (para el crontab);
+públicamente solo se exponen 80/443 vía nginx.
+
+### Cron de alarmas
+
+`GET /api/cron/check-alertas` corre desde el crontab del VPS (no desde un
+proveedor externo). El ping anti-cold-start de la era Render quedó obsoleto:
+
+```cron
+*/10 * * * * flock -n /opt/pamir/check-alertas.lock /opt/pamir/bin/check-alertas.sh >> /opt/pamir/cron.log 2>&1
+```
 
 ### Neon.tech (Base de datos)
 
-1. Crea un proyecto en [neon.tech](https://neon.tech)
-2. Copia la **Connection string (pooled)** y pégala como `DATABASE_URL` en Render
-3. Ejecuta las migraciones una sola vez desde local:
-
-```bash
-cd backend
-DATABASE_URL="postgresql://..." npm run db:migrate -- init
-```
+Sin cambios: `DATABASE_URL` (pooled) en `/opt/pamir/.env`. Las migraciones las
+aplica el servicio `migrate` del compose en cada deploy.
 
 ---
 
