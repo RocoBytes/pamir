@@ -58,6 +58,58 @@ const MOCK_EVENTO = {
   miInscripcion: null,
 }
 
+const MOCK_DECLARACION = {
+  id: 1,
+  version: '2026-08',
+  titulo: 'DECLARACIÓN JURADA DEL PARTICIPANTE — Declaro bajo mi responsabilidad que:',
+  items: [
+    'Punto uno de la declaración.',
+    'Punto dos de la declaración.',
+    'Punto tres de la declaración.',
+    'Punto cuatro de la declaración.',
+    'Punto cinco de la declaración.',
+    'Punto seis de la declaración.',
+    'Punto siete de la declaración.',
+  ],
+}
+
+type MiEstado = 'ninguna' | 'postulado' | 'retirado'
+
+/** Mocks del detalle + inscripción con estado mutable entre requests */
+async function mockDetalleConInscripcion(page: Page, inicial: MiEstado) {
+  const estado: { mi: MiEstado; lastPayload: unknown } = { mi: inicial, lastPayload: null }
+
+  await page.route('**/api/eventos/evento-001', (route: Route) => {
+    void route.fulfill({
+      status: 200,
+      json: {
+        ...MOCK_EVENTO,
+        declaracionVigente: MOCK_DECLARACION,
+        miInscripcion:
+          estado.mi === 'ninguna'
+            ? null
+            : { estado: estado.mi === 'postulado' ? 'POSTULADO' : 'RETIRADO' },
+      },
+    })
+  })
+
+  await page.route('**/api/eventos/evento-001/inscripcion', (route: Route) => {
+    const method = route.request().method()
+    if (method === 'POST') {
+      estado.lastPayload = route.request().postDataJSON()
+      estado.mi = 'postulado'
+      void route.fulfill({ status: 201, json: { inscripcion: { id: 'insc-001', estado: 'POSTULADO' } } })
+    } else if (method === 'DELETE') {
+      estado.mi = 'retirado'
+      void route.fulfill({ status: 200, json: { inscripcion: { id: 'insc-001', estado: 'RETIRADO' } } })
+    } else {
+      void route.continue()
+    }
+  })
+
+  return estado
+}
+
 async function mockEventosApi(page: Page) {
   await page.route('**/api/eventos/categorias', (route: Route) => {
     void route.fulfill({ status: 200, json: [MOCK_CATEGORIA] })
@@ -108,6 +160,86 @@ test.describe('Eventos del club – socio', () => {
     await expect(page.getByRole('heading', { name: 'Eventos del club' })).toBeVisible()
     await expect(page.getByRole('button', { name: /Crear evento/ })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /Gestionar/ })).toHaveCount(0)
+  })
+})
+
+test.describe('Eventos del club – inscripción (socio)', () => {
+  test.beforeEach(async ({ page }) => {
+    await setAuth(page, MOCK_USER)
+    await mockMe(page, MOCK_USER)
+    await mockHasIntegrante(page)
+    await mockSalidas(page)
+    await mockEventosApi(page)
+  })
+
+  async function abrirDetalle(page: Page) {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Abrir eventos del club' }).click()
+    await page.getByText('Trekking Cerro Provincia').click()
+  }
+
+  test('flujo SÍ: vehículo → cupos → declaración 7/7 → payload correcto y estado postulado', async ({ page }) => {
+    const estado = await mockDetalleConInscripcion(page, 'ninguna')
+    await abrirDetalle(page)
+
+    await page.getByRole('button', { name: 'Inscribirme' }).click()
+    const modal = page.getByRole('dialog', { name: /Inscripción/ })
+    await expect(modal.getByText('¿Cuento con vehículo propio?')).toBeVisible()
+
+    await modal.getByRole('button', { name: 'SÍ' }).click()
+    await expect(
+      modal.getByText('¿Cuántos cupos puedo entregar para otros participantes?'),
+    ).toBeVisible()
+    await modal.getByRole('button', { name: 'Sumar un cupo' }).click()
+    await modal.getByRole('button', { name: 'Sumar un cupo' }).click()
+    await modal.getByRole('button', { name: 'Continuar' }).click()
+
+    await expect(modal.getByText(/DECLARACIÓN JURADA DEL PARTICIPANTE/)).toBeVisible()
+    const checks = modal.locator('input[type="checkbox"]')
+    await expect(checks).toHaveCount(7)
+    const confirmar = modal.getByRole('button', { name: 'Confirmar inscripción' })
+    await expect(confirmar).toBeDisabled()
+    for (let i = 0; i < 7; i++) {
+      await checks.nth(i).check()
+    }
+    await expect(confirmar).toBeEnabled()
+    await confirmar.click()
+
+    await expect(page.getByText(/Estás postulado\/a/)).toBeVisible()
+    expect(estado.lastPayload).toEqual({
+      tieneVehiculo: true,
+      cuposVehiculo: 2,
+      declaracionVersionId: 1,
+      itemsAceptados: [true, true, true, true, true, true, true],
+    })
+  })
+
+  test('flujo NO: salta el paso de cupos directo a la declaración', async ({ page }) => {
+    await mockDetalleConInscripcion(page, 'ninguna')
+    await abrirDetalle(page)
+
+    await page.getByRole('button', { name: 'Inscribirme' }).click()
+    const modal = page.getByRole('dialog', { name: /Inscripción/ })
+    await modal.getByRole('button', { name: 'NO', exact: true }).click()
+
+    await expect(modal.getByText('Paso 3 de 3')).toBeVisible()
+    await expect(
+      modal.getByText('¿Cuántos cupos puedo entregar para otros participantes?'),
+    ).toHaveCount(0)
+    await expect(modal.getByText(/DECLARACIÓN JURADA DEL PARTICIPANTE/)).toBeVisible()
+  })
+
+  test('postulado: puede retirar la postulación con confirmación inline', async ({ page }) => {
+    await mockDetalleConInscripcion(page, 'postulado')
+    await abrirDetalle(page)
+
+    await expect(page.getByText(/Estás postulado\/a/)).toBeVisible()
+    await page.getByRole('button', { name: 'Retirar postulación' }).click()
+    await expect(page.getByText('¿Retirar tu postulación?')).toBeVisible()
+    await page.getByRole('button', { name: 'Confirmar retiro' }).click()
+
+    await expect(page.getByText('Retiraste tu postulación.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Inscribirme nuevamente' })).toBeVisible()
   })
 })
 

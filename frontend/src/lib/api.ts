@@ -5,6 +5,8 @@ import type {
   EventoListItem,
   EventoDetail,
   EventoPayload,
+  InscripcionRecord,
+  InscripcionPayload,
 } from '../types/evento'
 import { getAuthToken } from './auth-token'
 
@@ -648,6 +650,26 @@ export async function deleteEventoBorrador(id: string): Promise<void> {
     }
     throw new Error(message)
   }
+}
+
+export async function inscribirseEvento(
+  id: string,
+  payload: InscripcionPayload,
+): Promise<{ inscripcion: InscripcionRecord }> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(id)}/inscripcion`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(payload),
+  })
+  return handleResponse<{ inscripcion: InscripcionRecord }>(res)
+}
+
+export async function retirarseEvento(id: string): Promise<{ inscripcion: InscripcionRecord }> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(id)}/inscripcion`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  return handleResponse<{ inscripcion: InscripcionRecord }>(res)
 }
 
 export async function publicarEvento(id: string): Promise<EventoRecord> {

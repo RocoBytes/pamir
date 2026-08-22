@@ -31,8 +31,10 @@ function buildRawEmail(to: string, subject: string, html: string): string {
   return Buffer.from(message).toString('base64url');
 }
 
-export async function sendEmail(to: string, subject: string, htmlBody: string): Promise<void> {
+// Devuelve el id del mensaje en Gmail (proveedorId de la cola de notificaciones)
+export async function sendEmail(to: string, subject: string, htmlBody: string): Promise<string | undefined> {
   const gmail = getGmailClient();
   const raw = buildRawEmail(to, subject, htmlBody);
-  await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
+  const res = await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
+  return res.data.id ?? undefined;
 }

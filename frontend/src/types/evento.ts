@@ -67,6 +67,27 @@ export interface DeclaracionVigente {
   items: string[]
 }
 
+export interface InscripcionRecord {
+  id: string
+  eventoId: string
+  usuarioId: string
+  estado: EstadoInscripcion
+  tieneVehiculo: boolean
+  cuposVehiculo: number | null
+  declaracionVersionId: number
+  declaracionAceptadaAt: string
+  postuladoAt: string
+  retiradoAt: string | null
+  resueltoAt: string | null
+}
+
+export interface InscripcionPayload {
+  tieneVehiculo: boolean
+  cuposVehiculo: number | null
+  declaracionVersionId: number
+  itemsAceptados: boolean[]
+}
+
 export interface EventoDetail extends EventoListItem {
   declaracionVigente: DeclaracionVigente | null
 }

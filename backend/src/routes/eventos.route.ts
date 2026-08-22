@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { authMiddleware, requireAuth, requireRolAdmin } from '../middleware/auth.middleware.js';
-import { getCategorias, getEventos, getEventoById } from '../controllers/eventos.controller.js';
+import {
+  getCategorias,
+  getEventos,
+  getEventoById,
+  inscribirse,
+  retirarse,
+} from '../controllers/eventos.controller.js';
 import {
   createEvento,
   updateEvento,
@@ -19,6 +25,8 @@ router.use(authMiddleware, requireAuth);
 router.get('/categorias', getCategorias);
 router.get('/', getEventos);
 router.get('/:id', getEventoById);
+router.post('/:id/inscripcion', inscribirse);
+router.delete('/:id/inscripcion', retirarse);
 
 router.post('/', requireRolAdmin, createEvento);
 router.put('/:id', requireRolAdmin, updateEvento);

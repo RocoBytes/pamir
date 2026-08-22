@@ -1,5 +1,14 @@
-import { useEffect, useState } from 'react'
-import { AlertCircle, CalendarDays, Loader2, Megaphone, Settings2, X } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  AlertCircle,
+  CalendarDays,
+  CheckCircle2,
+  Loader2,
+  Megaphone,
+  Settings2,
+  Undo2,
+  X,
+} from 'lucide-react'
 import type { EventoDetail } from '../types/evento'
 import {
   DIFICULTAD_LABELS,
@@ -9,8 +18,9 @@ import {
   formatCorteSantiago,
   formatRangoFechas,
 } from '../types/evento'
-import { fetchEvento } from '../lib/api'
+import { fetchEvento, retirarseEvento } from '../lib/api'
 import { Button } from './ui/Button'
+import { InscripcionModal } from './InscripcionModal'
 
 interface EventoDetailModalProps {
   eventoId: string
@@ -18,6 +28,8 @@ interface EventoDetailModalProps {
   /** Habilita el botón Gestionar (rol ADMIN de eventos). */
   isEventosAdmin?: boolean
   onGestionar?: (id: string) => void
+  /** Notifica inscripción/retiro para que la lista se refresque. */
+  onChanged?: () => void
 }
 
 function FilaFicha({ label, value }: { label: string; value: string }) {
@@ -38,25 +50,51 @@ function SeccionTexto({ titulo, texto }: { titulo: string; texto: string }) {
   )
 }
 
-export function EventoDetailModal({ eventoId, onClose, isEventosAdmin = false, onGestionar }: EventoDetailModalProps) {
+export function EventoDetailModal({ eventoId, onClose, isEventosAdmin = false, onGestionar, onChanged }: EventoDetailModalProps) {
   const [evento, setEvento] = useState<EventoDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showInscripcion, setShowInscripcion] = useState(false)
+  const [confirmandoRetiro, setConfirmandoRetiro] = useState(false)
+  const [retirando, setRetirando] = useState(false)
+  const [accionError, setAccionError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      const data = await fetchEvento(eventoId)
+      setEvento(data)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar el evento')
+    } finally {
+      setLoading(false)
+    }
+  }, [eventoId])
 
   useEffect(() => {
-    async function fetchDetalle() {
-      try {
-        setLoading(true)
-        const data = await fetchEvento(eventoId)
-        setEvento(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al cargar el evento')
-      } finally {
-        setLoading(false)
-      }
+    setLoading(true)
+    void load()
+  }, [load])
+
+  function handleInscripcionSuccess() {
+    setShowInscripcion(false)
+    void load().then(() => onChanged?.())
+  }
+
+  async function handleRetirar() {
+    setRetirando(true)
+    setAccionError(null)
+    try {
+      await retirarseEvento(eventoId)
+      setConfirmandoRetiro(false)
+      await load()
+      onChanged?.()
+    } catch (err) {
+      setAccionError(err instanceof Error ? err.message : 'No se pudo retirar la postulación')
+    } finally {
+      setRetirando(false)
     }
-    void fetchDetalle()
-  }, [eventoId])
+  }
 
   if (loading) {
     return (
@@ -86,6 +124,12 @@ export function EventoDetailModal({ eventoId, onClose, isEventosAdmin = false, o
 
   const visible = deriveEstadoVisible(evento)
   const rango = formatRangoFechas(evento.fechaInicio, evento.fechaFin)
+  const inscripcionesAbiertas =
+    evento.estado === 'PUBLICADO' &&
+    !!evento.fechaCorte &&
+    new Date(evento.fechaCorte).getTime() > Date.now()
+  const miEstado = evento.miInscripcion?.estado ?? null
+  const corteTexto = evento.fechaCorte ? formatCorteSantiago(new Date(evento.fechaCorte)) : null
 
   return (
     <div
@@ -205,8 +249,99 @@ export function EventoDetailModal({ eventoId, onClose, isEventosAdmin = false, o
             )}
           </div>
 
-          {/* Fase 4: bloque de inscripción (CTA Inscribirme / retiro) */}
-          <p className="mt-4 text-center text-sm font-medium text-[#4a6fad]">{visible.badge}</p>
+          {/* Bloque de inscripción */}
+          <div className="mt-4 bg-white rounded-2xl border border-[#4a6fad]/15 p-5 shadow-sm flex flex-col gap-3">
+            {miEstado === 'SELECCIONADO' && (
+              <p className="flex items-start gap-2 text-sm font-semibold text-[#2c6e49] bg-[#e9f3ec] border border-[#2c6e49]/20 rounded-xl px-3 py-2.5">
+                <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+                ¡Quedaste seleccionado/a! El organizador se pondrá en contacto con los detalles.
+              </p>
+            )}
+
+            {miEstado === 'NO_SELECCIONADO' && (
+              <p className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
+                Esta vez no quedaste dentro del cupo. ¡Gracias por postular!
+              </p>
+            )}
+
+            {miEstado === 'POSTULADO' && (
+              <>
+                <p className="text-sm font-medium text-[#264c99] bg-[#e8eef7] border border-[#264c99]/20 rounded-xl px-3 py-2.5">
+                  Estás postulado/a{corteTexto ? ` · resultado después del ${corteTexto}` : ''}
+                </p>
+                {evento.estado === 'PUBLICADO' && !confirmandoRetiro && (
+                  <div className="flex justify-end">
+                    <Button variant="secondary" size="sm" onClick={() => setConfirmandoRetiro(true)}>
+                      <Undo2 size={15} />
+                      Retirar postulación
+                    </Button>
+                  </div>
+                )}
+                {confirmandoRetiro && (
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
+                    <p className="text-sm text-slate-700">¿Retirar tu postulación?</p>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmandoRetiro(false)}
+                        disabled={retirando}
+                      >
+                        Volver
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        loading={retirando}
+                        onClick={() => void handleRetirar()}
+                      >
+                        Confirmar retiro
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {miEstado === 'RETIRADO' && (
+              <>
+                <p className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
+                  Retiraste tu postulación.
+                </p>
+                {inscripcionesAbiertas && evento.declaracionVigente && (
+                  <div className="flex justify-end">
+                    <Button size="sm" onClick={() => setShowInscripcion(true)}>
+                      Inscribirme nuevamente
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {miEstado === null && inscripcionesAbiertas && evento.declaracionVigente && (
+              <Button fullWidth onClick={() => setShowInscripcion(true)}>
+                Inscribirme
+              </Button>
+            )}
+
+            {miEstado === null && evento.estado === 'PUBLICADO' && !inscripcionesAbiertas && (
+              <p className="text-sm text-center font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                Inscripciones cerradas
+              </p>
+            )}
+
+            {accionError && (
+              <p
+                className="flex items-start gap-2 text-sm text-[#8b3a44] bg-[#f5e8ea] border border-[#A4636E]/30 rounded-xl px-3 py-2.5"
+                role="alert"
+              >
+                <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                {accionError}
+              </p>
+            )}
+
+            <p className="text-center text-xs font-medium text-[#4a6fad]">{visible.badge}</p>
+          </div>
         </div>
 
         {/* Footer */}
@@ -222,6 +357,15 @@ export function EventoDetailModal({ eventoId, onClose, isEventosAdmin = false, o
           )}
         </div>
       </div>
+
+      {showInscripcion && evento.declaracionVigente && (
+        <InscripcionModal
+          evento={evento}
+          declaracion={evento.declaracionVigente}
+          onClose={() => setShowInscripcion(false)}
+          onSuccess={handleInscripcionSuccess}
+        />
+      )}
     </div>
   )
 }

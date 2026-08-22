@@ -923,3 +923,98 @@ export function buildPasswordResetEmail(name: string, resetUrl: string): string 
 </body>
 </html>`;
 }
+
+// ─── Eventos del club ─────────────────────────────────────────────────────────
+
+const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+
+interface EventoEmailData {
+  titulo: string;
+  fechaInicio: Date | null;
+  fechaFin: Date | null;
+  fechaCorte: Date | null;
+  ubicacion: string | null;
+}
+
+interface InscripcionEmailData {
+  tieneVehiculo: boolean;
+  cuposVehiculo: number | null;
+}
+
+// Día calendario (dd-mm-yyyy) desde la parte UTC del Date, sin depender del
+// timezone del servidor (las fechas de eventos son medianoche UTC del día elegido)
+function fechaCalendarioEvento(d: Date): string {
+  const [y = '', m = '', day = ''] = d.toISOString().slice(0, 10).split('-');
+  return `${day}-${m}-${y}`;
+}
+
+function rangoFechasEvento(evento: EventoEmailData): string {
+  if (!evento.fechaInicio) return 'Por confirmar';
+  const inicio = fechaCalendarioEvento(evento.fechaInicio);
+  if (!evento.fechaFin) return inicio;
+  const fin = fechaCalendarioEvento(evento.fechaFin);
+  return inicio === fin ? inicio : `${inicio} al ${fin}`;
+}
+
+// fechaCorte es un instante real: se muestra en hora de Santiago
+function fechaHoraSantiago(d: Date): string {
+  const texto = d.toLocaleString('es-CL', {
+    timeZone: 'America/Santiago',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return `${texto} hrs (hora de Santiago)`;
+}
+
+function eventoCtaBlock(): string {
+  return `
+        <tr>
+          <td style="padding:0 32px 28px;text-align:center;">
+            <a href="${FRONTEND_URL}" style="display:inline-block;background:${GREEN};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;">Ingresar a la aplicación</a>
+          </td>
+        </tr>`;
+}
+
+export function buildEventoInscripcionConfirmadaEmail(
+  nombre: string,
+  evento: EventoEmailData,
+  inscripcion: InscripcionEmailData,
+): string {
+  const intro = `<p style="margin:0;color:#1f2937;font-size:15px;">
+    Hola <strong>${escapeHtml(nombre)}</strong>, recibimos tu postulación a la siguiente actividad del club.
+  </p>`;
+
+  const tabla = `
+    ${row('Evento', evento.titulo)}
+    ${row('Fecha', rangoFechasEvento(evento))}
+    ${evento.ubicacion ? row('Ubicación', evento.ubicacion) : ''}
+    ${row('Vehículo propio', inscripcion.tieneVehiculo ? 'Sí' : 'No')}
+    ${inscripcion.tieneVehiculo ? row('Cupos ofrecidos', String(inscripcion.cuposVehiculo ?? 0)) : ''}
+    ${evento.fechaCorte ? row('Cierre de inscripciones', fechaHoraSantiago(evento.fechaCorte)) : ''}
+  `;
+
+  const nota = `
+        <tr>
+          <td style="padding:0 32px 20px;">
+            <p style="margin:0 0 8px;color:#374151;font-size:13px;line-height:1.6;">
+              El organizador selecciona entre los postulantes al cierre de inscripciones;
+              te avisaremos por este medio.
+            </p>
+            <p style="margin:0;color:${GRAY};font-size:13px;line-height:1.6;">
+              Si cambias de opinión puedes retirar tu postulación desde la aplicación.
+            </p>
+          </td>
+        </tr>
+        ${eventoCtaBlock()}`;
+
+  return emailShell(
+    'Postulación recibida',
+    intro,
+    tabla,
+    'Este correo es una notificación automática del sistema PAMIR.',
+    nota,
+  );
+}

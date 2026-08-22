@@ -220,6 +220,7 @@ export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onG
             setSelectedEventoId(null)
             onGestionarEvento(id)
           }}
+          onChanged={() => void loadEventos()}
         />
       )}
     </div>
