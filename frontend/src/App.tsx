@@ -8,13 +8,15 @@ import { FichaCierre } from './components/FichaCierre'
 import { EvaluacionExpress } from './components/EvaluacionExpress'
 import { DocumentosPage } from './components/DocumentosPage'
 import { ContactosPage } from './components/ContactosPage'
+import { EventosPage } from './components/EventosPage'
+import { EventoAdminPage } from './components/EventoAdminPage'
 import { AdminPanel } from './components/AdminPanel'
 import { AdminDashboard } from './components/AdminDashboard'
 import { SalidaEditForm } from './components/SalidaEditForm'
 import { fetchMyIntegrante } from './lib/api'
 import type { IntegranteRecord } from './types/salida'
 
-type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone' | 'documentos' | 'contactos' | 'admin-panel' | 'admin-dashboard' | 'editar-salida'
+type Route = 'dashboard' | 'nueva-salida' | 'nuevo-integrante' | 'nueva-cierre' | 'nuevo-integrante-standalone' | 'documentos' | 'contactos' | 'admin-panel' | 'admin-dashboard' | 'editar-salida' | 'eventos' | 'crear-evento' | 'gestionar-evento'
 
 const ADMIN_EMAIL = 'seguridad.acp.cl@gmail.com'
 
@@ -35,11 +37,14 @@ export default function App() {
   const { user, token, isLoading, loginWithCredentials, register, logout } = useAuth()
   const [route, setRoute] = useState<Route>('dashboard')
   const [actionSalidaId, setActionSalidaId] = useState<string | null>(null)
+  const [actionEventoId, setActionEventoId] = useState<string | null>(null)
   const [integranteChecked, setIntegranteChecked] = useState(false)
   const [integrante, setIntegrante] = useState<IntegranteRecord | null>(null)
 
   const isAuthenticated = !!(user && token)
   const isAdmin = user?.email === ADMIN_EMAIL
+  // Autorización del módulo de eventos: por rol en DB, no por email
+  const isEventosAdmin = user?.rol === 'ADMIN'
   const hasIntegrante = integrante !== null
   const isSocioPamir = integrante?.membresiaClub === 'SOCIO_ANDINO_PAMIR'
 
@@ -139,6 +144,38 @@ export default function App() {
     return <ContactosPage onBack={() => setRoute('dashboard')} />
   }
 
+  // Eventos del club: visible para todos los usuarios logueados (sin gate).
+  if (route === 'eventos') {
+    return (
+      <EventosPage
+        isEventosAdmin={isEventosAdmin}
+        onBack={() => setRoute('dashboard')}
+        onCrearEvento={() => setRoute('crear-evento')}
+        onGestionarEvento={(id) => { setActionEventoId(id); setRoute('gestionar-evento') }}
+      />
+    )
+  }
+
+  if (route === 'crear-evento' && isEventosAdmin) {
+    return (
+      <EventoAdminPage
+        eventoId={null}
+        onDone={() => setRoute('eventos')}
+        onCancel={() => setRoute('eventos')}
+      />
+    )
+  }
+
+  if (route === 'gestionar-evento' && isEventosAdmin && actionEventoId) {
+    return (
+      <EventoAdminPage
+        eventoId={actionEventoId}
+        onDone={() => { setActionEventoId(null); setRoute('eventos') }}
+        onCancel={() => { setActionEventoId(null); setRoute('eventos') }}
+      />
+    )
+  }
+
   if (route === 'admin-panel' && isAdmin) {
     return (
       <AdminPanel
@@ -185,6 +222,7 @@ export default function App() {
       onNewIntegrante={() => setRoute('nuevo-integrante-standalone')}
       onDocumentos={() => setRoute('documentos')}
       onContactos={() => setRoute('contactos')}
+      onEventos={() => setRoute('eventos')}
       onAdminPanel={() => setRoute('admin-panel')}
       onEditSalida={(id) => { setActionSalidaId(id); setRoute('editar-salida') }}
       onCloseSalida={(id) => { setActionSalidaId(id); setRoute('nueva-cierre') }}

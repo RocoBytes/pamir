@@ -4,12 +4,14 @@ export const MOCK_USER = {
   id: 'user-test-001',
   email: 'test@example.com',
   name: 'Test Alpinista',
+  rol: 'SOCIO',
 }
 
 export const MOCK_ADMIN = {
   id: 'user-admin-001',
   email: 'seguridad.acp.cl@gmail.com',
   name: 'Admin Seguridad',
+  rol: 'ADMIN',
 }
 
 export const MOCK_INTEGRANTE = {
@@ -44,6 +46,13 @@ export async function setAuth(page: Page, user = MOCK_USER, token = 'mock-jwt-to
     },
     { user, token },
   )
+}
+
+/** Mocks GET /api/me — returns the given user (self-heal de rol en useAuth) */
+export async function mockMe(page: Page, user: Record<string, unknown> = MOCK_USER) {
+  await page.route('**/api/me', (route: Route) => {
+    void route.fulfill({ status: 200, json: { user } })
+  })
 }
 
 /** Mocks GET /api/integrantes/me — returns 404 (no integrante) */

@@ -1,4 +1,11 @@
 import type { SalidaFormData, SalidaRecord, GpxUploadResponse, PronosticoUploadResponse, User, IntegranteRecord, Participante } from '../types/salida'
+import type {
+  CategoriaEventoRecord,
+  EventoRecord,
+  EventoListItem,
+  EventoDetail,
+  EventoPayload,
+} from '../types/evento'
 import { getAuthToken } from './auth-token'
 
 // En desarrollo el proxy de Vite redirige /api → localhost:3000.
@@ -574,6 +581,98 @@ export async function enviarSaludSalida(
     headers: authHeaders(),
   })
   return handleResponse<{ sent: boolean; to: string; participantesConFicha: number; participantesSinFicha: number }>(res)
+}
+
+// ─── Eventos del club ─────────────────────────────────────────────────────────
+
+export async function fetchCategoriasEvento(): Promise<CategoriaEventoRecord[]> {
+  const res = await fetch(`${API_BASE}/eventos/categorias`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<CategoriaEventoRecord[]>(res)
+}
+
+export async function fetchEventos(
+  params: { mes?: string; categorias?: string[]; incluirPasados?: boolean } = {},
+): Promise<EventoListItem[]> {
+  const query = new URLSearchParams()
+  if (params.mes) query.set('mes', params.mes)
+  for (const slug of params.categorias ?? []) query.append('categoria', slug)
+  if (params.incluirPasados) query.set('incluirPasados', 'true')
+  const qs = query.toString()
+  const res = await fetch(`${API_BASE}/eventos${qs ? `?${qs}` : ''}`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<EventoListItem[]>(res)
+}
+
+export async function fetchEvento(id: string): Promise<EventoDetail> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(id)}`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<EventoDetail>(res)
+}
+
+export type EventoConCategoria = EventoRecord & { categoria: CategoriaEventoRecord | null }
+
+export async function createEvento(payload: EventoPayload): Promise<EventoConCategoria> {
+  const res = await fetch(`${API_BASE}/eventos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(payload),
+  })
+  return handleResponse<EventoConCategoria>(res)
+}
+
+export async function updateEvento(id: string, payload: EventoPayload): Promise<EventoConCategoria> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(payload),
+  })
+  return handleResponse<EventoConCategoria>(res)
+}
+
+export async function deleteEventoBorrador(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    let message = `HTTP ${res.status}`
+    try {
+      const body = (await res.json()) as { error?: string }
+      message = body.error ?? message
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(message)
+  }
+}
+
+export async function publicarEvento(id: string): Promise<EventoRecord> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(id)}/publicar`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  return handleResponse<EventoRecord>(res)
+}
+
+export async function despublicarEvento(id: string): Promise<EventoRecord> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(id)}/despublicar`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  return handleResponse<EventoRecord>(res)
+}
+
+export async function cancelarEvento(id: string, motivo?: string): Promise<EventoRecord> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(id)}/cancelar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(motivo ? { motivo } : {}),
+  })
+  return handleResponse<EventoRecord>(res)
 }
 
 // ─── Health ───────────────────────────────────────────────────────────────────

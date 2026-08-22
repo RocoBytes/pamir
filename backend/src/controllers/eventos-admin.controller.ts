@@ -169,6 +169,7 @@ export async function createEvento(req: Request, res: Response): Promise<void> {
         titulo: parsed.data.titulo,
         creadoPor: req.user!.id,
       },
+      include: { categoria: true },
     });
     res.status(201).json(evento);
   } catch (error) {
@@ -233,6 +234,7 @@ export async function updateEvento(req: Request, res: Response): Promise<void> {
     const actualizado = await prisma.evento.update({
       where: { id },
       data: toEventoData(parsed.data),
+      include: { categoria: true },
     });
     res.json(actualizado);
   } catch (error) {
