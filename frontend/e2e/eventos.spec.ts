@@ -143,6 +143,7 @@ test.describe('Eventos del club – socio', () => {
   test('abre Eventos y ve la tarjeta publicada con badge de categoría e inscripciones abiertas', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Abrir eventos del club' }).click()
+    await page.getByRole('button', { name: 'Lista' }).click()
 
     await expect(page.getByRole('heading', { name: 'Eventos del club' })).toBeVisible()
     await expect(page.getByText('Trekking Cerro Provincia')).toBeVisible()
@@ -156,6 +157,7 @@ test.describe('Eventos del club – socio', () => {
   test('un socio NO ve el botón Crear evento ni Gestionar', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Abrir eventos del club' }).click()
+    await page.getByRole('button', { name: 'Lista' }).click()
 
     await expect(page.getByRole('heading', { name: 'Eventos del club' })).toBeVisible()
     await expect(page.getByRole('button', { name: /Crear evento/ })).toHaveCount(0)
@@ -175,6 +177,7 @@ test.describe('Eventos del club – inscripción (socio)', () => {
   async function abrirDetalle(page: Page) {
     await page.goto('/')
     await page.getByRole('button', { name: 'Abrir eventos del club' }).click()
+    await page.getByRole('button', { name: 'Lista' }).click()
     await page.getByText('Trekking Cerro Provincia').click()
   }
 
@@ -255,6 +258,7 @@ test.describe('Eventos del club – admin (rol ADMIN)', () => {
   test('el admin ve Crear evento y Gestionar', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Abrir eventos del club' }).click()
+    await page.getByRole('button', { name: 'Lista' }).click()
 
     await expect(page.getByRole('heading', { name: 'Eventos del club' })).toBeVisible()
     await expect(page.getByRole('button', { name: /Crear evento/ })).toBeVisible()
@@ -353,6 +357,7 @@ test.describe('Eventos del club – postulantes (admin)', () => {
   async function abrirPostulantes(page: Page) {
     await page.goto('/')
     await page.getByRole('button', { name: 'Abrir eventos del club' }).click()
+    await page.getByRole('button', { name: 'Lista' }).click()
     await page.getByRole('button', { name: 'Gestionar Trekking Cerro Provincia' }).click()
     await page.getByRole('button', { name: 'Postulantes' }).click()
   }
@@ -411,5 +416,150 @@ test.describe('Eventos del club – postulantes (admin)', () => {
     await expect(reenviar).toBeVisible()
     await reenviar.click()
     await expect(page.getByText(/Reenvío completado: 1 enviadas · 0 fallidas · 0 pendientes/)).toBeVisible()
+  })
+})
+
+// ─── Calendario (Fase 6) ─────────────────────────────────────────────────────
+
+const MES_CAL = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' })
+  .format(new Date())
+  .slice(0, 7)
+
+function shiftMesCal(mes: string, delta: number): string {
+  const [anio = 0, mesNum = 1] = mes.split('-').map(Number)
+  return new Date(Date.UTC(anio, mesNum - 1 + delta, 1)).toISOString().slice(0, 7)
+}
+
+const MESES_LABEL = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+]
+
+function labelMesCal(mes: string): string {
+  const [anio = 0, mesNum = 1] = mes.split('-').map(Number)
+  const nombre = MESES_LABEL[mesNum - 1] ?? ''
+  return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} de ${anio}`
+}
+
+const CAT_CURSOS = {
+  id: 5,
+  slug: 'cursos-talleres',
+  nombre: 'Cursos y talleres',
+  color: '#29A8DF',
+  orden: 5,
+  activa: true,
+}
+
+const EV_MULTI = {
+  ...MOCK_EVENTO,
+  id: 'evento-cal-1',
+  titulo: 'Travesía Multi',
+  fechaInicio: `${MES_CAL}-10T00:00:00.000Z`,
+  fechaFin: `${MES_CAL}-12T00:00:00.000Z`,
+}
+
+const EV_CURSO = {
+  ...MOCK_EVENTO,
+  id: 'evento-cal-2',
+  titulo: 'Curso Nudos',
+  categoriaId: 5,
+  categoria: CAT_CURSOS,
+  fechaInicio: `${MES_CAL}-15T00:00:00.000Z`,
+  fechaFin: `${MES_CAL}-15T00:00:00.000Z`,
+}
+
+/** Mock de calendario: respeta ?categoria= y registra las URLs pedidas */
+async function mockCalendarioApi(page: Page) {
+  const urls: string[] = []
+  const eventos = [EV_MULTI, EV_CURSO]
+
+  await page.route('**/api/eventos/categorias', (route: Route) => {
+    void route.fulfill({ status: 200, json: [MOCK_CATEGORIA, CAT_CURSOS] })
+  })
+  const responder = (route: Route) => {
+    const url = new URL(route.request().url())
+    urls.push(url.pathname + url.search)
+    const cats = url.searchParams.getAll('categoria')
+    const items = cats.length ? eventos.filter((e) => cats.includes(e.categoria.slug)) : eventos
+    void route.fulfill({ status: 200, json: items })
+  }
+  await page.route('**/api/eventos', responder)
+  await page.route('**/api/eventos?*', responder)
+  await page.route('**/api/eventos/evento-cal-1', (route: Route) => {
+    void route.fulfill({
+      status: 200,
+      json: { ...EV_MULTI, declaracionVigente: MOCK_DECLARACION, miInscripcion: null },
+    })
+  })
+  return urls
+}
+
+test.describe('Eventos del club – calendario', () => {
+  test.beforeEach(async ({ page }) => {
+    await setAuth(page, MOCK_USER)
+    await mockMe(page, MOCK_USER)
+    await mockHasIntegrante(page)
+    await mockSalidas(page)
+  })
+
+  async function abrirCalendario(page: Page) {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Abrir eventos del club' }).click()
+    await expect(page.getByRole('heading', { name: 'Eventos del club' })).toBeVisible()
+  }
+
+  test('un evento multi-día se dibuja como chip que abarca sus 3 días', async ({ page }) => {
+    await mockCalendarioApi(page)
+    await abrirCalendario(page)
+
+    const chips = page.locator(`button[title="Travesía Multi"]`)
+    const total = await chips.count()
+    expect(total).toBeGreaterThanOrEqual(1)
+    let sumaSpans = 0
+    for (let i = 0; i < total; i++) {
+      const style = (await chips.nth(i).getAttribute('style')) ?? ''
+      const m = /span (\d+)/.exec(style)
+      sumaSpans += m ? Number(m[1]) : 1
+    }
+    // 10, 11 y 12 del mes: 3 días en total, en 1 o 2 segmentos según la semana
+    expect(sumaSpans).toBe(3)
+  })
+
+  test('dos categorías → dos chips con su color; filtrar por una oculta la otra', async ({ page }) => {
+    await mockCalendarioApi(page)
+    await abrirCalendario(page)
+
+    const curso = page.locator('button[title="Curso Nudos"]').first()
+    await expect(curso).toBeVisible()
+    const bg = await curso.evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(bg).toBe('rgb(41, 168, 223)') // #29A8DF
+    await expect(page.locator('button[title="Travesía Multi"]').first()).toBeVisible()
+
+    // Chip de filtro 'Trekking' (exact para no matchear los chips del calendario)
+    await page.getByRole('button', { name: 'Trekking', exact: true }).click()
+    await expect(page.locator('button[title="Curso Nudos"]')).toHaveCount(0)
+    await expect(page.locator('button[title="Travesía Multi"]').first()).toBeVisible()
+  })
+
+  test('la navegación de mes pide ?mes= del mes siguiente y actualiza el título', async ({ page }) => {
+    const urls = await mockCalendarioApi(page)
+    await abrirCalendario(page)
+
+    await expect(page.getByText(labelMesCal(MES_CAL))).toBeVisible()
+    const siguiente = shiftMesCal(MES_CAL, 1)
+    await page.getByRole('button', { name: 'Mes siguiente' }).click()
+
+    await expect(page.getByText(labelMesCal(siguiente))).toBeVisible()
+    await expect
+      .poll(() => urls.some((u) => u.includes(`mes=${siguiente}`)))
+      .toBe(true)
+  })
+
+  test('clic en un chip abre el detalle del evento', async ({ page }) => {
+    await mockCalendarioApi(page)
+    await abrirCalendario(page)
+
+    await page.locator('button[title="Travesía Multi"]').first().click()
+    await expect(page.getByRole('dialog', { name: /Travesía Multi/ })).toBeVisible()
   })
 })

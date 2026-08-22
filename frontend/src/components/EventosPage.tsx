@@ -4,6 +4,9 @@ import {
   ArrowLeft,
   CalendarDays,
   CalendarOff,
+  ChevronLeft,
+  ChevronRight,
+  List,
   Loader2,
   Plus,
   Settings2,
@@ -14,7 +17,31 @@ import type { CategoriaEventoRecord, EventoListItem } from '../types/evento'
 import { fetchCategoriasEvento, fetchEventos } from '../lib/api'
 import { Button } from './ui/Button'
 import { EventoCard } from './EventoCard'
+import { EventoCalendar } from './EventoCalendar'
 import { EventoDetailModal } from './EventoDetailModal'
+
+const MESES_LARGO = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+]
+
+// Mes calendario actual visto desde Santiago
+function mesActualSantiago(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' })
+    .format(new Date())
+    .slice(0, 7)
+}
+
+function labelMes(mes: string): string {
+  const [anio = 0, mesNum = 1] = mes.split('-').map(Number)
+  const nombre = MESES_LARGO[mesNum - 1] ?? ''
+  return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} de ${anio}`
+}
+
+function shiftMes(mes: string, delta: number): string {
+  const [anio = 0, mesNum = 1] = mes.split('-').map(Number)
+  return new Date(Date.UTC(anio, mesNum - 1 + delta, 1)).toISOString().slice(0, 7)
+}
 
 interface EventosPageProps {
   isEventosAdmin?: boolean
@@ -31,6 +58,9 @@ export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onG
   const [slugsSeleccionados, setSlugsSeleccionados] = useState<string[]>([])
   const [verPasados, setVerPasados] = useState(false)
   const [selectedEventoId, setSelectedEventoId] = useState<string | null>(null)
+  // El calendario es la portada de la sección; la lista queda a un toggle
+  const [vista, setVista] = useState<'calendario' | 'lista'>('calendario')
+  const [mes, setMes] = useState(() => mesActualSantiago())
 
   useEffect(() => {
     fetchCategoriasEvento()
@@ -44,17 +74,19 @@ export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onG
     setIsLoading(true)
     setError(null)
     try {
-      const data = await fetchEventos({
-        categorias: slugsSeleccionados.length > 0 ? slugsSeleccionados : undefined,
-        incluirPasados: verPasados || undefined,
-      })
+      const categorias = slugsSeleccionados.length > 0 ? slugsSeleccionados : undefined
+      const data = await fetchEventos(
+        vista === 'calendario'
+          ? { mes, categorias }
+          : { categorias, incluirPasados: verPasados || undefined },
+      )
       setEventos(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar los eventos')
     } finally {
       setIsLoading(false)
     }
-  }, [slugsSeleccionados, verPasados])
+  }, [vista, mes, slugsSeleccionados, verPasados])
 
   useEffect(() => {
     void loadEventos()
@@ -93,12 +125,43 @@ export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onG
               Calendario de actividades e inscripciones.
             </p>
           </div>
-          {isEventosAdmin && (
-            <Button variant="primary" size="sm" onClick={onCrearEvento}>
-              <Plus size={16} />
-              Crear evento
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Toggle calendario / lista */}
+            <div className="inline-flex rounded-xl border border-[#4a6fad]/20 bg-white p-0.5">
+              <button
+                type="button"
+                onClick={() => setVista('calendario')}
+                aria-pressed={vista === 'calendario'}
+                className={[
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99]',
+                  vista === 'calendario' ? 'bg-[#264c99] text-white' : 'text-[#757874] hover:bg-[#f0f4fb]',
+                ].join(' ')}
+              >
+                <CalendarDays size={14} />
+                Calendario
+              </button>
+              <button
+                type="button"
+                onClick={() => setVista('lista')}
+                aria-pressed={vista === 'lista'}
+                className={[
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99]',
+                  vista === 'lista' ? 'bg-[#264c99] text-white' : 'text-[#757874] hover:bg-[#f0f4fb]',
+                ].join(' ')}
+              >
+                <List size={14} />
+                Lista
+              </button>
+            </div>
+            {isEventosAdmin && (
+              <Button variant="primary" size="sm" onClick={onCrearEvento}>
+                <Plus size={16} />
+                Crear evento
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Filtros: chips de categoría + ver pasados */}
@@ -142,16 +205,41 @@ export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onG
               </button>
             )
           })}
-          <label className="ml-auto inline-flex items-center gap-2 text-xs font-medium text-[#757874] cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={verPasados}
-              onChange={(e) => setVerPasados(e.target.checked)}
-              className="w-4 h-4 rounded border-[#4a6fad]/40 text-[#264c99] focus:ring-[#264c99]"
-            />
-            Ver pasados
-          </label>
+          {vista === 'lista' && (
+            <label className="ml-auto inline-flex items-center gap-2 text-xs font-medium text-[#757874] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={verPasados}
+                onChange={(e) => setVerPasados(e.target.checked)}
+                className="w-4 h-4 rounded border-[#4a6fad]/40 text-[#264c99] focus:ring-[#264c99]"
+              />
+              Ver pasados
+            </label>
+          )}
         </div>
+
+        {/* Navegación de mes (solo calendario) */}
+        {vista === 'calendario' && (
+          <div className="mb-4 flex items-center justify-between bg-[#264c99] text-white rounded-2xl px-2 py-1.5">
+            <button
+              type="button"
+              onClick={() => setMes((m) => shiftMes(m, -1))}
+              aria-label="Mes anterior"
+              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <p className="text-sm font-bold tracking-wide">{labelMes(mes)}</p>
+            <button
+              type="button"
+              onClick={() => setMes((m) => shiftMes(m, 1))}
+              aria-label="Mes siguiente"
+              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
 
         {/* States */}
         {isLoading && (
@@ -174,7 +262,11 @@ export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onG
           </div>
         )}
 
-        {!isLoading && !error && eventos.length === 0 && (
+        {!isLoading && !error && vista === 'calendario' && (
+          <EventoCalendar eventos={eventos} mes={mes} onSelect={setSelectedEventoId} />
+        )}
+
+        {!isLoading && !error && vista === 'lista' && eventos.length === 0 && (
           <div className="flex flex-col items-center py-12 gap-3 text-center">
             <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-[#e8eef7]">
               <CalendarOff size={24} className="text-[#264c99]" />
@@ -190,7 +282,7 @@ export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onG
           </div>
         )}
 
-        {!isLoading && !error && eventos.length > 0 && (
+        {!isLoading && !error && vista === 'lista' && eventos.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
             {eventos.map((evento) => (
               <div key={evento.id} className="min-w-0">
