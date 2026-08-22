@@ -350,13 +350,14 @@ model DeclaracionJuradaVersion {
 model Evento {
   id          String       @id @default(uuid())
   titulo      String
-  categoriaId Int          @map("categoria_id")
+  // Nullable: un borrador solo exige titulo (E1); se exige al publicar
+  categoriaId Int?         @map("categoria_id")
   estado      EstadoEvento @default(BORRADOR)
 
   // Cabecera (ficha)
-  fechaInicio         DateTime @map("fecha_inicio")
+  fechaInicio         DateTime? @map("fecha_inicio")
   horaInicio          String?  @map("hora_inicio")
-  fechaFin            DateTime @map("fecha_fin")
+  fechaFin            DateTime? @map("fecha_fin")
   duracionTexto       String?  @map("duracion_texto")
   ubicacion           String?
   reunionCoordinacion String?  @map("reunion_coordinacion")
@@ -388,7 +389,7 @@ model Evento {
   canceladoAt       DateTime? @map("cancelado_at")
   motivoCancelacion String?   @map("motivo_cancelacion")
 
-  categoria     CategoriaEvento @relation(fields: [categoriaId], references: [id])
+  categoria     CategoriaEvento? @relation(fields: [categoriaId], references: [id])
   creador       User            @relation("EventoCreador", fields: [creadoPor], references: [id])
   finalizador   User?           @relation("EventoFinalizador", fields: [finalizadoPor], references: [id])
   inscripciones Inscripcion[]
