@@ -263,3 +263,153 @@ test.describe('Eventos del club – admin (rol ADMIN)', () => {
     ).toBeVisible()
   })
 })
+
+// ─── Postulantes (Fase 5) ────────────────────────────────────────────────────
+
+const ANA_ID = '11111111-1111-4111-8111-111111111111'
+const BENITO_ID = '22222222-2222-4222-8222-222222222222'
+const CARLA_ID = '33333333-3333-4333-8333-333333333333'
+
+const MOCK_POSTULANTES = {
+  evento: {
+    id: 'evento-001',
+    titulo: 'Trekking Cerro Provincia',
+    cupos: 2,
+    estado: 'PUBLICADO',
+    fechaCorte: corteIso,
+  },
+  postulantes: [
+    {
+      id: ANA_ID,
+      usuario: { nombre: 'Ana Postulante', email: 'ana@example.com' },
+      telefono: '+56 9 1111 1111',
+      membresiaClub: 'SOCIO_ANDINO_PAMIR',
+      tieneVehiculo: true,
+      cuposVehiculo: 3,
+      estado: 'POSTULADO',
+      postuladoAt: new Date().toISOString(),
+      retiradoAt: null,
+      notificaciones: [
+        { tipo: 'INSCRIPCION_CONFIRMADA', estado: 'ENVIADA', intentos: 0, ultimoError: null },
+      ],
+    },
+    {
+      id: BENITO_ID,
+      usuario: { nombre: 'Benito Sinauto', email: 'benito@example.com' },
+      telefono: null,
+      membresiaClub: null,
+      tieneVehiculo: false,
+      cuposVehiculo: null,
+      estado: 'POSTULADO',
+      postuladoAt: new Date().toISOString(),
+      retiradoAt: null,
+      notificaciones: [
+        { tipo: 'INSCRIPCION_CONFIRMADA', estado: 'ERROR', intentos: 1, ultimoError: 'invalid_grant' },
+      ],
+    },
+    {
+      id: CARLA_ID,
+      usuario: { nombre: 'Carla Retirada', email: 'carla@example.com' },
+      telefono: null,
+      membresiaClub: 'SOCIO_OTRO_CLUB',
+      tieneVehiculo: false,
+      cuposVehiculo: null,
+      estado: 'RETIRADO',
+      postuladoAt: new Date().toISOString(),
+      retiradoAt: new Date().toISOString(),
+      notificaciones: [
+        { tipo: 'INSCRIPCION_CONFIRMADA', estado: 'ENVIADA', intentos: 0, ultimoError: null },
+      ],
+    },
+  ],
+}
+
+async function mockPostulantesApi(page: Page) {
+  const capturado: { finalizarPayload: unknown } = { finalizarPayload: null }
+
+  await page.route('**/api/eventos/evento-001/postulantes', (route: Route) => {
+    void route.fulfill({ status: 200, json: MOCK_POSTULANTES })
+  })
+  await page.route('**/api/eventos/evento-001/finalizar', (route: Route) => {
+    capturado.finalizarPayload = route.request().postDataJSON()
+    void route.fulfill({ status: 200, json: { seleccionados: 1, noSeleccionados: 1 } })
+  })
+  await page.route('**/api/eventos/evento-001/notificaciones/reenviar', (route: Route) => {
+    void route.fulfill({ status: 200, json: { despachadas: 1, fallidas: 0, pendientes: 0 } })
+  })
+  return capturado
+}
+
+test.describe('Eventos del club – postulantes (admin)', () => {
+  test.beforeEach(async ({ page }) => {
+    await setAuth(page, MOCK_ADMIN)
+    await mockMe(page, MOCK_ADMIN)
+    await mockHasIntegrante(page)
+    await mockSalidas(page)
+    await mockEventosApi(page)
+    await mockDetalleConInscripcion(page, 'ninguna')
+  })
+
+  async function abrirPostulantes(page: Page) {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Abrir eventos del club' }).click()
+    await page.getByRole('button', { name: 'Gestionar Trekking Cerro Provincia' }).click()
+    await page.getByRole('button', { name: 'Postulantes' }).click()
+  }
+
+  test('la tabla muestra los postulantes con estados y resumen de transporte', async ({ page }) => {
+    await mockPostulantesApi(page)
+    await abrirPostulantes(page)
+
+    await expect(page.getByText('Ana Postulante')).toBeVisible()
+    await expect(page.getByText('Benito Sinauto')).toBeVisible()
+    await expect(page.getByText('Carla Retirada')).toBeVisible()
+    await expect(page.getByText('Retirado', { exact: true })).toBeVisible()
+    await expect(page.getByText('Seleccionados 0 / 2 cupos')).toBeVisible()
+  })
+
+  test('la fila RETIRADO no es seleccionable', async ({ page }) => {
+    await mockPostulantesApi(page)
+    await abrirPostulantes(page)
+
+    await expect(page.getByRole('checkbox', { name: 'Seleccionar a Ana Postulante' })).toBeEnabled()
+    await expect(page.getByRole('checkbox', { name: 'Seleccionar a Carla Retirada' })).toBeDisabled()
+  })
+
+  test('finalizar: gating, diálogo con N/M y payload con seleccionadosIds', async ({ page }) => {
+    const capturado = await mockPostulantesApi(page)
+    await abrirPostulantes(page)
+
+    const finalizar = page.getByRole('button', { name: 'Finalizar evento' })
+    await expect(finalizar).toBeDisabled()
+
+    await page.getByRole('checkbox', { name: 'Seleccionar a Ana Postulante' }).check()
+    await expect(finalizar).toBeEnabled()
+    await expect(page.getByText('Seleccionados 1 / 2 cupos')).toBeVisible()
+    await expect(page.getByText('transporte cubierto')).toBeVisible()
+
+    await finalizar.click()
+    await expect(
+      page.getByText(
+        'Se confirmarán 1 participantes y se notificará a 1 no seleccionados. Esto cierra las inscripciones y no se puede deshacer.',
+      ),
+    ).toBeVisible()
+    await expect(
+      page.getByText('Aún no se cumple la fecha de corte; las inscripciones se cerrarán ahora.'),
+    ).toBeVisible()
+
+    await page.getByRole('button', { name: 'Finalizar', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Finalizar evento' })).toHaveCount(0)
+    expect(capturado.finalizarPayload).toEqual({ seleccionadosIds: [ANA_ID] })
+  })
+
+  test('Reenviar pendientes es visible con una notificación en ERROR y muestra el resultado', async ({ page }) => {
+    await mockPostulantesApi(page)
+    await abrirPostulantes(page)
+
+    const reenviar = page.getByRole('button', { name: 'Reenviar pendientes' })
+    await expect(reenviar).toBeVisible()
+    await reenviar.click()
+    await expect(page.getByText(/Reenvío completado: 1 enviadas · 0 fallidas · 0 pendientes/)).toBeVisible()
+  })
+})

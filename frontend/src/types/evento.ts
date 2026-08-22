@@ -88,6 +88,68 @@ export interface InscripcionPayload {
   itemsAceptados: boolean[]
 }
 
+// ─── Postulantes (vista admin) ───────────────────────────────────────────────
+
+export type TipoNotificacion =
+  | 'INSCRIPCION_CONFIRMADA'
+  | 'SELECCIONADO'
+  | 'NO_SELECCIONADO'
+  | 'EVENTO_CANCELADO'
+
+export type EstadoNotificacion = 'PENDIENTE' | 'ENVIADA' | 'ERROR'
+
+export interface NotificacionResumen {
+  tipo: TipoNotificacion
+  estado: EstadoNotificacion
+  intentos: number
+  ultimoError: string | null
+}
+
+export interface PostulanteRow {
+  id: string
+  usuario: { nombre: string; email: string }
+  telefono: string | null
+  membresiaClub: string | null
+  tieneVehiculo: boolean
+  cuposVehiculo: number | null
+  estado: EstadoInscripcion
+  postuladoAt: string
+  retiradoAt: string | null
+  notificaciones: NotificacionResumen[]
+}
+
+export interface PostulantesResponse {
+  evento: {
+    id: string
+    titulo: string
+    cupos: number | null
+    estado: EstadoEvento
+    fechaCorte: string | null
+  }
+  postulantes: PostulanteRow[]
+}
+
+export const ESTADO_INSCRIPCION_LABELS: Record<EstadoInscripcion, string> = {
+  POSTULADO: 'Postulado',
+  RETIRADO: 'Retirado',
+  SELECCIONADO: 'Seleccionado',
+  NO_SELECCIONADO: 'No seleccionado',
+}
+
+export const ESTADO_INSCRIPCION_COLORS: Record<EstadoInscripcion, string> = {
+  POSTULADO: 'bg-[#e8eef7] text-[#264c99]',
+  RETIRADO: 'bg-slate-100 text-slate-600',
+  SELECCIONADO: 'bg-[#e9f3ec] text-[#2c6e49]',
+  NO_SELECCIONADO: 'bg-[#f5e8ea] text-[#A4636E]',
+}
+
+export const TIPO_NOTIFICACION_LABELS: Record<TipoNotificacion, string> = {
+  INSCRIPCION_CONFIRMADA: 'Confirmación',
+  SELECCIONADO: 'Seleccionado',
+  NO_SELECCIONADO: 'No seleccionado',
+  EVENTO_CANCELADO: 'Cancelación',
+}
+
 export interface EventoDetail extends EventoListItem {
   declaracionVigente: DeclaracionVigente | null
 }

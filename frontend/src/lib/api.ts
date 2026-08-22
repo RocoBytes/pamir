@@ -7,6 +7,7 @@ import type {
   EventoPayload,
   InscripcionRecord,
   InscripcionPayload,
+  PostulantesResponse,
 } from '../types/evento'
 import { getAuthToken } from './auth-token'
 
@@ -686,6 +687,35 @@ export async function despublicarEvento(id: string): Promise<EventoRecord> {
     headers: authHeaders(),
   })
   return handleResponse<EventoRecord>(res)
+}
+
+export async function fetchPostulantes(id: string): Promise<PostulantesResponse> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(id)}/postulantes`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<PostulantesResponse>(res)
+}
+
+export async function finalizarEvento(
+  id: string,
+  seleccionadosIds: string[],
+): Promise<{ seleccionados: number; noSeleccionados: number }> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(id)}/finalizar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ seleccionadosIds }),
+  })
+  return handleResponse<{ seleccionados: number; noSeleccionados: number }>(res)
+}
+
+export async function reenviarNotificaciones(
+  id: string,
+): Promise<{ despachadas: number; fallidas: number; pendientes: number }> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(id)}/notificaciones/reenviar`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  return handleResponse<{ despachadas: number; fallidas: number; pendientes: number }>(res)
 }
 
 export async function cancelarEvento(id: string, motivo?: string): Promise<EventoRecord> {

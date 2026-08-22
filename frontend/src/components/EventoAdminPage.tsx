@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   AlertCircle,
@@ -27,12 +27,15 @@ import {
 import type { EventoConCategoria } from '../lib/api'
 import { Button } from './ui/Button'
 import { EventoForm } from './EventoForm'
+import { PostulantesTab } from './PostulantesTab'
 
 // ─── Confirmación ────────────────────────────────────────────────────────────
 
 interface ConfirmDialogProps {
   title: string
   message: string
+  /** Línea extra de advertencia (caja ámbar) bajo el mensaje. */
+  warning?: string
   confirmLabel: string
   danger?: boolean
   withMotivo?: boolean
@@ -42,9 +45,10 @@ interface ConfirmDialogProps {
   onClose: () => void
 }
 
-function ConfirmDialog({
+export function ConfirmDialog({
   title,
   message,
+  warning,
   confirmLabel,
   danger = false,
   withMotivo = false,
@@ -80,6 +84,12 @@ function ConfirmDialog({
         </div>
         <div className="px-5 py-4 flex flex-col gap-3">
           <p className="text-sm text-slate-700 leading-relaxed">{message}</p>
+          {warning && (
+            <p className="flex items-start gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+              <AlertTriangle size={15} className="shrink-0 mt-0.5" />
+              {warning}
+            </p>
+          )}
           {withMotivo && (
             <div className="flex flex-col gap-1">
               <label htmlFor="motivo-cancelacion" className="text-sm font-semibold text-[#264c99]">
@@ -204,16 +214,25 @@ export function EventoAdminPage({ eventoId = null, onDone, onCancel }: EventoAdm
   const [actionBusy, setActionBusy] = useState(false)
   const [confirmando, setConfirmando] = useState<AccionConfirmable | null>(null)
   const [guardado, setGuardado] = useState(false)
+  const [tab, setTab] = useState<'ficha' | 'postulantes'>('ficha')
+
+  const reloadEvento = useCallback(async (id: string) => {
+    try {
+      const data = await fetchEvento(id)
+      setEvento(data)
+      setLoadError(null)
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el evento')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!eventoId) return
-    fetchEvento(eventoId)
-      .then(setEvento)
-      .catch((err: unknown) => {
-        setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el evento')
-      })
-      .finally(() => setLoading(false))
-  }, [eventoId])
+    setLoading(true)
+    void reloadEvento(eventoId)
+  }, [eventoId, reloadEvento])
 
   // El form devuelve el evento sin los agregados de detalle; se preservan
   function mergeSaved(result: EventoConCategoria | EventoRecord): void {
@@ -295,18 +314,37 @@ export function EventoAdminPage({ eventoId = null, onDone, onCancel }: EventoAdm
         <div className="flex gap-1 border-b border-[#4a6fad]/15 mb-5">
           <button
             type="button"
-            className="px-4 py-2 text-sm font-semibold text-[#264c99] border-b-2 border-[#264c99] -mb-px"
+            onClick={() => setTab('ficha')}
+            className={
+              tab === 'ficha'
+                ? 'px-4 py-2 text-sm font-semibold text-[#264c99] border-b-2 border-[#264c99] -mb-px'
+                : 'px-4 py-2 text-sm font-semibold text-[#757874] hover:text-[#264c99] transition-colors'
+            }
           >
             Ficha
           </button>
-          <button
-            type="button"
-            disabled
-            title="Disponible próximamente"
-            className="px-4 py-2 text-sm font-semibold text-[#757874]/50 cursor-not-allowed"
-          >
-            Postulantes
-          </button>
+          {evento ? (
+            <button
+              type="button"
+              onClick={() => setTab('postulantes')}
+              className={
+                tab === 'postulantes'
+                  ? 'px-4 py-2 text-sm font-semibold text-[#264c99] border-b-2 border-[#264c99] -mb-px'
+                  : 'px-4 py-2 text-sm font-semibold text-[#757874] hover:text-[#264c99] transition-colors'
+              }
+            >
+              Postulantes
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              title="Guarda el evento primero"
+              className="px-4 py-2 text-sm font-semibold text-[#757874]/50 cursor-not-allowed"
+            >
+              Postulantes
+            </button>
+          )}
         </div>
 
         {loading && (
@@ -326,7 +364,14 @@ export function EventoAdminPage({ eventoId = null, onDone, onCancel }: EventoAdm
           </div>
         )}
 
-        {!loading && !loadError && (
+        {!loading && !loadError && tab === 'postulantes' && evento && (
+          <PostulantesTab
+            eventoId={evento.id}
+            onFinalizado={() => void reloadEvento(evento.id)}
+          />
+        )}
+
+        {!loading && !loadError && tab === 'ficha' && (
           <>
             {/* Ciclo de vida */}
             {evento && (

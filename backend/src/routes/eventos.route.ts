@@ -14,6 +14,9 @@ import {
   publicarEvento,
   despublicarEvento,
   cancelarEvento,
+  getPostulantes,
+  finalizarEvento,
+  reenviarNotificaciones,
 } from '../controllers/eventos-admin.controller.js';
 
 const router = Router();
@@ -34,5 +37,8 @@ router.delete('/:id', requireRolAdmin, deleteEventoBorrador);
 router.post('/:id/publicar', requireRolAdmin, publicarEvento);
 router.post('/:id/despublicar', requireRolAdmin, despublicarEvento);
 router.post('/:id/cancelar', requireRolAdmin, cancelarEvento);
+router.get('/:id/postulantes', requireRolAdmin, getPostulantes);
+router.post('/:id/finalizar', requireRolAdmin, finalizarEvento);
+router.post('/:id/notificaciones/reenviar', requireRolAdmin, reenviarNotificaciones);
 
 export default router;

@@ -2,6 +2,22 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { Evento, Prisma } from '../generated/prisma/client.js';
+import {
+  despacharNotificacionesPendientes,
+  DispatchEnCursoError,
+} from '../lib/notificaciones.js';
+
+// Errores con código HTTP lanzados desde dentro de la transacción de
+// finalización; el catch del handler los mapea a la respuesta.
+class HttpError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'HttpError';
+  }
+}
 
 /**
  * UTC offset of America/Santiago for a calendar date (DST-safe). Mirrors the
@@ -405,17 +421,228 @@ export async function cancelarEvento(req: Request, res: Response): Promise<void>
       return;
     }
 
+    const estadoPrevio = evento.estado;
     const cancelado = await prisma.evento.update({
       where: { id },
       data: { estado: 'CANCELADO', canceladoAt: new Date(), motivoCancelacion: motivo },
     });
 
-    // Fase 5: encolar notificaciones EVENTO_CANCELADO para los inscritos
-    // (POSTULADO si venía de PUBLICADO, SELECCIONADO si venía de FINALIZADO).
+    // Aviso de cancelación: a los POSTULADO si venía de PUBLICADO, a los
+    // SELECCIONADO si venía de FINALIZADO. El unique de la cola evita duplicados.
+    let hayAvisos = false;
+    if (estadoPrevio === 'PUBLICADO' || estadoPrevio === 'FINALIZADO') {
+      const objetivo = estadoPrevio === 'PUBLICADO' ? 'POSTULADO' : 'SELECCIONADO';
+      const destinatarios = await prisma.inscripcion.findMany({
+        where: { eventoId: id, estado: objetivo },
+        select: { id: true },
+      });
+      if (destinatarios.length > 0) {
+        await prisma.notificacion.createMany({
+          data: destinatarios.map((d) => ({ inscripcionId: d.id, tipo: 'EVENTO_CANCELADO' as const })),
+          skipDuplicates: true,
+        });
+        hayAvisos = true;
+      }
+    }
 
     res.json(cancelado);
+
+    if (hayAvisos) {
+      despacharNotificacionesPendientes(id).catch((err) =>
+        console.error('[cancelarEvento] dispatch:', err),
+      );
+    }
   } catch (error) {
     console.error('[cancelarEvento]', error);
     res.status(500).json({ error: 'Error al cancelar el evento' });
+  }
+}
+
+// ─── Postulantes ──────────────────────────────────────────────────────────────
+
+export async function getPostulantes(req: Request, res: Response): Promise<void> {
+  const id = req.params['id'] as string;
+
+  try {
+    const evento = await prisma.evento.findUnique({
+      where: { id },
+      select: { id: true, titulo: true, cupos: true, estado: true, fechaCorte: true },
+    });
+    if (!evento) {
+      res.status(404).json({ error: 'Evento no encontrado' });
+      return;
+    }
+
+    // D10: orden de llegada. Los RETIRADO se incluyen (visibles, no
+    // seleccionables) porque le sirven al organizador como contexto.
+    const inscripciones = await prisma.inscripcion.findMany({
+      where: { eventoId: id },
+      orderBy: { postuladoAt: 'asc' },
+      include: {
+        usuario: { select: { name: true, email: true } },
+        notificaciones: {
+          select: { tipo: true, estado: true, intentos: true, ultimoError: true },
+          orderBy: { creadaAt: 'asc' },
+        },
+      },
+    });
+
+    // D8: teléfono y club salen de la ficha de integrante, cruzada por email
+    const emails = inscripciones.map((i) => i.usuario.email);
+    const integrantes = emails.length
+      ? await prisma.integrante.findMany({
+          where: { email: { in: emails, mode: 'insensitive' } },
+          select: { email: true, telefonoCelular: true, membresiaClub: true },
+        })
+      : [];
+    const fichaPorEmail = new Map(integrantes.map((i) => [i.email.toLowerCase(), i]));
+
+    res.json({
+      evento,
+      postulantes: inscripciones.map((i) => {
+        const ficha = fichaPorEmail.get(i.usuario.email.toLowerCase());
+        return {
+          id: i.id,
+          usuario: { nombre: i.usuario.name, email: i.usuario.email },
+          telefono: ficha?.telefonoCelular ?? null,
+          membresiaClub: ficha?.membresiaClub ?? null,
+          tieneVehiculo: i.tieneVehiculo,
+          cuposVehiculo: i.cuposVehiculo,
+          estado: i.estado,
+          postuladoAt: i.postuladoAt,
+          retiradoAt: i.retiradoAt,
+          notificaciones: i.notificaciones,
+        };
+      }),
+    });
+  } catch (error) {
+    console.error('[getPostulantes]', error);
+    res.status(500).json({ error: 'Error al obtener los postulantes' });
+  }
+}
+
+// ─── Finalización (F1–F5) ─────────────────────────────────────────────────────
+
+const finalizarSchema = z.object({
+  seleccionadosIds: z
+    .array(z.string().uuid('Selección inválida'))
+    .min(1, 'Selecciona al menos un participante')
+    .max(200, 'Selección demasiado grande'),
+});
+
+export async function finalizarEvento(req: Request, res: Response): Promise<void> {
+  const id = req.params['id'] as string;
+
+  const parsed = finalizarSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Datos inválidos' });
+    return;
+  }
+  const ids = [...new Set(parsed.data.seleccionadosIds)];
+
+  try {
+    const resultado = await prisma.$transaction(
+      async (tx) => {
+        // F1: FOR UPDATE serializa finalizaciones concurrentes sobre el evento
+        const filas = await tx.$queryRaw<{ id: string; cupos: number | null }[]>`
+          SELECT id, cupos FROM "eventos"
+          WHERE id = ${id} AND estado = 'PUBLICADO'::"EstadoEvento"
+          FOR UPDATE`;
+        if (filas.length === 0) {
+          throw new HttpError(409, 'El evento ya fue finalizado o cancelado');
+        }
+        const cupos = filas[0]?.cupos ?? 0;
+
+        // F2: la selección cabe en los cupos
+        if (ids.length < 1 || ids.length > cupos) {
+          throw new HttpError(422, `La selección debe tener entre 1 y ${cupos} participantes`);
+        }
+
+        // F3: todos los seleccionados siguen POSTULADO (nadie se retiró entremedio)
+        const vigentes = await tx.inscripcion.count({
+          where: { id: { in: ids }, eventoId: id, estado: 'POSTULADO' },
+        });
+        if (vigentes !== ids.length) {
+          throw new HttpError(409, 'Alguien de tu selección se retiró; recarga la lista');
+        }
+
+        const ahora = new Date();
+        await tx.inscripcion.updateMany({
+          where: { id: { in: ids } },
+          data: { estado: 'SELECCIONADO', resueltoAt: ahora },
+        });
+        // F5: solo los POSTULADO restantes pasan a NO_SELECCIONADO; RETIRADO intacto
+        const noSeleccionados = await tx.inscripcion.updateMany({
+          where: { eventoId: id, estado: 'POSTULADO' },
+          data: { estado: 'NO_SELECCIONADO', resueltoAt: ahora },
+        });
+
+        await tx.evento.update({
+          where: { id },
+          data: { estado: 'FINALIZADO', finalizadoAt: ahora, finalizadoPor: req.user!.id },
+        });
+
+        // F4: una notificación por resuelto; el unique la mantiene única aunque
+        // esta transacción se reintente o se finalice dos veces
+        const resueltas = await tx.inscripcion.findMany({
+          where: { eventoId: id, estado: { in: ['SELECCIONADO', 'NO_SELECCIONADO'] } },
+          select: { id: true, estado: true },
+        });
+        await tx.notificacion.createMany({
+          data: resueltas.map((i) => ({
+            inscripcionId: i.id,
+            tipo: i.estado === 'SELECCIONADO' ? ('SELECCIONADO' as const) : ('NO_SELECCIONADO' as const),
+          })),
+          skipDuplicates: true,
+        });
+
+        return { seleccionados: ids.length, noSeleccionados: noSeleccionados.count };
+      },
+      { timeout: 15000 },
+    );
+
+    res.json(resultado);
+
+    despacharNotificacionesPendientes(id).catch((err) =>
+      console.error('[finalizarEvento] dispatch:', err),
+    );
+  } catch (error) {
+    if (error instanceof HttpError) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
+    console.error('[finalizarEvento]', error);
+    res.status(500).json({ error: 'Error al finalizar el evento' });
+  }
+}
+
+// ─── Reenvío de notificaciones pendientes ─────────────────────────────────────
+
+export async function reenviarNotificaciones(req: Request, res: Response): Promise<void> {
+  const id = req.params['id'] as string;
+
+  try {
+    const evento = await prisma.evento.findUnique({ where: { id }, select: { id: true } });
+    if (!evento) {
+      res.status(404).json({ error: 'Evento no encontrado' });
+      return;
+    }
+
+    const { despachadas, fallidas } = await despacharNotificacionesPendientes(id);
+    const pendientes = await prisma.notificacion.count({
+      where: {
+        inscripcion: { eventoId: id },
+        estado: { in: ['PENDIENTE', 'ERROR'] },
+        intentos: { lt: 5 },
+      },
+    });
+    res.json({ despachadas, fallidas, pendientes });
+  } catch (error) {
+    if (error instanceof DispatchEnCursoError) {
+      res.status(409).json({ error: 'Ya hay un envío en curso para este evento' });
+      return;
+    }
+    console.error('[reenviarNotificaciones]', error);
+    res.status(500).json({ error: 'Error al reenviar las notificaciones' });
   }
 }

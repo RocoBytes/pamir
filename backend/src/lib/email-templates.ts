@@ -948,12 +948,24 @@ function fechaCalendarioEvento(d: Date): string {
   return `${day}-${m}-${y}`;
 }
 
-function rangoFechasEvento(evento: EventoEmailData): string {
+export function rangoFechasEvento(evento: { fechaInicio: Date | null; fechaFin: Date | null }): string {
   if (!evento.fechaInicio) return 'Por confirmar';
   const inicio = fechaCalendarioEvento(evento.fechaInicio);
   if (!evento.fechaFin) return inicio;
   const fin = fechaCalendarioEvento(evento.fechaFin);
   return inicio === fin ? inicio : `${inicio} al ${fin}`;
+}
+
+// Ficha ampliada para los correos del ciclo de vida (selección / cancelación)
+interface EventoLifecycleEmailData {
+  titulo: string;
+  fechaInicio: Date | null;
+  fechaFin: Date | null;
+  horaInicio: string | null;
+  ubicacion: string | null;
+  reunionCoordinacion: string | null;
+  organizadorNombre: string | null;
+  motivoCancelacion: string | null;
 }
 
 // fechaCorte es un instante real: se muestra en hora de Santiago
@@ -1012,6 +1024,116 @@ export function buildEventoInscripcionConfirmadaEmail(
 
   return emailShell(
     'Postulación recibida',
+    intro,
+    tabla,
+    'Este correo es una notificación automática del sistema PAMIR.',
+    nota,
+  );
+}
+
+export function buildEventoSeleccionadoEmail(nombre: string, evento: EventoLifecycleEmailData): string {
+  const intro = `<p style="margin:0;color:#1f2937;font-size:15px;">
+    Hola <strong>${escapeHtml(nombre)}</strong>, ¡buenas noticias!
+    Quedaste <strong>seleccionado/a</strong> para participar en la siguiente actividad del club.
+  </p>`;
+
+  const fecha = evento.horaInicio
+    ? `${rangoFechasEvento(evento)} · ${evento.horaInicio} h`
+    : rangoFechasEvento(evento);
+
+  const tabla = `
+    ${row('Evento', evento.titulo)}
+    ${row('Fecha', fecha)}
+    ${evento.ubicacion ? row('Ubicación', evento.ubicacion) : ''}
+    ${evento.reunionCoordinacion ? row('Reunión de coordinación (obligatoria)', evento.reunionCoordinacion) : ''}
+    ${evento.organizadorNombre ? row('Organizador', evento.organizadorNombre) : ''}
+  `;
+
+  const nota = `
+        <tr>
+          <td style="padding:0 32px 20px;">
+            <p style="margin:0 0 8px;color:#374151;font-size:13px;line-height:1.6;">
+              Recuerda revisar el <strong>equipo mínimo</strong> indicado en la ficha de la actividad
+              y mantener al día tu ficha de socio.
+            </p>
+            <p style="margin:0;color:${GRAY};font-size:13px;line-height:1.6;">
+              Si no puedes asistir, avisa al organizador a la brevedad para liberar tu cupo.
+            </p>
+          </td>
+        </tr>
+        ${eventoCtaBlock()}`;
+
+  return emailShell(
+    'Selección confirmada',
+    intro,
+    tabla,
+    'Este correo es una notificación automática del sistema PAMIR.',
+    nota,
+  );
+}
+
+export function buildEventoNoSeleccionadoEmail(
+  nombre: string,
+  evento: EventoLifecycleEmailData,
+  resumen: { cupos: number | null; postulantes: number },
+): string {
+  const cuposTexto = resumen.cupos != null ? `${resumen.cupos} cupos` : 'cupos limitados';
+
+  const intro = `<p style="margin:0;color:#1f2937;font-size:15px;">
+    Hola <strong>${escapeHtml(nombre)}</strong>, gracias por postular a esta actividad.
+    Esta vez no quedaste dentro del cupo (${escapeHtml(cuposTexto)}, ${resumen.postulantes} postulantes).
+  </p>`;
+
+  const tabla = `
+    ${row('Evento', evento.titulo)}
+    ${row('Fecha', rangoFechasEvento(evento))}
+  `;
+
+  const nota = `
+        <tr>
+          <td style="padding:0 32px 20px;">
+            <p style="margin:0;color:#374151;font-size:13px;line-height:1.6;">
+              Valoramos mucho tu interés. Te invitamos a revisar el calendario:
+              cada mes hay nuevas actividades del club.
+            </p>
+          </td>
+        </tr>
+        ${eventoCtaBlock()}`;
+
+  return emailShell(
+    'Resultado de tu postulación',
+    intro,
+    tabla,
+    'Este correo es una notificación automática del sistema PAMIR.',
+    nota,
+  );
+}
+
+export function buildEventoCanceladoEmail(nombre: string, evento: EventoLifecycleEmailData): string {
+  const intro = `<p style="margin:0;color:#1f2937;font-size:15px;">
+    Hola <strong>${escapeHtml(nombre)}</strong>, lamentamos informarte que la siguiente
+    actividad fue <strong>cancelada</strong>.
+  </p>`;
+
+  const tabla = `
+    ${row('Evento', evento.titulo)}
+    ${row('Fecha', rangoFechasEvento(evento))}
+    ${evento.motivoCancelacion ? row('Motivo', evento.motivoCancelacion) : ''}
+  `;
+
+  const nota = `
+        <tr>
+          <td style="padding:0 32px 20px;">
+            <p style="margin:0;color:#374151;font-size:13px;line-height:1.6;">
+              Sentimos los inconvenientes que esto pueda causarte. Te invitamos a revisar
+              el calendario de próximas actividades del club.
+            </p>
+          </td>
+        </tr>
+        ${eventoCtaBlock()}`;
+
+  return emailShell(
+    'Evento cancelado',
     intro,
     tabla,
     'Este correo es una notificación automática del sistema PAMIR.',
