@@ -6,6 +6,8 @@ export interface User {
   email: string
   avatar?: string
   picture?: string
+  // Opcional: sesiones guardadas antes del módulo de eventos no lo traen
+  rol?: 'SOCIO' | 'ADMIN'
 }
 
 export interface AuthState {

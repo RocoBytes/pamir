@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import type { User, AuthState } from '../types/salida'
 import { saveAuth, loadAuth, clearAuth } from '../lib/storage'
 import { setAuthToken } from '../lib/auth-token'
-import { loginWithCredentials, registerUser } from '../lib/api'
+import { loginWithCredentials, registerUser, fetchMe } from '../lib/api'
 
 interface UseAuthReturn extends AuthState {
   loginWithCredentials: (email: string, password: string) => Promise<void>
@@ -26,6 +26,25 @@ export function useAuth(): UseAuthReturn {
   useEffect(() => {
     if (state.token) setAuthToken(state.token)
   }, [state.token])
+
+  // Al montar con sesión guardada, refresca el usuario desde el servidor:
+  // corrige payloads antiguos de pamir_auth que aún no traen rol. Si el token
+  // expiró o no hay conexión, se conserva el comportamiento existente.
+  useEffect(() => {
+    const saved = loadAuth()
+    if (!saved?.token) return
+    fetchMe()
+      .then(({ user }) => {
+        setState((prev) => {
+          if (prev.token !== saved.token) return prev
+          saveAuth({ user, token: saved.token })
+          return { user, token: saved.token }
+        })
+      })
+      .catch(() => {
+        // Token inválido/expirado o red caída: no se toca el estado
+      })
+  }, [])
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
     setIsLoading(true)

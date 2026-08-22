@@ -18,6 +18,38 @@ enum SalidaStatus {
   INCIDENTE
 }
 
+enum RolUsuario {
+  SOCIO
+  ADMIN
+}
+
+enum EstadoEvento {
+  BORRADOR
+  PUBLICADO
+  FINALIZADO
+  CANCELADO
+}
+
+enum EstadoInscripcion {
+  POSTULADO
+  RETIRADO
+  SELECCIONADO
+  NO_SELECCIONADO
+}
+
+enum TipoNotificacion {
+  INSCRIPCION_CONFIRMADA
+  SELECCIONADO
+  NO_SELECCIONADO
+  EVENTO_CANCELADO
+}
+
+enum EstadoNotificacion {
+  PENDIENTE
+  ENVIADA
+  ERROR
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model User {
@@ -31,12 +63,16 @@ model User {
   verificationTokenExpiry DateTime? @map("verification_token_expiry")
   resetToken              String?   @unique @map("reset_token")
   resetTokenExpiry        DateTime? @map("reset_token_expiry")
+  rol               RolUsuario @default(SOCIO)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   salidas Salida[]
   cierres Cierre[]
   dashboardLayouts DashboardLayout[]
+  eventosCreados     Evento[]      @relation("EventoCreador")
+  eventosFinalizados Evento[]      @relation("EventoFinalizador")
+  inscripciones      Inscripcion[]
 
   @@map("users")
 }
@@ -276,4 +312,137 @@ model Integrante {
   updatedAt DateTime @updatedAt      @map("updated_at")
 
   @@map("integrantes")
+}
+
+// ─── Eventos del club ─────────────────────────────────────────────────────────
+
+// Categorías de actividades (tabla en vez de enum: agregar una nueva no
+// requiere migración). color es hex para los chips del calendario.
+model CategoriaEvento {
+  id     Int     @id @default(autoincrement())
+  slug   String  @unique
+  nombre String
+  color  String
+  orden  Int
+  activa Boolean @default(true)
+
+  eventos Evento[]
+
+  @@map("categorias_evento")
+}
+
+// Versiones de la declaración jurada del participante. El texto vive una sola
+// vez; cada inscripción referencia la versión que aceptó (evidencia auditable).
+model DeclaracionJuradaVersion {
+  id           Int       @id @default(autoincrement())
+  version      String    @unique
+  titulo       String
+  items        Json // array ordenado de strings
+  hashSha256   String    @map("hash_sha256")
+  vigenteDesde DateTime  @default(now()) @map("vigente_desde")
+  vigenteHasta DateTime? @map("vigente_hasta") // null = vigente
+
+  inscripciones Inscripcion[]
+
+  @@map("declaracion_jurada_versiones")
+}
+
+model Evento {
+  id          String       @id @default(uuid())
+  titulo      String
+  categoriaId Int          @map("categoria_id")
+  estado      EstadoEvento @default(BORRADOR)
+
+  // Cabecera (ficha)
+  fechaInicio         DateTime @map("fecha_inicio")
+  horaInicio          String?  @map("hora_inicio")
+  fechaFin            DateTime @map("fecha_fin")
+  duracionTexto       String?  @map("duracion_texto")
+  ubicacion           String?
+  reunionCoordinacion String?  @map("reunion_coordinacion")
+  organizadorNombre   String?  @map("organizador_nombre")
+  alturaMaximaMsnm    Int?     @map("altura_maxima_msnm")
+  dificultad          Int?
+  costoTexto          String?  @map("costo_texto")
+
+  // Cupos e inscripción. fechaCorte es un instante UTC; el cierre de
+  // inscripciones se deriva de now() >= fechaCorte (sin cron).
+  cupos      Int?
+  fechaCorte DateTime? @map("fecha_corte")
+
+  // Contenido — la completitud se exige al publicar, no en el borrador
+  objetivo        String?
+  itinerario      String?
+  incluye         String?
+  noIncluye       String? @map("no_incluye")
+  recomendaciones String?
+  avisoDestacado  String? @map("aviso_destacado")
+
+  // Auditoría
+  creadoPor         String    @map("creado_por")
+  creadoAt          DateTime  @default(now()) @map("creado_at")
+  actualizadoAt     DateTime  @updatedAt @map("actualizado_at")
+  publicadoAt       DateTime? @map("publicado_at")
+  finalizadoAt      DateTime? @map("finalizado_at")
+  finalizadoPor     String?   @map("finalizado_por")
+  canceladoAt       DateTime? @map("cancelado_at")
+  motivoCancelacion String?   @map("motivo_cancelacion")
+
+  categoria     CategoriaEvento @relation(fields: [categoriaId], references: [id])
+  creador       User            @relation("EventoCreador", fields: [creadoPor], references: [id])
+  finalizador   User?           @relation("EventoFinalizador", fields: [finalizadoPor], references: [id])
+  inscripciones Inscripcion[]
+
+  @@index([estado, fechaInicio])
+  @@index([categoriaId])
+  @@map("eventos")
+}
+
+// onDelete Restrict: un evento con postulantes no se borra, se cancela.
+model Inscripcion {
+  id        String            @id @default(uuid())
+  eventoId  String            @map("evento_id")
+  usuarioId String            @map("usuario_id")
+  estado    EstadoInscripcion @default(POSTULADO)
+
+  tieneVehiculo Boolean @map("tiene_vehiculo")
+  cuposVehiculo Int?    @map("cupos_vehiculo")
+
+  declaracionVersionId  Int      @map("declaracion_version_id")
+  declaracionAceptadaAt DateTime @map("declaracion_aceptada_at")
+  declaracionIp         String?  @map("declaracion_ip")
+  declaracionUserAgent  String?  @map("declaracion_user_agent")
+
+  postuladoAt DateTime  @default(now()) @map("postulado_at")
+  retiradoAt  DateTime? @map("retirado_at")
+  resueltoAt  DateTime? @map("resuelto_at")
+
+  evento             Evento                   @relation(fields: [eventoId], references: [id], onDelete: Restrict)
+  usuario            User                     @relation(fields: [usuarioId], references: [id])
+  declaracionVersion DeclaracionJuradaVersion @relation(fields: [declaracionVersionId], references: [id])
+  notificaciones     Notificacion[]
+
+  @@unique([eventoId, usuarioId])
+  @@index([eventoId, estado])
+  @@map("inscripciones")
+}
+
+// Cola mínima de correos en Postgres. El unique (inscripcionId, tipo)
+// garantiza que finalizar dos veces o reenviar jamás duplica un correo.
+model Notificacion {
+  id            String             @id @default(uuid())
+  inscripcionId String             @map("inscripcion_id")
+  tipo          TipoNotificacion
+  estado        EstadoNotificacion @default(PENDIENTE)
+  intentos      Int                @default(0)
+  ultimoError   String?            @map("ultimo_error")
+  proveedorId   String?            @map("proveedor_id")
+  creadaAt      DateTime           @default(now()) @map("creada_at")
+  enviadaAt     DateTime?          @map("enviada_at")
+
+  inscripcion Inscripcion @relation(fields: [inscripcionId], references: [id], onDelete: Cascade)
+
+  @@unique([inscripcionId, tipo])
+  @@index([estado])
+  @@map("notificaciones")
 }

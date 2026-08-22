@@ -129,11 +129,25 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     res.json({
       token,
-      user: { id: user.id, email: user.email, name: user.name, picture: user.picture ?? undefined },
+      user: { id: user.id, email: user.email, name: user.name, picture: user.picture ?? undefined, rol: user.rol },
     });
   } catch (error) {
     console.error('[login]', error);
     res.status(500).json({ error: 'Error al iniciar sesión' });
+  }
+}
+
+// ─── Me ───────────────────────────────────────────────────────────────────────
+
+// Usuario autenticado actual. authMiddleware ya lo cargó fresco desde la base
+// de datos, por lo que rol siempre refleja el valor vigente.
+export async function getMe(req: Request, res: Response): Promise<void> {
+  try {
+    const { id, email, name, rol } = req.user!;
+    res.json({ user: { id, email, name, rol } });
+  } catch (error) {
+    console.error('[getMe]', error);
+    res.status(500).json({ error: 'Error al obtener el usuario' });
   }
 }
 

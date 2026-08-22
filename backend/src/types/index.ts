@@ -2,6 +2,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
+  rol: 'SOCIO' | 'ADMIN';
 }
 
 // Augments Express's Request interface to add req.user

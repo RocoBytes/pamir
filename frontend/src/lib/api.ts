@@ -74,6 +74,13 @@ export async function resetPassword(
   return handleResponse<{ message: string }>(res)
 }
 
+export async function fetchMe(): Promise<{ user: User }> {
+  const res = await fetch(`${API_BASE}/me`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<{ user: User }>(res)
+}
+
 // ─── Salidas ──────────────────────────────────────────────────────────────────
 
 export async function fetchSalidas(): Promise<SalidaRecord[]> {

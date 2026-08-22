@@ -21,7 +21,7 @@ export async function authMiddleware(
     const { userId } = verifyToken(token);
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
-    req.user = user ? { id: user.id, email: user.email, name: user.name } : null;
+    req.user = user ? { id: user.id, email: user.email, name: user.name, rol: user.rol } : null;
   } catch {
     req.user = null;
   }
@@ -47,6 +47,20 @@ export function requireAdmin(
   next: NextFunction,
 ): void {
   if (!req.user || req.user.email !== ADMIN_EMAIL) {
+    res.status(403).json({ error: 'Acceso restringido al administrador' });
+    return;
+  }
+  next();
+}
+
+// Autorización por columna rol (módulo de eventos): promover a un nuevo
+// administrador es un UPDATE en la base de datos, sin redeploy.
+export function requireRolAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (req.user?.rol !== 'ADMIN') {
     res.status(403).json({ error: 'Acceso restringido al administrador' });
     return;
   }
