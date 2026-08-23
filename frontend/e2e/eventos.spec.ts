@@ -9,11 +9,11 @@ import {
 } from './helpers'
 
 const MOCK_CATEGORIA = {
-  id: 4,
-  slug: 'trekking',
-  nombre: 'Trekking',
-  color: '#8B6A4F',
-  orden: 4,
+  id: 3,
+  slug: 'senderismo',
+  nombre: 'Senderismo',
+  color: '#4E805D',
+  orden: 3,
   activa: true,
 }
 
@@ -36,7 +36,6 @@ const MOCK_EVENTO = {
   organizadorNombre: 'María Organizadora',
   alturaMaximaMsnm: 2750,
   dificultad: 3,
-  costoTexto: null,
   cupos: 12,
   fechaCorte: corteIso,
   objetivo: 'Cumbre del Cerro Provincia',
@@ -147,9 +146,9 @@ test.describe('Eventos del club – socio', () => {
 
     await expect(page.getByRole('heading', { name: 'Eventos del club' })).toBeVisible()
     await expect(page.getByText('Trekking Cerro Provincia')).toBeVisible()
-    // Badge de categoría dentro de la tarjeta (el chip de filtro también dice Trekking)
+    // Badge de categoría dentro de la tarjeta (el chip de filtro también dice Senderismo)
     const card = page.locator('button', { hasText: 'Trekking Cerro Provincia' })
-    await expect(card.getByText('Trekking', { exact: true })).toBeVisible()
+    await expect(card.getByText('Senderismo', { exact: true })).toBeVisible()
     await expect(card.getByText(/Inscripciones abiertas/)).toBeVisible()
     await expect(card.getByText('12 cupos · 3 postulantes')).toBeVisible()
   })
@@ -446,7 +445,7 @@ const CAT_CURSOS = {
   slug: 'cursos-talleres',
   nombre: 'Cursos y talleres',
   color: '#29A8DF',
-  orden: 5,
+  orden: 4,
   activa: true,
 }
 
@@ -535,8 +534,8 @@ test.describe('Eventos del club – calendario', () => {
     expect(bg).toBe('rgb(41, 168, 223)') // #29A8DF
     await expect(page.locator('button[title="Travesía Multi"]').first()).toBeVisible()
 
-    // Chip de filtro 'Trekking' (exact para no matchear los chips del calendario)
-    await page.getByRole('button', { name: 'Trekking', exact: true }).click()
+    // Chip de filtro 'Senderismo' (exact para no matchear los chips del calendario)
+    await page.getByRole('button', { name: 'Senderismo', exact: true }).click()
     await expect(page.locator('button[title="Curso Nudos"]')).toHaveCount(0)
     await expect(page.locator('button[title="Travesía Multi"]').first()).toBeVisible()
   })
