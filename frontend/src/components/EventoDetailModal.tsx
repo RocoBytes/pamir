@@ -218,7 +218,6 @@ export function EventoDetailModal({ eventoId, onClose, isEventosAdmin = false, o
                   value={`${evento.alturaMaximaMsnm.toLocaleString('es-CL')} msnm`}
                 />
               )}
-              {evento.costoTexto && <FilaFicha label="Costo" value={evento.costoTexto} />}
               {evento.cupos !== null && (
                 <FilaFicha
                   label="Cupos"

@@ -364,7 +364,6 @@ model Evento {
   organizadorNombre   String?  @map("organizador_nombre")
   alturaMaximaMsnm    Int?     @map("altura_maxima_msnm")
   dificultad          Int?
-  costoTexto          String?  @map("costo_texto")
 
   // Cupos e inscripción. fechaCorte es un instante UTC; el cierre de
   // inscripciones se deriva de now() >= fechaCorte (sin cron).

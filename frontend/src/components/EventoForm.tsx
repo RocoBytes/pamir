@@ -33,7 +33,6 @@ const eventoFormSchema = z
       .string()
       .refine((v) => v === '' || (/^\d+$/.test(v) && Number(v) <= 9000), 'Entre 0 y 9000 msnm'),
     dificultad: z.string(),
-    costoTexto: texto300,
     avisoDestacado: texto300,
     cupos: z
       .string()
@@ -96,7 +95,6 @@ function buildDefaults(evento: EventoDetail | null): EventoFormValues {
     organizadorNombre: evento?.organizadorNombre ?? '',
     alturaMaximaMsnm: evento?.alturaMaximaMsnm != null ? String(evento.alturaMaximaMsnm) : '',
     dificultad: evento?.dificultad != null ? String(evento.dificultad) : '',
-    costoTexto: evento?.costoTexto ?? '',
     avisoDestacado: evento?.avisoDestacado ?? '',
     cupos: evento?.cupos != null ? String(evento.cupos) : '',
     fechaCorteFecha: corte?.fecha ?? '',
@@ -122,7 +120,6 @@ function toPayload(values: EventoFormValues): EventoPayload {
     organizadorNombre: values.organizadorNombre || null,
     alturaMaximaMsnm: values.alturaMaximaMsnm ? Number(values.alturaMaximaMsnm) : null,
     dificultad: values.dificultad ? Number(values.dificultad) : null,
-    costoTexto: values.costoTexto || null,
     avisoDestacado: values.avisoDestacado || null,
     cupos: values.cupos ? Number(values.cupos) : null,
     fechaCorte:
@@ -348,13 +345,6 @@ export function EventoForm({ evento, onSaved }: EventoFormProps) {
             {...register('dificultad')}
           />
         </div>
-
-        <Input
-          label="Costo"
-          placeholder="Ej: Socios al día sin costo. No socios $15.000"
-          error={errors.costoTexto?.message}
-          {...register('costoTexto')}
-        />
 
         <Input
           label="Aviso destacado"

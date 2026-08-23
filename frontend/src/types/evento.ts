@@ -35,7 +35,6 @@ export interface EventoRecord {
   organizadorNombre: string | null
   alturaMaximaMsnm: number | null
   dificultad: number | null
-  costoTexto: string | null
   cupos: number | null
   fechaCorte: string | null
   objetivo: string | null
@@ -168,7 +167,6 @@ export interface EventoPayload {
   organizadorNombre?: string | null
   alturaMaximaMsnm?: number | null
   dificultad?: number | null
-  costoTexto?: string | null
   cupos?: number | null
   fechaCorte?: { fecha: string; hora: string } | null
   objetivo?: string | null

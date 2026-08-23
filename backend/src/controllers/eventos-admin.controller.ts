@@ -87,7 +87,6 @@ const fichaShape = {
     .max(5, 'La dificultad debe estar entre 1 y 5')
     .nullable()
     .optional(),
-  costoTexto: texto300.nullable().optional(),
   cupos: z
     .number()
     .int('Los cupos deben ser un número entero')
@@ -133,7 +132,6 @@ function toEventoData(data: FichaInput): Prisma.EventoUncheckedUpdateInput {
   if (data.organizadorNombre !== undefined) out.organizadorNombre = texto(data.organizadorNombre);
   if (data.alturaMaximaMsnm !== undefined) out.alturaMaximaMsnm = data.alturaMaximaMsnm;
   if (data.dificultad !== undefined) out.dificultad = data.dificultad;
-  if (data.costoTexto !== undefined) out.costoTexto = texto(data.costoTexto);
   if (data.cupos !== undefined) out.cupos = data.cupos;
   if (data.fechaCorte !== undefined) out.fechaCorte = data.fechaCorte ? composeFechaCorte(data.fechaCorte) : null;
   if (data.objetivo !== undefined) out.objetivo = texto(data.objetivo);
