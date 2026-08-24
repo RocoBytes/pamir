@@ -43,8 +43,10 @@ export default function App() {
 
   const isAuthenticated = !!(user && token)
   const isAdmin = user?.email === ADMIN_EMAIL
-  // Autorización del módulo de eventos: por rol en DB, no por email
-  const isEventosAdmin = user?.rol === 'ADMIN'
+  // Autorización del módulo de eventos: por rol/gestores en DB, no por email
+  const esAdminEventos = user?.rol === 'ADMIN'
+  const gestorCategoriaIds = user?.gestorCategorias?.map((g) => g.categoriaId) ?? []
+  const puedeGestionarEventos = esAdminEventos || gestorCategoriaIds.length > 0
   const hasIntegrante = integrante !== null
   const isSocioPamir = integrante?.membresiaClub === 'SOCIO_ANDINO_PAMIR'
 
@@ -148,7 +150,9 @@ export default function App() {
   if (route === 'eventos') {
     return (
       <EventosPage
-        isEventosAdmin={isEventosAdmin}
+        puedeGestionar={puedeGestionarEventos}
+        esAdminEventos={esAdminEventos}
+        gestorCategoriaIds={gestorCategoriaIds}
         onBack={() => setRoute('dashboard')}
         onCrearEvento={() => setRoute('crear-evento')}
         onGestionarEvento={(id) => { setActionEventoId(id); setRoute('gestionar-evento') }}
@@ -156,20 +160,24 @@ export default function App() {
     )
   }
 
-  if (route === 'crear-evento' && isEventosAdmin) {
+  if (route === 'crear-evento' && puedeGestionarEventos) {
     return (
       <EventoAdminPage
         eventoId={null}
+        esAdminEventos={esAdminEventos}
+        gestorCategoriaIds={gestorCategoriaIds}
         onDone={() => setRoute('eventos')}
         onCancel={() => setRoute('eventos')}
       />
     )
   }
 
-  if (route === 'gestionar-evento' && isEventosAdmin && actionEventoId) {
+  if (route === 'gestionar-evento' && puedeGestionarEventos && actionEventoId) {
     return (
       <EventoAdminPage
         eventoId={actionEventoId}
+        esAdminEventos={esAdminEventos}
+        gestorCategoriaIds={gestorCategoriaIds}
         onDone={() => { setActionEventoId(null); setRoute('eventos') }}
         onCancel={() => { setActionEventoId(null); setRoute('eventos') }}
       />

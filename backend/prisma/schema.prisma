@@ -73,6 +73,7 @@ model User {
   eventosCreados     Evento[]      @relation("EventoCreador")
   eventosFinalizados Evento[]      @relation("EventoFinalizador")
   inscripciones      Inscripcion[]
+  gestorCategorias   GestorCategoria[]
 
   @@map("users")
 }
@@ -326,9 +327,27 @@ model CategoriaEvento {
   orden  Int
   activa Boolean @default(true)
 
-  eventos Evento[]
+  eventos  Evento[]
+  gestores GestorCategoria[]
 
   @@map("categorias_evento")
+}
+
+// Gestores por categoría: cada gestor crea y administra eventos solo de sus
+// categorías asignadas (el rol ADMIN mantiene acceso total). Las asignaciones
+// se administran por SQL directo en esta iteración.
+model GestorCategoria {
+  id          Int      @id @default(autoincrement())
+  usuarioId   String   @map("usuario_id")
+  categoriaId Int      @map("categoria_id")
+  creadoAt    DateTime @default(now()) @map("creado_at")
+
+  usuario   User            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  categoria CategoriaEvento @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, categoriaId])
+  @@index([usuarioId])
+  @@map("gestores_categoria")
 }
 
 // Versiones de la declaración jurada del participante. El texto vive una sola
@@ -388,7 +407,8 @@ model Evento {
   canceladoAt       DateTime? @map("cancelado_at")
   motivoCancelacion String?   @map("motivo_cancelacion")
 
-  categoria     CategoriaEvento? @relation(fields: [categoriaId], references: [id])
+  // Restrict explícito: una categoría en uso no se borra (se reasigna antes)
+  categoria     CategoriaEvento? @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
   creador       User            @relation("EventoCreador", fields: [creadoPor], references: [id])
   finalizador   User?           @relation("EventoFinalizador", fields: [finalizadoPor], references: [id])
   inscripciones Inscripcion[]

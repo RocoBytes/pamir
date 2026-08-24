@@ -17,6 +17,7 @@ import {
   deriveEstadoVisible,
   formatCorteSantiago,
   formatRangoFechas,
+  puedeGestionarCategoria,
 } from '../types/evento'
 import { fetchEvento, retirarseEvento } from '../lib/api'
 import { Button } from './ui/Button'
@@ -25,8 +26,9 @@ import { InscripcionModal } from './InscripcionModal'
 interface EventoDetailModalProps {
   eventoId: string
   onClose: () => void
-  /** Habilita el botón Gestionar (rol ADMIN de eventos). */
-  isEventosAdmin?: boolean
+  /** Habilitan el botón Gestionar (admin o gestor de la categoría del evento). */
+  esAdminEventos?: boolean
+  gestorCategoriaIds?: number[]
   onGestionar?: (id: string) => void
   /** Notifica inscripción/retiro para que la lista se refresque. */
   onChanged?: () => void
@@ -50,7 +52,14 @@ function SeccionTexto({ titulo, texto }: { titulo: string; texto: string }) {
   )
 }
 
-export function EventoDetailModal({ eventoId, onClose, isEventosAdmin = false, onGestionar, onChanged }: EventoDetailModalProps) {
+export function EventoDetailModal({
+  eventoId,
+  onClose,
+  esAdminEventos = false,
+  gestorCategoriaIds = [],
+  onGestionar,
+  onChanged,
+}: EventoDetailModalProps) {
   const [evento, setEvento] = useState<EventoDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -348,7 +357,7 @@ export function EventoDetailModal({ eventoId, onClose, isEventosAdmin = false, o
           <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto">
             Cerrar
           </Button>
-          {isEventosAdmin && onGestionar && (
+          {puedeGestionarCategoria(esAdminEventos, gestorCategoriaIds, evento.categoriaId) && onGestionar && (
             <Button variant="secondary" onClick={() => onGestionar(evento.id)} className="w-full sm:w-auto">
               <Settings2 size={16} />
               Gestionar

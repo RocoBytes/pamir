@@ -126,10 +126,11 @@ export async function login(req: Request, res: Response): Promise<void> {
     }
 
     const token = signToken({ userId: user.id, email: user.email });
+    const gestorCategorias = await gestorCategoriasDe(user.id);
 
     res.json({
       token,
-      user: { id: user.id, email: user.email, name: user.name, picture: user.picture ?? undefined, rol: user.rol },
+      user: { id: user.id, email: user.email, name: user.name, picture: user.picture ?? undefined, rol: user.rol, gestorCategorias },
     });
   } catch (error) {
     console.error('[login]', error);
@@ -139,12 +140,23 @@ export async function login(req: Request, res: Response): Promise<void> {
 
 // ─── Me ───────────────────────────────────────────────────────────────────────
 
+// Categorías de eventos que el usuario gestiona (vacío para la mayoría)
+async function gestorCategoriasDe(userId: string): Promise<{ categoriaId: number; slug: string }[]> {
+  const filas = await prisma.gestorCategoria.findMany({
+    where: { usuarioId: userId },
+    select: { categoriaId: true, categoria: { select: { slug: true } } },
+    orderBy: { categoriaId: 'asc' },
+  });
+  return filas.map((f) => ({ categoriaId: f.categoriaId, slug: f.categoria.slug }));
+}
+
 // Usuario autenticado actual. authMiddleware ya lo cargó fresco desde la base
 // de datos, por lo que rol siempre refleja el valor vigente.
 export async function getMe(req: Request, res: Response): Promise<void> {
   try {
     const { id, email, name, rol } = req.user!;
-    res.json({ user: { id, email, name, rol } });
+    const gestorCategorias = await gestorCategoriasDe(id);
+    res.json({ user: { id, email, name, rol, gestorCategorias } });
   } catch (error) {
     console.error('[getMe]', error);
     res.status(500).json({ error: 'Error al obtener el usuario' });

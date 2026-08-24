@@ -6,6 +6,7 @@ import {
   mockSalidas,
   MOCK_USER,
   MOCK_ADMIN,
+  MOCK_GESTOR,
 } from './helpers'
 
 const MOCK_CATEGORIA = {
@@ -415,6 +416,76 @@ test.describe('Eventos del club – postulantes (admin)', () => {
     await expect(reenviar).toBeVisible()
     await reenviar.click()
     await expect(page.getByText(/Reenvío completado: 1 enviadas · 0 fallidas · 0 pendientes/)).toBeVisible()
+  })
+})
+
+// ─── Gestores por categoría ──────────────────────────────────────────────────
+
+const CAT_M1 = {
+  id: 1,
+  slug: 'montanismo-n1',
+  nombre: 'Montañismo N°1',
+  color: '#E8862E',
+  orden: 1,
+  activa: true,
+}
+
+const EV_M1 = {
+  ...MOCK_EVENTO,
+  id: 'evento-m1-001',
+  titulo: 'Salida Montaña Uno',
+  categoriaId: 1,
+  categoria: CAT_M1,
+}
+
+/** Lista con dos eventos de categorías distintas (montanismo-n1 + senderismo) */
+async function mockEventosDosCategorias(page: Page) {
+  await page.route('**/api/eventos/categorias', (route: Route) => {
+    void route.fulfill({ status: 200, json: [CAT_M1, MOCK_CATEGORIA] })
+  })
+  const responder = (route: Route) => {
+    void route.fulfill({ status: 200, json: [EV_M1, MOCK_EVENTO] })
+  }
+  await page.route('**/api/eventos', responder)
+  await page.route('**/api/eventos?*', responder)
+}
+
+test.describe('Eventos del club – gestor de categoría', () => {
+  test.beforeEach(async ({ page }) => {
+    await setAuth(page, MOCK_GESTOR)
+    await mockMe(page, MOCK_GESTOR)
+    await mockHasIntegrante(page)
+    await mockSalidas(page)
+    await mockEventosDosCategorias(page)
+  })
+
+  test('el gestor ve Crear evento y Gestionar solo en su categoría', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Abrir eventos del club' }).click()
+    await page.getByRole('button', { name: 'Lista' }).click()
+
+    await expect(page.getByRole('button', { name: /Crear evento/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Gestionar Salida Montaña Uno' })).toBeVisible()
+    await expect(
+      page.getByRole('button', { name: 'Gestionar Trekking Cerro Provincia' }),
+    ).toHaveCount(0)
+  })
+
+  test('el formulario de creación solo ofrece sus categorías y la exige', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Abrir eventos del club' }).click()
+    await page.getByRole('button', { name: /Crear evento/ }).click()
+
+    await expect(page.getByRole('heading', { name: 'Crear evento' })).toBeVisible()
+    const opciones = page.locator('#categoría option')
+    await expect(opciones).toHaveCount(2)
+    await expect(opciones.nth(0)).toHaveText('— Selecciona —')
+    await expect(opciones.nth(1)).toHaveText('Montañismo N°1')
+
+    // Sin categoría el guardado se bloquea client-side
+    await page.getByLabel(/Título/).fill('Prueba gestor')
+    await page.getByRole('button', { name: 'Guardar borrador' }).click()
+    await expect(page.getByText('Selecciona la categoría')).toBeVisible()
   })
 })
 

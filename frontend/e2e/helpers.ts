@@ -5,6 +5,7 @@ export const MOCK_USER = {
   email: 'test@example.com',
   name: 'Test Alpinista',
   rol: 'SOCIO',
+  gestorCategorias: [],
 }
 
 export const MOCK_ADMIN = {
@@ -12,6 +13,16 @@ export const MOCK_ADMIN = {
   email: 'seguridad.acp.cl@gmail.com',
   name: 'Admin Seguridad',
   rol: 'ADMIN',
+  gestorCategorias: [],
+}
+
+/** Gestor de eventos: socio con una categoría asignada (montanismo-n1) */
+export const MOCK_GESTOR = {
+  id: 'user-gestor-001',
+  email: 'gestor@example.com',
+  name: 'Gestora Montaña',
+  rol: 'SOCIO',
+  gestorCategorias: [{ categoriaId: 1, slug: 'montanismo-n1' }],
 }
 
 export const MOCK_INTEGRANTE = {

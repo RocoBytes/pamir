@@ -10,5 +10,8 @@ export interface AuthUser {
 declare module 'express-serve-static-core' {
   interface Request {
     user: AuthUser | null;
+    // Categorías de eventos que el usuario gestiona; null = acceso total (ADMIN).
+    // Lo llena requireGestorEventos.
+    gestorCategoriaIds?: number[] | null;
   }
 }

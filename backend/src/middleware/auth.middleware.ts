@@ -66,3 +66,37 @@ export function requireRolAdmin(
   }
   next();
 }
+
+// Gestión de eventos por categoría: el ADMIN pasa siempre (gestorCategoriaIds
+// null = sin restricción); un gestor pasa con sus categorías asignadas en
+// req.gestorCategoriaIds. Asignar un gestor es un INSERT en gestores_categoria.
+export async function requireGestorEventos(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (!req.user) {
+    res.status(403).json({ error: 'Acceso restringido a gestores de eventos' });
+    return;
+  }
+  if (req.user.rol === 'ADMIN') {
+    req.gestorCategoriaIds = null;
+    return next();
+  }
+
+  try {
+    const filas = await prisma.gestorCategoria.findMany({
+      where: { usuarioId: req.user.id },
+      select: { categoriaId: true },
+    });
+    if (filas.length === 0) {
+      res.status(403).json({ error: 'Acceso restringido a gestores de eventos' });
+      return;
+    }
+    req.gestorCategoriaIds = filas.map((f) => f.categoriaId);
+    next();
+  } catch (error) {
+    console.error('[requireGestorEventos]', error);
+    res.status(500).json({ error: 'Error de autorización' });
+  }
+}

@@ -202,11 +202,19 @@ type AccionConfirmable = 'publicar' | 'despublicar' | 'cancelar' | 'eliminar'
 interface EventoAdminPageProps {
   /** null = modo creación */
   eventoId?: string | null
+  esAdminEventos?: boolean
+  gestorCategoriaIds?: number[]
   onDone: () => void
   onCancel: () => void
 }
 
-export function EventoAdminPage({ eventoId = null, onDone, onCancel }: EventoAdminPageProps) {
+export function EventoAdminPage({
+  eventoId = null,
+  esAdminEventos = false,
+  gestorCategoriaIds = [],
+  onDone,
+  onCancel,
+}: EventoAdminPageProps) {
   const [evento, setEvento] = useState<EventoDetail | null>(null)
   const [loading, setLoading] = useState(eventoId !== null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -438,7 +446,13 @@ export function EventoAdminPage({ eventoId = null, onDone, onCancel }: EventoAdm
             ) : evento?.estado === 'FINALIZADO' ? (
               <AvisoEditor evento={evento} onSaved={mergeSaved} />
             ) : (
-              <EventoForm key={evento?.id ?? 'nuevo'} evento={evento} onSaved={mergeSaved} />
+              <EventoForm
+                key={evento?.id ?? 'nuevo'}
+                evento={evento}
+                esAdminEventos={esAdminEventos}
+                gestorCategoriaIds={gestorCategoriaIds}
+                onSaved={mergeSaved}
+              />
             )}
           </>
         )}

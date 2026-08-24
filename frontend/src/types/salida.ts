@@ -8,6 +8,8 @@ export interface User {
   picture?: string
   // Opcional: sesiones guardadas antes del módulo de eventos no lo traen
   rol?: 'SOCIO' | 'ADMIN'
+  // Categorías de eventos que el usuario gestiona (gestores por categoría)
+  gestorCategorias?: { categoriaId: number; slug: string }[]
 }
 
 export interface AuthState {

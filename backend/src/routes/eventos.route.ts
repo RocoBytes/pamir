@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware, requireAuth, requireRolAdmin } from '../middleware/auth.middleware.js';
+import { authMiddleware, requireAuth, requireGestorEventos } from '../middleware/auth.middleware.js';
 import {
   getCategorias,
   getEventos,
@@ -31,14 +31,14 @@ router.get('/:id', getEventoById);
 router.post('/:id/inscripcion', inscribirse);
 router.delete('/:id/inscripcion', retirarse);
 
-router.post('/', requireRolAdmin, createEvento);
-router.put('/:id', requireRolAdmin, updateEvento);
-router.delete('/:id', requireRolAdmin, deleteEventoBorrador);
-router.post('/:id/publicar', requireRolAdmin, publicarEvento);
-router.post('/:id/despublicar', requireRolAdmin, despublicarEvento);
-router.post('/:id/cancelar', requireRolAdmin, cancelarEvento);
-router.get('/:id/postulantes', requireRolAdmin, getPostulantes);
-router.post('/:id/finalizar', requireRolAdmin, finalizarEvento);
-router.post('/:id/notificaciones/reenviar', requireRolAdmin, reenviarNotificaciones);
+router.post('/', requireGestorEventos, createEvento);
+router.put('/:id', requireGestorEventos, updateEvento);
+router.delete('/:id', requireGestorEventos, deleteEventoBorrador);
+router.post('/:id/publicar', requireGestorEventos, publicarEvento);
+router.post('/:id/despublicar', requireGestorEventos, despublicarEvento);
+router.post('/:id/cancelar', requireGestorEventos, cancelarEvento);
+router.get('/:id/postulantes', requireGestorEventos, getPostulantes);
+router.post('/:id/finalizar', requireGestorEventos, finalizarEvento);
+router.post('/:id/notificaciones/reenviar', requireGestorEventos, reenviarNotificaciones);
 
 export default router;

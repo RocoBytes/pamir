@@ -271,6 +271,20 @@ export function deriveEstadoVisible(evento: EventoRecord, now: Date = new Date()
   }
 }
 
+// ─── Gestores por categoría ──────────────────────────────────────────────────
+
+// El admin gestiona todo; un gestor solo sus categorías. Un evento sin
+// categoría (borrador del admin) solo lo gestiona el admin.
+export function puedeGestionarCategoria(
+  esAdmin: boolean,
+  gestorCategoriaIds: number[],
+  categoriaId: number | null,
+): boolean {
+  if (esAdmin) return true
+  if (categoriaId === null) return false
+  return gestorCategoriaIds.includes(categoriaId)
+}
+
 // ─── Chips de categoría ──────────────────────────────────────────────────────
 
 // Texto oscuro sobre colores claros (amarillo/celeste) vía luminancia relativa

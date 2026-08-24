@@ -180,13 +180,17 @@ const CampoTextarea = forwardRef<HTMLTextAreaElement, CampoTextareaProps>(functi
 interface EventoFormProps {
   /** null = crear un borrador nuevo */
   evento: EventoDetail | null
+  esAdminEventos?: boolean
+  gestorCategoriaIds?: number[]
   onSaved: (evento: EventoConCategoria) => void
 }
 
-export function EventoForm({ evento, onSaved }: EventoFormProps) {
+export function EventoForm({ evento, esAdminEventos = false, gestorCategoriaIds = [], onSaved }: EventoFormProps) {
   const [categorias, setCategorias] = useState<CategoriaEventoRecord[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // Un gestor crea siempre dentro de una de sus categorías (espejo del backend)
+  const categoriaObligatoria = !esAdminEventos
 
   const {
     register,
@@ -195,6 +199,7 @@ export function EventoForm({ evento, onSaved }: EventoFormProps) {
     watch,
     getValues,
     setValue,
+    setError: setFieldError,
     formState: { errors, dirtyFields },
   } = useForm<EventoFormValues>({
     resolver: zodResolver(eventoFormSchema),
@@ -227,6 +232,10 @@ export function EventoForm({ evento, onSaved }: EventoFormProps) {
     evento !== null && evento.estado === 'PUBLICADO' && evento.totalPostulantes > 0 && camposSensiblesEditados
 
   async function onSubmit(values: EventoFormValues): Promise<void> {
+    if (categoriaObligatoria && !values.categoriaId) {
+      setFieldError('categoriaId', { type: 'manual', message: 'Selecciona la categoría' })
+      return
+    }
     setSaving(true)
     setSubmitError(null)
     try {
@@ -241,9 +250,13 @@ export function EventoForm({ evento, onSaved }: EventoFormProps) {
     }
   }
 
+  // El gestor solo elige entre sus categorías; el admin ve todas
+  const categoriasElegibles = esAdminEventos
+    ? categorias
+    : categorias.filter((c) => gestorCategoriaIds.includes(c.id))
   const categoriaOptions = [
-    { value: '', label: '— Sin categoría —' },
-    ...categorias.map((c) => ({ value: String(c.id), label: c.nombre })),
+    { value: '', label: categoriaObligatoria ? '— Selecciona —' : '— Sin categoría —' },
+    ...categoriasElegibles.map((c) => ({ value: String(c.id), label: c.nombre })),
   ]
   const dificultadOptions = [
     { value: '', label: '— Sin definir —' },
@@ -266,6 +279,7 @@ export function EventoForm({ evento, onSaved }: EventoFormProps) {
 
         <Select
           label="Categoría"
+          required={categoriaObligatoria}
           options={categoriaOptions}
           error={errors.categoriaId?.message}
           {...register('categoriaId')}

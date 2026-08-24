@@ -14,6 +14,7 @@ import {
 import logoPamir from '../assets/logo_PAMIR.png'
 
 import type { CategoriaEventoRecord, EventoListItem } from '../types/evento'
+import { puedeGestionarCategoria } from '../types/evento'
 import { fetchCategoriasEvento, fetchEventos } from '../lib/api'
 import { Button } from './ui/Button'
 import { EventoCard } from './EventoCard'
@@ -44,13 +45,23 @@ function shiftMes(mes: string, delta: number): string {
 }
 
 interface EventosPageProps {
-  isEventosAdmin?: boolean
+  /** Puede crear/gestionar eventos (admin o gestor de alguna categoría). */
+  puedeGestionar?: boolean
+  esAdminEventos?: boolean
+  gestorCategoriaIds?: number[]
   onBack: () => void
   onCrearEvento: () => void
   onGestionarEvento: (id: string) => void
 }
 
-export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onGestionarEvento }: EventosPageProps) {
+export function EventosPage({
+  puedeGestionar = false,
+  esAdminEventos = false,
+  gestorCategoriaIds = [],
+  onBack,
+  onCrearEvento,
+  onGestionarEvento,
+}: EventosPageProps) {
   const [categorias, setCategorias] = useState<CategoriaEventoRecord[]>([])
   const [eventos, setEventos] = useState<EventoListItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -155,7 +166,7 @@ export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onG
                 Lista
               </button>
             </div>
-            {isEventosAdmin && (
+            {puedeGestionar && (
               <Button variant="primary" size="sm" onClick={onCrearEvento}>
                 <Plus size={16} />
                 Crear evento
@@ -274,7 +285,7 @@ export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onG
             <div>
               <p className="font-semibold text-slate-700">Sin eventos próximos</p>
               <p className="text-sm text-[#757874] mt-0.5">
-                {isEventosAdmin
+                {puedeGestionar
                   ? 'Usa el botón Crear evento para publicar la primera actividad'
                   : 'Cuando el club publique actividades las verás aquí'}
               </p>
@@ -287,7 +298,7 @@ export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onG
             {eventos.map((evento) => (
               <div key={evento.id} className="min-w-0">
                 <EventoCard evento={evento} onClick={setSelectedEventoId} />
-                {isEventosAdmin && (
+                {puedeGestionarCategoria(esAdminEventos, gestorCategoriaIds, evento.categoriaId) && (
                   <button
                     onClick={() => onGestionarEvento(evento.id)}
                     className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-[#4a6fad] hover:text-[#264c99] px-2 py-1 rounded-lg hover:bg-[#e8eef7] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#264c99]"
@@ -307,7 +318,8 @@ export function EventosPage({ isEventosAdmin = false, onBack, onCrearEvento, onG
         <EventoDetailModal
           eventoId={selectedEventoId}
           onClose={() => setSelectedEventoId(null)}
-          isEventosAdmin={isEventosAdmin}
+          esAdminEventos={esAdminEventos}
+          gestorCategoriaIds={gestorCategoriaIds}
           onGestionar={(id) => {
             setSelectedEventoId(null)
             onGestionarEvento(id)

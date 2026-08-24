@@ -42,17 +42,39 @@ export async function getEventos(req: Request, res: Response): Promise<void> {
 
     const incluirPasados = req.query['incluirPasados'] === 'true';
 
+    // Los gestores ven además los BORRADOR/CANCELADO de sus categorías (una
+    // consulta indexada por request para no-admins; los socios pagan lo mismo
+    // y obtienen lista vacía).
+    let gestorIds: number[] = [];
+    if (!isAdmin) {
+      const filas = await prisma.gestorCategoria.findMany({
+        where: { usuarioId: req.user!.id },
+        select: { categoriaId: true },
+      });
+      gestorIds = filas.map((f) => f.categoriaId);
+    }
+    const esGestor = gestorIds.length > 0;
+
     const condiciones: Prisma.EventoWhereInput[] = [];
     if (!isAdmin) {
-      condiciones.push({ estado: { in: ['PUBLICADO', 'FINALIZADO'] } });
+      condiciones.push(
+        esGestor
+          ? {
+              OR: [
+                { estado: { in: ['PUBLICADO', 'FINALIZADO'] } },
+                { estado: { in: ['BORRADOR', 'CANCELADO'] }, categoriaId: { in: gestorIds } },
+              ],
+            }
+          : { estado: { in: ['PUBLICADO', 'FINALIZADO'] } },
+      );
     }
     if (slugs.length > 0) {
       condiciones.push({ categoria: { slug: { in: slugs } } });
     }
 
     // Ventana temporal: mes usa semántica de solapamiento; por defecto se
-    // ocultan los eventos ya terminados. Los borradores del admin sin fechas
-    // deben aparecer siempre.
+    // ocultan los eventos ya terminados. Los borradores sin fechas del admin o
+    // del gestor (en sus categorías) deben aparecer siempre.
     let ventana: Prisma.EventoWhereInput | null = null;
     if (typeof mes === 'string') {
       const [anio, mesNum] = mes.split('-').map(Number) as [number, number];
@@ -63,9 +85,15 @@ export async function getEventos(req: Request, res: Response): Promise<void> {
       ventana = { fechaFin: { gte: hoySantiagoUtc() } };
     }
     if (ventana) {
-      condiciones.push(
-        isAdmin ? { OR: [ventana, { estado: 'BORRADOR', fechaInicio: null }] } : ventana,
-      );
+      if (isAdmin) {
+        condiciones.push({ OR: [ventana, { estado: 'BORRADOR', fechaInicio: null }] });
+      } else if (esGestor) {
+        condiciones.push({
+          OR: [ventana, { estado: 'BORRADOR', fechaInicio: null, categoriaId: { in: gestorIds } }],
+        });
+      } else {
+        condiciones.push(ventana);
+      }
     }
 
     const eventos = await prisma.evento.findMany({
@@ -110,10 +138,22 @@ export async function getEventoById(req: Request, res: Response): Promise<void> 
       },
     });
 
-    // Un borrador no existe para quien no es admin (no filtrar existencia)
-    if (!evento || (evento.estado === 'BORRADOR' && req.user!.rol !== 'ADMIN')) {
+    // Un borrador no existe para quien no puede gestionarlo (no filtrar
+    // existencia). Gestores: consulta puntual solo al tocar un borrador.
+    if (!evento) {
       res.status(404).json({ error: 'Evento no encontrado' });
       return;
+    }
+    if (evento.estado === 'BORRADOR' && req.user!.rol !== 'ADMIN') {
+      const esGestorDeCategoria =
+        evento.categoriaId !== null &&
+        (await prisma.gestorCategoria.count({
+          where: { usuarioId: req.user!.id, categoriaId: evento.categoriaId },
+        })) > 0;
+      if (!esGestorDeCategoria) {
+        res.status(404).json({ error: 'Evento no encontrado' });
+        return;
+      }
     }
 
     const [mia, declaracionVigente] = await Promise.all([

@@ -19,6 +19,17 @@ class HttpError extends Error {
   }
 }
 
+// Alcance por categoría: el ADMIN gestiona todo; un gestor solo sus categorías
+// (req.gestorCategoriaIds, poblado por requireGestorEventos). Un evento sin
+// categoría solo lo gestiona el admin.
+function puedeGestionarCategoria(req: Request, categoriaId: number | null): boolean {
+  if (req.user?.rol === 'ADMIN') return true;
+  if (categoriaId === null) return false;
+  return req.gestorCategoriaIds?.includes(categoriaId) ?? false;
+}
+
+const MENSAJE_SIN_CATEGORIA = 'No gestionas esta categoría';
+
 /**
  * UTC offset of America/Santiago for a calendar date (DST-safe). Mirrors the
  * helper in salidas.controller.ts: a noon-UTC probe avoids the midnight DST edge.
@@ -165,8 +176,18 @@ export async function createEvento(req: Request, res: Response): Promise<void> {
   }
 
   try {
+    // Un gestor siempre crea dentro de una de sus categorías; solo el admin
+    // puede partir un borrador sin categoría.
+    if (req.user!.rol !== 'ADMIN' && parsed.data.categoriaId == null) {
+      res.status(400).json({ error: 'Selecciona la categoría' });
+      return;
+    }
     if (parsed.data.categoriaId != null && !(await categoriaExiste(parsed.data.categoriaId))) {
       res.status(400).json({ error: 'Categoría inválida' });
+      return;
+    }
+    if (!puedeGestionarCategoria(req, parsed.data.categoriaId ?? null)) {
+      res.status(403).json({ error: MENSAJE_SIN_CATEGORIA });
       return;
     }
 
@@ -209,9 +230,26 @@ export async function updateEvento(req: Request, res: Response): Promise<void> {
       res.status(404).json({ error: 'Evento no encontrado' });
       return;
     }
+    if (!puedeGestionarCategoria(req, evento.categoriaId)) {
+      res.status(403).json({ error: MENSAJE_SIN_CATEGORIA });
+      return;
+    }
     if (evento.estado === 'CANCELADO') {
       res.status(409).json({ error: 'El evento está cancelado' });
       return;
+    }
+
+    // Cambios de categoría: un gestor no puede dejarla en null ni moverla a
+    // una categoría que no gestiona.
+    if (parsed.data.categoriaId !== undefined) {
+      if (parsed.data.categoriaId === null && req.user!.rol !== 'ADMIN') {
+        res.status(400).json({ error: 'Selecciona la categoría' });
+        return;
+      }
+      if (parsed.data.categoriaId !== null && !puedeGestionarCategoria(req, parsed.data.categoriaId)) {
+        res.status(403).json({ error: MENSAJE_SIN_CATEGORIA });
+        return;
+      }
     }
 
     const camposPresentes = Object.entries(parsed.data)
@@ -271,6 +309,10 @@ export async function deleteEventoBorrador(req: Request, res: Response): Promise
       res.status(404).json({ error: 'Evento no encontrado' });
       return;
     }
+    if (!puedeGestionarCategoria(req, evento.categoriaId)) {
+      res.status(403).json({ error: MENSAJE_SIN_CATEGORIA });
+      return;
+    }
     if (evento.estado !== 'BORRADOR') {
       res.status(409).json({ error: 'Solo un borrador puede eliminarse' });
       return;
@@ -313,6 +355,10 @@ export async function publicarEvento(req: Request, res: Response): Promise<void>
     const evento = await prisma.evento.findUnique({ where: { id } });
     if (!evento) {
       res.status(404).json({ error: 'Evento no encontrado' });
+      return;
+    }
+    if (!puedeGestionarCategoria(req, evento.categoriaId)) {
+      res.status(403).json({ error: MENSAJE_SIN_CATEGORIA });
       return;
     }
     if (evento.estado !== 'BORRADOR') {
@@ -370,6 +416,10 @@ export async function despublicarEvento(req: Request, res: Response): Promise<vo
       res.status(404).json({ error: 'Evento no encontrado' });
       return;
     }
+    if (!puedeGestionarCategoria(req, evento.categoriaId)) {
+      res.status(403).json({ error: MENSAJE_SIN_CATEGORIA });
+      return;
+    }
     if (evento.estado !== 'PUBLICADO') {
       res.status(409).json({ error: 'Solo un evento publicado puede despublicarse' });
       return;
@@ -408,6 +458,10 @@ export async function cancelarEvento(req: Request, res: Response): Promise<void>
     const evento = await prisma.evento.findUnique({ where: { id } });
     if (!evento) {
       res.status(404).json({ error: 'Evento no encontrado' });
+      return;
+    }
+    if (!puedeGestionarCategoria(req, evento.categoriaId)) {
+      res.status(403).json({ error: MENSAJE_SIN_CATEGORIA });
       return;
     }
     if (evento.estado === 'CANCELADO') {
@@ -464,10 +518,14 @@ export async function getPostulantes(req: Request, res: Response): Promise<void>
   try {
     const evento = await prisma.evento.findUnique({
       where: { id },
-      select: { id: true, titulo: true, cupos: true, estado: true, fechaCorte: true },
+      select: { id: true, titulo: true, cupos: true, estado: true, fechaCorte: true, categoriaId: true },
     });
     if (!evento) {
       res.status(404).json({ error: 'Evento no encontrado' });
+      return;
+    }
+    if (!puedeGestionarCategoria(req, evento.categoriaId)) {
+      res.status(403).json({ error: MENSAJE_SIN_CATEGORIA });
       return;
     }
 
@@ -539,6 +597,20 @@ export async function finalizarEvento(req: Request, res: Response): Promise<void
   const ids = [...new Set(parsed.data.seleccionadosIds)];
 
   try {
+    // Alcance por categoría antes de abrir la transacción
+    const eventoPrevio = await prisma.evento.findUnique({
+      where: { id },
+      select: { categoriaId: true },
+    });
+    if (!eventoPrevio) {
+      res.status(404).json({ error: 'Evento no encontrado' });
+      return;
+    }
+    if (!puedeGestionarCategoria(req, eventoPrevio.categoriaId)) {
+      res.status(403).json({ error: MENSAJE_SIN_CATEGORIA });
+      return;
+    }
+
     const resultado = await prisma.$transaction(
       async (tx) => {
         // F1: FOR UPDATE serializa finalizaciones concurrentes sobre el evento
@@ -620,9 +692,16 @@ export async function reenviarNotificaciones(req: Request, res: Response): Promi
   const id = req.params['id'] as string;
 
   try {
-    const evento = await prisma.evento.findUnique({ where: { id }, select: { id: true } });
+    const evento = await prisma.evento.findUnique({
+      where: { id },
+      select: { id: true, categoriaId: true },
+    });
     if (!evento) {
       res.status(404).json({ error: 'Evento no encontrado' });
+      return;
+    }
+    if (!puedeGestionarCategoria(req, evento.categoriaId)) {
+      res.status(403).json({ error: MENSAJE_SIN_CATEGORIA });
       return;
     }
 
