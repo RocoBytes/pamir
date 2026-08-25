@@ -1,9 +1,9 @@
-import React from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ChevronLeft, Send, Paperclip, X } from 'lucide-react'
+import { ChevronLeft, Send } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { FilePicker } from '../ui/FilePicker'
 import type { RiesgoIdentificado } from '../../types/salida'
 import { RIESGO_IDENTIFICADO_LABELS } from '../../types/salida'
 
@@ -129,141 +129,6 @@ function CheckboxGroup<T extends string>({
   )
 }
 
-// ─── GPX file picker ──────────────────────────────────────────────────────────
-
-const MAX_GPX_SIZE = 15 * 1024 * 1024 // 15 MB
-
-interface GpxFilePickerProps {
-  value: File | null
-  onChange: (file: File | null) => void
-}
-
-function GpxFilePicker({ value, onChange }: GpxFilePickerProps) {
-  const [sizeError, setSizeError] = React.useState<string | null>(null)
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null
-    if (file) {
-      if (file.size > MAX_GPX_SIZE) {
-        setSizeError('El archivo supera el límite de 15 MB')
-        e.target.value = ''
-        return
-      }
-      setSizeError(null)
-    }
-    onChange(file)
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="text-sm font-semibold text-[#264c99]">
-        Archivo de Ruta GPX{' '}
-        <span className="text-[#757874] font-normal">(opcional)</span>
-      </span>
-      <p className="text-xs text-[#757874]">
-        Selecciona un archivo .gpx desde tu dispositivo. Se subirá automáticamente
-        a Google Drive al guardar la salida.
-      </p>
-
-      {value ? (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#264c99]/40 bg-[#e8eef7]">
-          <Paperclip size={15} className="text-[#264c99] shrink-0" />
-          <span className="text-sm text-[#1e3c7a] flex-1 truncate">{value.name}</span>
-          <button
-            type="button"
-            onClick={() => onChange(null)}
-            className="shrink-0 text-[#4a6fad] hover:text-[#A4636E] transition-colors"
-            aria-label="Quitar archivo"
-          >
-            <X size={15} />
-          </button>
-        </div>
-      ) : (
-        <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-[#4a6fad]/40 bg-white cursor-pointer hover:border-[#264c99]/60 hover:bg-[#f5f8f5] transition-colors">
-          <Paperclip size={15} className="text-[#4a6fad]/60" />
-          <span className="text-sm text-[#757874]">Seleccionar archivo .gpx…</span>
-          <input
-            type="file"
-            accept=".gpx"
-            className="sr-only"
-            onChange={handleFileChange}
-          />
-        </label>
-      )}
-
-      {sizeError && (
-        <p className="text-xs text-[#A4636E]" role="alert">
-          {sizeError}
-        </p>
-      )}
-    </div>
-  )
-}
-
-// ─── Pronostico file picker ───────────────────────────────────────────────────
-
-function PronosticoFilePicker({ value, onChange }: GpxFilePickerProps) {
-  const [sizeError, setSizeError] = React.useState<string | null>(null)
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null
-    if (file) {
-      if (file.size > MAX_GPX_SIZE) {
-        setSizeError('El archivo supera el límite de 15 MB')
-        e.target.value = ''
-        return
-      }
-      setSizeError(null)
-    }
-    onChange(file)
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="text-sm font-semibold text-[#264c99]">
-        Archivo del Pronóstico{' '}
-        <span className="text-[#757874] font-normal">(opcional)</span>
-      </span>
-      <p className="text-xs text-[#757874]">
-        Opcionalmente sube una foto o documento (PDF, JPG, PNG) del pronóstico
-        meteorológico.
-      </p>
-
-      {value ? (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#264c99]/40 bg-[#e8eef7]">
-          <Paperclip size={15} className="text-[#264c99] shrink-0" />
-          <span className="text-sm text-[#1e3c7a] flex-1 truncate">{value.name}</span>
-          <button
-            type="button"
-            onClick={() => onChange(null)}
-            className="shrink-0 text-[#4a6fad] hover:text-[#A4636E] transition-colors"
-            aria-label="Quitar archivo"
-          >
-            <X size={15} />
-          </button>
-        </div>
-      ) : (
-        <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-[#4a6fad]/40 bg-white cursor-pointer hover:border-[#264c99]/60 hover:bg-[#f5f8f5] transition-colors">
-          <Paperclip size={15} className="text-[#4a6fad]/60" />
-          <span className="text-sm text-[#757874]">Seleccionar archivo…</span>
-          <input
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
-            className="sr-only"
-            onChange={handleFileChange}
-          />
-        </label>
-      )}
-
-      {sizeError && (
-        <p className="text-xs text-[#A4636E]" role="alert">
-          {sizeError}
-        </p>
-      )}
-    </div>
-  )
-}
-
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Step5TechnicalPlanProps {
@@ -339,7 +204,19 @@ export function Step5Status({
       </div>
 
       {/* Archivo del pronóstico (opcional) */}
-      <PronosticoFilePicker value={pronosticoFile} onChange={onPronosticoFileChange} />
+      <FilePicker
+        label={
+          <>
+            Archivo del Pronóstico{' '}
+            <span className="text-[#757874] font-normal">(opcional)</span>
+          </>
+        }
+        hint="Opcionalmente sube una foto o documento (PDF, JPG, PNG) del pronóstico meteorológico."
+        accept=".pdf,.jpg,.jpeg,.png"
+        placeholder="Seleccionar archivo…"
+        value={pronosticoFile}
+        onChange={onPronosticoFileChange}
+      />
 
       {/* Principales Riesgos Identificados */}
       <div className="flex flex-col gap-3">
@@ -418,7 +295,19 @@ export function Step5Status({
       </div>
 
       {/* GPX File */}
-      <GpxFilePicker value={gpxFile} onChange={onFileChange} />
+      <FilePicker
+        label={
+          <>
+            Archivo de Ruta GPX{' '}
+            <span className="text-[#757874] font-normal">(opcional)</span>
+          </>
+        }
+        hint="Selecciona un archivo .gpx desde tu dispositivo. Se subirá automáticamente a Google Drive al guardar la salida."
+        accept=".gpx"
+        placeholder="Seleccionar archivo .gpx…"
+        value={gpxFile}
+        onChange={onFileChange}
+      />
 
       {/* Navigation */}
       <div className="flex justify-between pt-2">
