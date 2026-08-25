@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import Busboy from 'busboy';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { Evento, Prisma } from '../generated/prisma/client.js';
@@ -6,6 +7,11 @@ import {
   despacharNotificacionesPendientes,
   DispatchEnCursoError,
 } from '../lib/notificaciones.js';
+import { uploadToGoogleDrive, deleteFromGoogleDrive } from '../lib/google-drive.js';
+import { ALLOWED_PRONOSTICO_EXT_STRICT, sanitizePronosticoFilename } from './upload.controller.js';
+
+// Itinerary attachment (PDF/JPG/PNG) size cap, streamed straight to Drive
+const MAX_ADJUNTO_BYTES = 15 * 1024 * 1024;
 
 // Errores con código HTTP lanzados desde dentro de la transacción de
 // finalización; el catch del handler los mapea a la respuesta.
@@ -322,11 +328,198 @@ export async function deleteEventoBorrador(req: Request, res: Response): Promise
       return;
     }
 
+    // Best-effort cleanup of the itinerary attachment; a Drive failure must
+    // not block deleting the draft.
+    if (evento.itinerarioFileId) {
+      try {
+        await deleteFromGoogleDrive(evento.itinerarioFileId);
+      } catch (err) {
+        console.error('[deleteEventoBorrador] Could not delete attachment from Drive:', err);
+      }
+    }
+
     await prisma.evento.delete({ where: { id } });
     res.status(204).send();
   } catch (error) {
     console.error('[deleteEventoBorrador]', error);
     res.status(500).json({ error: 'Error al eliminar el evento' });
+  }
+}
+
+// ─── Itinerario attachment ────────────────────────────────────────────────────
+
+/**
+ * Shared guard for the attachment endpoints. Returns the evento, or null when
+ * it already sent the error response (404 / 403 / 409 / 500).
+ */
+async function cargarEventoParaAdjunto(req: Request, res: Response): Promise<Evento | null> {
+  const id = req.params['id'] as string;
+
+  let evento: Evento | null;
+  try {
+    evento = await prisma.evento.findUnique({ where: { id } });
+  } catch (error) {
+    console.error('[cargarEventoParaAdjunto]', error);
+    res.status(500).json({ error: 'Error al buscar el evento' });
+    return null;
+  }
+
+  if (!evento) {
+    res.status(404).json({ error: 'Evento no encontrado' });
+    return null;
+  }
+  if (!puedeGestionarCategoria(req, evento.categoriaId)) {
+    res.status(403).json({ error: MENSAJE_SIN_CATEGORIA });
+    return null;
+  }
+  if (evento.estado === 'CANCELADO') {
+    res.status(409).json({ error: 'El evento está cancelado' });
+    return null;
+  }
+  if (evento.estado === 'FINALIZADO') {
+    res.status(409).json({ error: 'Un evento finalizado solo permite editar el aviso destacado' });
+    return null;
+  }
+  return evento;
+}
+
+/**
+ * POST /api/eventos/:id/itinerario-adjunto
+ *
+ * multipart/form-data with a single "file" field (PDF/JPG/PNG, up to 15 MB).
+ * The stream is piped straight to Google Drive (resumable upload); replacing
+ * an existing attachment deletes the previous Drive file after responding.
+ */
+export async function uploadItinerarioAdjunto(req: Request, res: Response): Promise<void> {
+  const evento = await cargarEventoParaAdjunto(req, res);
+  if (!evento) return;
+
+  let responded = false;
+  const safeRespond = (status: number, body: object) => {
+    if (!responded) {
+      responded = true;
+      res.status(status).json(body);
+    }
+  };
+
+  const busboy = Busboy({
+    headers: req.headers,
+    limits: {
+      files: 1,
+      fileSize: MAX_ADJUNTO_BYTES,
+    },
+  });
+
+  let fileSeen = false;
+
+  busboy.on('file', async (_fieldname, fileStream, info) => {
+    fileSeen = true;
+    const { filename: rawFilename, mimeType } = info;
+
+    if (!ALLOWED_PRONOSTICO_EXT_STRICT.test(rawFilename)) {
+      fileStream.resume();
+      safeRespond(400, { error: 'Solo se permiten archivos PDF, JPG o PNG' });
+      return;
+    }
+
+    fileStream.on('limit', () => {
+      fileStream.resume();
+      safeRespond(413, {
+        error: `El archivo supera el límite de ${MAX_ADJUNTO_BYTES / 1024 / 1024} MB`,
+      });
+    });
+
+    try {
+      const anteriorId = evento.itinerarioFileId;
+      const result = await uploadToGoogleDrive(
+        fileStream,
+        sanitizePronosticoFilename(rawFilename),
+        mimeType || 'application/octet-stream',
+        MAX_ADJUNTO_BYTES,
+      );
+
+      let actualizado;
+      try {
+        actualizado = await prisma.evento.update({
+          where: { id: evento.id },
+          data: {
+            itinerarioFileId: result.fileId,
+            itinerarioFileName: result.fileName,
+            itinerarioFileUrl: result.webViewLink,
+          },
+          include: { categoria: true },
+        });
+      } catch (err) {
+        // Do not leave the freshly uploaded file orphaned
+        await deleteFromGoogleDrive(result.fileId).catch(() => undefined);
+        throw err;
+      }
+
+      safeRespond(200, actualizado);
+
+      if (anteriorId && anteriorId !== result.fileId) {
+        deleteFromGoogleDrive(anteriorId).catch((err) =>
+          console.error('[uploadItinerarioAdjunto] Could not delete previous attachment from Drive:', err),
+        );
+      }
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'FILE_TOO_LARGE') {
+        safeRespond(413, {
+          error: `El archivo supera el límite de ${MAX_ADJUNTO_BYTES / 1024 / 1024} MB`,
+        });
+        return;
+      }
+      console.error('[uploadItinerarioAdjunto] Error subiendo a Google Drive:', err);
+      safeRespond(500, { error: 'Error al subir el adjunto a Google Drive' });
+    }
+  });
+
+  busboy.on('error', (err) => {
+    console.error('[uploadItinerarioAdjunto] Busboy error:', err);
+    safeRespond(500, { error: 'Error procesando el archivo' });
+  });
+
+  // If the request ended without a file, respond instead of hanging.
+  // fileSeen is set synchronously at the start of the 'file' handler and
+  // 'close' fires after 'file', so there is no race with the async upload.
+  busboy.on('close', () => {
+    if (!fileSeen) {
+      safeRespond(400, { error: 'No se recibió ningún archivo' });
+    }
+  });
+
+  req.pipe(busboy);
+}
+
+/**
+ * DELETE /api/eventos/:id/itinerario-adjunto
+ *
+ * Removes the attachment reference and best-effort deletes the Drive file.
+ * Idempotent: succeeds even when nothing is attached.
+ */
+export async function deleteItinerarioAdjunto(req: Request, res: Response): Promise<void> {
+  const evento = await cargarEventoParaAdjunto(req, res);
+  if (!evento) return;
+
+  try {
+    if (evento.itinerarioFileId) {
+      try {
+        await deleteFromGoogleDrive(evento.itinerarioFileId);
+      } catch (err) {
+        console.error('[deleteItinerarioAdjunto] Could not delete attachment from Drive:', err);
+      }
+    }
+
+    const actualizado = await prisma.evento.update({
+      where: { id: evento.id },
+      data: { itinerarioFileId: null, itinerarioFileName: null, itinerarioFileUrl: null },
+      include: { categoria: true },
+    });
+    res.json(actualizado);
+  } catch (error) {
+    console.error('[deleteItinerarioAdjunto]', error);
+    res.status(500).json({ error: 'Error al quitar el adjunto' });
   }
 }
 

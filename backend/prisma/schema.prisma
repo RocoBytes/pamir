@@ -392,6 +392,10 @@ model Evento {
   // Contenido — la completitud se exige al publicar, no en el borrador
   objetivo        String?
   itinerario      String?
+  // Optional itinerary attachment (PDF/JPG/PNG stored in Google Drive)
+  itinerarioFileId   String? @map("itinerario_file_id")
+  itinerarioFileName String? @map("itinerario_file_name")
+  itinerarioFileUrl  String? @map("itinerario_file_url")
   incluye         String?
   noIncluye       String? @map("no_incluye")
   recomendaciones String?

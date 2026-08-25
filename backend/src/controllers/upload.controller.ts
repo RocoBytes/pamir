@@ -5,7 +5,7 @@ import { prisma } from '../lib/prisma.js';
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
 const ALLOWED_EXT = /\.gpx$/i;
-const ALLOWED_PRONOSTICO_EXT_STRICT = /\.(pdf|jpg|jpeg|png)$/i;
+export const ALLOWED_PRONOSTICO_EXT_STRICT = /\.(pdf|jpg|jpeg|png)$/i;
 
 function sanitizeGpxFilename(raw: string): string {
   const base = raw
@@ -16,7 +16,7 @@ function sanitizeGpxFilename(raw: string): string {
   return base.toLowerCase().endsWith('.gpx') ? base : `${base}.gpx`;
 }
 
-function sanitizePronosticoFilename(raw: string): string {
+export function sanitizePronosticoFilename(raw: string): string {
   return raw
     .replace(/[/\\]/g, '')
     .replace(/[^\w\s.-]/g, '_')

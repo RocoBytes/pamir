@@ -11,6 +11,8 @@ import {
   createEvento,
   updateEvento,
   deleteEventoBorrador,
+  uploadItinerarioAdjunto,
+  deleteItinerarioAdjunto,
   publicarEvento,
   despublicarEvento,
   cancelarEvento,
@@ -34,6 +36,8 @@ router.delete('/:id/inscripcion', retirarse);
 router.post('/', requireGestorEventos, createEvento);
 router.put('/:id', requireGestorEventos, updateEvento);
 router.delete('/:id', requireGestorEventos, deleteEventoBorrador);
+router.post('/:id/itinerario-adjunto', requireGestorEventos, uploadItinerarioAdjunto);
+router.delete('/:id/itinerario-adjunto', requireGestorEventos, deleteItinerarioAdjunto);
 router.post('/:id/publicar', requireGestorEventos, publicarEvento);
 router.post('/:id/despublicar', requireGestorEventos, despublicarEvento);
 router.post('/:id/cancelar', requireGestorEventos, cancelarEvento);
