@@ -446,8 +446,9 @@ export function EventoAdminPage({
             ) : evento?.estado === 'FINALIZADO' ? (
               <AvisoEditor evento={evento} onSaved={mergeSaved} />
             ) : (
+              // Keyed on the prop, not the loaded record: saving a new evento must not remount the form (it would drop the pending attachment).
               <EventoForm
-                key={evento?.id ?? 'nuevo'}
+                key={eventoId ?? 'nuevo'}
                 evento={evento}
                 esAdminEventos={esAdminEventos}
                 gestorCategoriaIds={gestorCategoriaIds}

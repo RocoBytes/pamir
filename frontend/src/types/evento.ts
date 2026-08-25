@@ -39,6 +39,9 @@ export interface EventoRecord {
   fechaCorte: string | null
   objetivo: string | null
   itinerario: string | null
+  itinerarioFileId: string | null
+  itinerarioFileName: string | null
+  itinerarioFileUrl: string | null
   incluye: string | null
   noIncluye: string | null
   recomendaciones: string | null

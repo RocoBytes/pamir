@@ -2,13 +2,20 @@ import { forwardRef, useEffect, useState, type TextareaHTMLAttributes } from 're
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { AlertCircle, AlertTriangle } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Paperclip, X } from 'lucide-react'
 
 import type { EventoDetail, CategoriaEventoRecord, EventoPayload } from '../types/evento'
 import { DIFICULTAD_LABELS } from '../types/evento'
-import { createEvento, updateEvento, fetchCategoriasEvento } from '../lib/api'
+import {
+  createEvento,
+  updateEvento,
+  fetchCategoriasEvento,
+  uploadItinerarioAdjunto,
+  deleteItinerarioAdjunto,
+} from '../lib/api'
 import type { EventoConCategoria } from '../lib/api'
 import { Button } from './ui/Button'
+import { FilePicker } from './ui/FilePicker'
 import { Input } from './ui/Input'
 import { Select } from './ui/Select'
 import { TimeInput24 } from './ui/TimeInput24'
@@ -189,6 +196,13 @@ export function EventoForm({ evento, esAdminEventos = false, gestorCategoriaIds 
   const [categorias, setCategorias] = useState<CategoriaEventoRecord[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // Attachment lives outside RHF: it is uploaded in a second request after the JSON save
+  const [adjuntoFile, setAdjuntoFile] = useState<File | null>(null)
+  const [quitarAdjunto, setQuitarAdjunto] = useState(false)
+  const adjuntoActual =
+    !quitarAdjunto && evento?.itinerarioFileUrl
+      ? { url: evento.itinerarioFileUrl, nombre: evento.itinerarioFileName ?? 'archivo' }
+      : null
   // Un gestor crea siempre dentro de una de sus categorías (espejo del backend)
   const categoriaObligatoria = !esAdminEventos
 
@@ -238,13 +252,37 @@ export function EventoForm({ evento, esAdminEventos = false, gestorCategoriaIds 
     }
     setSaving(true)
     setSubmitError(null)
+    let guardado: EventoConCategoria
     try {
-      const result = evento
+      guardado = evento
         ? await updateEvento(evento.id, toPayload(values))
         : await createEvento(toPayload(values))
-      onSaved(result)
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'No se pudo guardar el evento')
+      setSaving(false)
+      return
+    }
+    // The JSON is persisted; on creation this switches the form to edit mode.
+    onSaved(guardado)
+    try {
+      if (adjuntoFile) {
+        const conAdjunto = await uploadItinerarioAdjunto(guardado.id, adjuntoFile)
+        setAdjuntoFile(null)
+        setQuitarAdjunto(false)
+        onSaved(conAdjunto)
+      } else if (quitarAdjunto && guardado.itinerarioFileId) {
+        const sinAdjunto = await deleteItinerarioAdjunto(guardado.id)
+        setQuitarAdjunto(false)
+        onSaved(sinAdjunto)
+      }
+    } catch (err) {
+      const detalle = err instanceof Error ? err.message : ''
+      setSubmitError(
+        adjuntoFile
+          ? `El evento se guardó, pero no se pudo subir el adjunto${detalle ? `: ${detalle}` : ''}. Vuelve a guardar para reintentar.`
+          : `El evento se guardó, pero no se pudo quitar el adjunto${detalle ? `: ${detalle}` : ''}. Vuelve a guardar para reintentar.`,
+      )
+      // adjuntoFile / quitarAdjunto are kept so the next save retries only the file step
     } finally {
       setSaving(false)
     }
@@ -423,6 +461,61 @@ export function EventoForm({ evento, esAdminEventos = false, gestorCategoriaIds 
           error={errors.itinerario?.message}
           {...register('itinerario')}
         />
+        {adjuntoActual && !adjuntoFile ? (
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-[#264c99]">Adjunto del itinerario</span>
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#264c99]/40 bg-[#e8eef7]">
+              <a
+                href={adjuntoActual.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 flex-1 min-w-0 text-sm text-[#1e3c7a] hover:underline"
+              >
+                <Paperclip size={15} className="text-[#264c99] shrink-0" />
+                <span className="truncate">{adjuntoActual.nombre}</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setQuitarAdjunto(true)}
+                disabled={saving}
+                className="shrink-0 text-[#4a6fad] hover:text-[#A4636E] transition-colors disabled:opacity-50"
+                aria-label="Quitar adjunto"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <FilePicker
+            label={
+              <>
+                Adjunto del itinerario{' '}
+                <span className="text-[#757874] font-normal">(opcional)</span>
+              </>
+            }
+            hint="PDF, JPG o PNG, máximo 15 MB. Se sube al guardar."
+            accept=".pdf,.jpg,.jpeg,.png"
+            placeholder="Seleccionar archivo"
+            value={adjuntoFile}
+            onChange={(f) => {
+              setAdjuntoFile(f)
+              if (f) setQuitarAdjunto(false)
+            }}
+            disabled={saving}
+          />
+        )}
+        {quitarAdjunto && !adjuntoFile && evento?.itinerarioFileUrl && (
+          <p className="text-xs text-[#757874] -mt-2">
+            Se quitará el adjunto al guardar.{' '}
+            <button
+              type="button"
+              onClick={() => setQuitarAdjunto(false)}
+              className="font-semibold text-[#264c99] hover:underline"
+            >
+              Deshacer
+            </button>
+          </p>
+        )}
         <CampoTextarea
           label="Incluye"
           rows={3}

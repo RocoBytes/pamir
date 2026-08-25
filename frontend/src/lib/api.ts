@@ -653,6 +653,27 @@ export async function deleteEventoBorrador(id: string): Promise<void> {
   }
 }
 
+// Multipart (field `file`); the browser sets Content-Type with the boundary
+export async function uploadItinerarioAdjunto(eventoId: string, file: File): Promise<EventoConCategoria> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(eventoId)}/itinerario-adjunto`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  })
+  return handleResponse<EventoConCategoria>(res)
+}
+
+export async function deleteItinerarioAdjunto(eventoId: string): Promise<EventoConCategoria> {
+  const res = await fetch(`${API_BASE}/eventos/${encodeURIComponent(eventoId)}/itinerario-adjunto`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  return handleResponse<EventoConCategoria>(res)
+}
+
 export async function inscribirseEvento(
   id: string,
   payload: InscripcionPayload,

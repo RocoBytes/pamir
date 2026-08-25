@@ -41,6 +41,9 @@ const MOCK_EVENTO = {
   fechaCorte: corteIso,
   objetivo: 'Cumbre del Cerro Provincia',
   itinerario: 'Salida 07:30 desde el club',
+  itinerarioFileId: 'drive-itin-001',
+  itinerarioFileName: 'itinerario.pdf',
+  itinerarioFileUrl: 'https://drive.google.com/file/d/drive-itin-001/view',
   incluye: null,
   noIncluye: null,
   recomendaciones: null,
@@ -230,6 +233,15 @@ test.describe('Eventos del club – inscripción (socio)', () => {
       modal.getByText('¿Cuántos cupos puedo entregar para otros participantes?'),
     ).toHaveCount(0)
     await expect(modal.getByText(/DECLARACIÓN JURADA DEL PARTICIPANTE/)).toBeVisible()
+  })
+
+  test('el detalle enlaza al adjunto del itinerario en una pestaña nueva', async ({ page }) => {
+    await mockDetalleConInscripcion(page, 'ninguna')
+    await abrirDetalle(page)
+
+    const link = page.getByRole('link', { name: /Ver itinerario adjunto/ })
+    await expect(link).toHaveAttribute('href', 'https://drive.google.com/file/d/drive-itin-001/view')
+    await expect(link).toHaveAttribute('target', '_blank')
   })
 
   test('postulado: puede retirar la postulación con confirmación inline', async ({ page }) => {
