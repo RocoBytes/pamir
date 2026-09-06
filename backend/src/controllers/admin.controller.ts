@@ -4,6 +4,11 @@ import { prisma } from '../lib/prisma.js';
 import { Prisma, SalidaStatus } from '../generated/prisma/client.js';
 import { sendEmail } from '../lib/google-gmail.js';
 import { buildSaludSalidaEmail, type ParticipanteSaludEmailData } from '../lib/email-templates.js';
+import {
+  getEstadoCredencial,
+  guardarRefreshToken,
+  probarRefreshToken,
+} from '../lib/google-credentials.js';
 
 interface MesRow {
   // DATE_TRUNC returns timestamp-without-tz; some driver versions deliver
@@ -713,6 +718,56 @@ export async function enviarSaludSalida(req: Request, res: Response): Promise<vo
   } catch (error) {
     console.error('[enviarSaludSalida]', error);
     res.status(500).json({ error: 'Error al procesar la solicitud' });
+  }
+}
+
+// ─── Credencial de Google (refresh token rotable desde el panel) ────────────────
+
+// Un refresh token de Google empieza por "1//" y ronda los 100 caracteres. El
+// tope alto sólo evita que un pegado accidental enorme llegue a la validación.
+const guardarCredencialSchema = z.object({
+  refreshToken: z.string().trim().min(20).max(2048),
+});
+
+// GET /api/admin/google-credencial
+export async function getGoogleCredencial(_req: Request, res: Response): Promise<void> {
+  try {
+    res.json(await getEstadoCredencial());
+  } catch (error) {
+    console.error('[getGoogleCredencial]', error);
+    res.status(500).json({ error: 'No se pudo obtener el estado de la credencial' });
+  }
+}
+
+// PUT /api/admin/google-credencial
+export async function saveGoogleCredencial(req: Request, res: Response): Promise<void> {
+  try {
+    const parsed = guardarCredencialSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'El refresh token no tiene un formato válido' });
+      return;
+    }
+
+    const refreshToken = parsed.data.refreshToken;
+
+    // Se prueba contra Google ANTES de guardar: una errata al pegar dejaría la
+    // integración rota en silencio, que es justo el fallo que esto viene a cerrar.
+    const prueba = await probarRefreshToken(refreshToken);
+    if (!prueba.ok) {
+      res.status(422).json({ error: `Google rechazó el token: ${prueba.motivo}` });
+      return;
+    }
+
+    await guardarRefreshToken(refreshToken, req.user!.email);
+
+    res.json(await getEstadoCredencial());
+  } catch (error) {
+    // Nunca `error` a secas: si viniera de gaxios arrastraría el token pegado.
+    console.error(
+      '[saveGoogleCredencial]',
+      error instanceof Error ? error.message : 'error desconocido',
+    );
+    res.status(500).json({ error: 'No se pudo guardar la credencial' });
   }
 }
 

@@ -432,6 +432,34 @@ export async function fetchAdminStats(): Promise<AdminStats> {
   return handleResponse<AdminStats>(res)
 }
 
+// ─── Credencial de Google (refresh token rotable desde el panel) ─────────────
+
+export interface GoogleCredencial {
+  configurado: boolean
+  /** 'db' = pegado desde el panel; 'env' = el del servidor, como respaldo. */
+  origen: 'db' | 'env'
+  actualizadoAt: string | null
+  actualizadoPor: string | null
+  diasDesdeActualizacion: number | null
+  estado: { ok: boolean; motivo: string | null }
+}
+
+export async function fetchGoogleCredencial(): Promise<GoogleCredencial> {
+  const res = await fetch(`${API_BASE}/admin/google-credencial`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<GoogleCredencial>(res)
+}
+
+export async function saveGoogleCredencial(refreshToken: string): Promise<GoogleCredencial> {
+  const res = await fetch(`${API_BASE}/admin/google-credencial`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ refreshToken }),
+  })
+  return handleResponse<GoogleCredencial>(res)
+}
+
 // ─── Admin analytics dashboard ──────────────────────────────────────────────────
 
 export interface DashboardFiltros {
