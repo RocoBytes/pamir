@@ -1,21 +1,11 @@
 import { google } from 'googleapis';
+import { getOAuth2Client } from './google-credentials.js';
 
-let gmailClient: ReturnType<typeof google.gmail> | null = null;
-
-function getGmailClient(): ReturnType<typeof google.gmail> {
-  if (gmailClient) return gmailClient;
-
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-  );
-
-  oauth2Client.setCredentials({
-    refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
-  });
-
-  gmailClient = google.gmail({ version: 'v1', auth: oauth2Client });
-  return gmailClient;
+// Sin memorizar el cliente Gmail a propósito: construirlo es barato y lo caro
+// (el access token) ya lo cachea el OAuth2Client compartido. Así, cuando un
+// admin pega un token nuevo en el panel, basta con invalidar esa única caché.
+async function getGmailClient(): Promise<ReturnType<typeof google.gmail>> {
+  return google.gmail({ version: 'v1', auth: await getOAuth2Client() });
 }
 
 function buildRawEmail(to: string, subject: string, html: string): string {
@@ -33,7 +23,7 @@ function buildRawEmail(to: string, subject: string, html: string): string {
 
 // Devuelve el id del mensaje en Gmail (proveedorId de la cola de notificaciones)
 export async function sendEmail(to: string, subject: string, htmlBody: string): Promise<string | undefined> {
-  const gmail = getGmailClient();
+  const gmail = await getGmailClient();
   const raw = buildRawEmail(to, subject, htmlBody);
   const res = await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
   return res.data.id ?? undefined;

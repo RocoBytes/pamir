@@ -95,6 +95,23 @@ model DashboardLayout {
   @@map("dashboard_layouts")
 }
 
+// Secretos que un administrador puede rotar desde el panel, sin SSH ni redeploy.
+// Nació para el refresh token de Google: la pantalla de consentimiento OAuth está
+// en estado "Testing", así que Google lo caduca cada 7 días y hay que renovarlo a
+// mano. El contenedor es read_only y env_file se lee sólo al arrancar, de modo que
+// la app no puede reescribir su propio .env: el valor vive aquí.
+// `value` va SIEMPRE cifrado (lib/secret-crypto.ts), nunca en claro.
+model AppSecret {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedBy String?  @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("app_secrets")
+}
+
 model Salida {
   id           String  @id @default(uuid())
   numeroSalida Int     @unique @default(autoincrement()) @map("numero_salida")

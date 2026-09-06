@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { Readable, Transform, TransformCallback } from 'node:stream';
+import { getOAuth2Client } from './google-credentials.js';
 
 // ─── Size Guard Stream ────────────────────────────────────────────────────────
 
@@ -29,17 +30,8 @@ class SizeGuard extends Transform {
 
 // ─── Drive Client Factory ─────────────────────────────────────────────────────
 
-function createDriveClient() {
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-  );
-
-  oauth2Client.setCredentials({
-    refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
-  });
-
-  return google.drive({ version: 'v3', auth: oauth2Client });
+async function createDriveClient() {
+  return google.drive({ version: 'v3', auth: await getOAuth2Client() });
 }
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
@@ -65,7 +57,7 @@ export async function uploadToGoogleDrive(
   mimeType: string,
   maxBytes = 15 * 1024 * 1024,
 ): Promise<UploadResult> {
-  const drive = createDriveClient();
+  const drive = await createDriveClient();
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
   // Insertar SizeGuard en el pipeline para rechazar archivos demasiado grandes
@@ -109,6 +101,6 @@ export async function uploadToGoogleDrive(
  * puede borrar archivos que ella misma creó.
  */
 export async function deleteFromGoogleDrive(fileId: string): Promise<void> {
-  const drive = createDriveClient();
+  const drive = await createDriveClient();
   await drive.files.delete({ fileId });
 }
