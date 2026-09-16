@@ -5,6 +5,7 @@ import { sendEmail } from '../lib/google-gmail.js';
 import { buildSalidaNotificationEmail } from '../lib/email-templates.js';
 import { ADMIN_EMAIL } from '../lib/constants.js';
 import { instanteSantiago } from '../lib/santiago-time.js';
+import { errorFechaCalendario } from '../lib/fecha-calendario.js';
 
 const asJson = (v: unknown): Prisma.InputJsonValue => v as Prisma.InputJsonValue;
 
@@ -197,6 +198,14 @@ export async function createSalida(req: Request, res: Response): Promise<void> {
     // Un usuario no-admin nunca puede marcar una salida como registro histórico.
     if (!isAdmin && data.esRegistroHistorico) {
       res.status(403).json({ error: 'No tienes permiso para crear registros históricos' });
+      return;
+    }
+
+    const errorFecha =
+      errorFechaCalendario('Fecha de inicio', data.fechaInicio) ??
+      errorFechaCalendario('Fecha de retorno', data.fechaRetornoEstimada);
+    if (errorFecha) {
+      res.status(400).json({ error: errorFecha });
       return;
     }
 
@@ -439,6 +448,17 @@ export async function updateSalida(req: Request, res: Response): Promise<void> {
 
     // Whitelist explícita — nunca exponer campos de sistema al cliente
     const body = req.body as Partial<CreateSalidaBody>;
+
+    const errorFecha =
+      (body.fechaInicio !== undefined ? errorFechaCalendario('Fecha de inicio', body.fechaInicio) : null) ??
+      (body.fechaRetornoEstimada !== undefined
+        ? errorFechaCalendario('Fecha de retorno', body.fechaRetornoEstimada)
+        : null);
+    if (errorFecha) {
+      res.status(400).json({ error: errorFecha });
+      return;
+    }
+
     const salida = await prisma.salida.update({
       where: { id },
       data: {

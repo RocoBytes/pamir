@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { fechaCalendarioField } from './fecha-calendario.js';
+import { fechaCalendarioField, errorFechaCalendario } from './fecha-calendario.js';
 
 function firstMessage(value: string): string | undefined {
   const result = fechaCalendarioField.safeParse(value);
@@ -31,5 +31,31 @@ describe('fechaCalendarioField', () => {
 
   it('rejects a malformed date with the format message', () => {
     assert.equal(firstMessage('26-09-22'), 'Formato de fecha inválido (se espera YYYY-MM-DD)');
+  });
+});
+
+describe('errorFechaCalendario', () => {
+  it('returns null for a valid calendar date', () => {
+    assert.equal(errorFechaCalendario('Fecha de inicio', '2026-09-24'), null);
+  });
+
+  it('accepts an ISO datetime, validated by its date part', () => {
+    assert.equal(errorFechaCalendario('Fecha de inicio', '2026-09-24T00:00:00.000Z'), null);
+  });
+
+  it('rejects a year below the minimum, mentioning the label', () => {
+    const error = errorFechaCalendario('Fecha de inicio', '0026-09-24');
+    assert.equal(typeof error, 'string');
+    assert.match(error ?? '', /^Fecha de inicio inválida/);
+  });
+
+  it('rejects an undefined value, mentioning the label', () => {
+    const error = errorFechaCalendario('Fecha de retorno', undefined);
+    assert.equal(typeof error, 'string');
+    assert.match(error ?? '', /^Fecha de retorno inválida/);
+  });
+
+  it('rejects a day that does not exist', () => {
+    assert.equal(typeof errorFechaCalendario('Fecha de retorno', '2026-02-30'), 'string');
   });
 });

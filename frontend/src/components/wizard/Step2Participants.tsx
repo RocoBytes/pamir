@@ -6,6 +6,7 @@ import { Input } from '../ui/Input'
 import { TimeInput24 } from '../ui/TimeInput24'
 import { Button } from '../ui/Button'
 import type { AvisoExterno } from '../../types/salida'
+import { fechaInputField } from '../../lib/fechas'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -21,9 +22,9 @@ const step2Schema = z
     // Siempre presente vía defaultValues (EMPTY_FORM / WizardLayout), por eso sin .default()
     // para evitar el desajuste input/output del resolver de react-hook-form.
     esRegistroHistorico: z.boolean(),
-    fechaInicio: z.string().min(1, 'Selecciona la fecha de inicio'),
+    fechaInicio: fechaInputField('Selecciona la fecha de inicio'),
     horaInicio: z.string().min(1, 'Ingresa la hora de salida'),
-    fechaRetornoEstimada: z.string().min(1, 'Selecciona la fecha estimada de retorno'),
+    fechaRetornoEstimada: fechaInputField('Selecciona la fecha estimada de retorno'),
     horaRetornoEstimada: z.string().min(1, 'Ingresa la hora de retorno'),
     horaAlerta: z.string().min(1, 'Ingresa la hora de alerta'),
     avisosExternos: z

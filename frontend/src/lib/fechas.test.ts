@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { restarDias, esFechaCompleta } from './fechas'
+import { restarDias, esFechaCompleta, fechaInputField } from './fechas'
 
 describe('restarDias', () => {
   it('subtracts days within the same month', () => {
@@ -31,5 +31,28 @@ describe('esFechaCompleta', () => {
 
   it('rejects a non-padded partial date', () => {
     expect(esFechaCompleta('2026-9-4')).toBe(false)
+  })
+})
+
+describe('fechaInputField', () => {
+  it('fails on an empty value with the empty message', () => {
+    const result = fechaInputField('Selecciona la fecha').safeParse('')
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe('Selecciona la fecha')
+    }
+  })
+
+  it('fails on an implausible year with the invalid-date message', () => {
+    const result = fechaInputField('Selecciona la fecha').safeParse('0002-09-24')
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe('Fecha inválida: revisa el año (4 dígitos)')
+    }
+  })
+
+  it('succeeds on a complete plausible date', () => {
+    const result = fechaInputField('Selecciona la fecha').safeParse('2026-09-24')
+    expect(result.success).toBe(true)
   })
 })

@@ -7,6 +7,7 @@ import { Input } from './ui/Input'
 import { TimeInput24 } from './ui/TimeInput24'
 import { Button } from './ui/Button'
 import { getSalida, updateSalida } from '../lib/api'
+import { fechaInputField } from '../lib/fechas'
 import type {
   SalidaRecord,
   TipoSalida,
@@ -74,8 +75,8 @@ const editSchema = z
     temporada: z.enum(TEMPORADAS),
     nombreActividad: z.string().min(2, 'Ingresa el nombre de la actividad (mín. 2 caracteres)'),
     ubicacionGeografica: z.string().min(2, 'Ingresa la ubicación (mín. 2 caracteres)'),
-    fechaInicio: z.string().min(1, 'Selecciona la fecha de inicio'),
-    fechaRetornoEstimada: z.string().min(1, 'Selecciona la fecha de retorno'),
+    fechaInicio: fechaInputField('Selecciona la fecha de inicio'),
+    fechaRetornoEstimada: fechaInputField('Selecciona la fecha de retorno'),
     horaRetornoEstimada: z.string().min(1, 'Ingresa la hora de retorno'),
     horaAlerta: z.string().min(1, 'Ingresa la hora de alerta'),
     avisosExternos: z.array(z.enum(AVISOS)).min(1, 'Selecciona al menos una opción'),
