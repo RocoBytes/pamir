@@ -4,6 +4,7 @@ import { Prisma, SalidaStatus, Salida } from '../generated/prisma/client.js';
 import { sendEmail } from '../lib/google-gmail.js';
 import { buildSalidaNotificationEmail } from '../lib/email-templates.js';
 import { ADMIN_EMAIL } from '../lib/constants.js';
+import { instanteSantiago } from '../lib/santiago-time.js';
 
 const asJson = (v: unknown): Prisma.InputJsonValue => v as Prisma.InputJsonValue;
 
@@ -76,20 +77,6 @@ function normalizeParticipantes(participantObjs: unknown[], addedBy: string | nu
 }
 
 /**
- * UTC offset of America/Santiago for a calendar date (DST-safe). Mirrors the
- * helper in cron.controller.ts: a noon-UTC probe avoids the midnight DST edge.
- */
-function santiagoOffsetFor(dateStr: string): string {
-  const probe = new Date(`${dateStr}T12:00:00Z`);
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Santiago',
-    timeZoneName: 'longOffset',
-  }).formatToParts(probe);
-  const tzPart = parts.find((p) => p.type === 'timeZoneName')?.value ?? 'GMT-04:00';
-  return tzPart.replace('GMT', '');
-}
-
-/**
  * Scheduled departure instant of a salida, in Santiago time. fechaInicio is
  * stored as midnight UTC of the chosen calendar date; horaInicio is "HH:MM".
  * Legacy salidas without horaInicio fall back to 23:59 (editable through the day).
@@ -97,7 +84,7 @@ function santiagoOffsetFor(dateStr: string): string {
 function departureMoment(salida: Salida): Date {
   const dateStr = salida.fechaInicio.toISOString().slice(0, 10);
   const hora = salida.horaInicio ?? '23:59';
-  return new Date(`${dateStr}T${hora}:00${santiagoOffsetFor(dateStr)}`);
+  return instanteSantiago(dateStr, hora);
 }
 
 // Los integrantes son editables solo si la salida está EN_CURSO y la fecha+hora

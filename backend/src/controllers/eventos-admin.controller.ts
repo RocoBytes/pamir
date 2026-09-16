@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Busboy from 'busboy';
 import { z } from 'zod';
 import { fechaCalendarioField as fechaField } from '../lib/fecha-calendario.js';
+import { instanteSantiago } from '../lib/santiago-time.js';
 import { prisma } from '../lib/prisma.js';
 import { Evento, Prisma } from '../generated/prisma/client.js';
 import {
@@ -37,24 +38,10 @@ function puedeGestionarCategoria(req: Request, categoriaId: number | null): bool
 
 const MENSAJE_SIN_CATEGORIA = 'No gestionas esta categoría';
 
-/**
- * UTC offset of America/Santiago for a calendar date (DST-safe). Mirrors the
- * helper in salidas.controller.ts: a noon-UTC probe avoids the midnight DST edge.
- */
-function santiagoOffsetFor(dateStr: string): string {
-  const probe = new Date(`${dateStr}T12:00:00Z`);
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Santiago',
-    timeZoneName: 'longOffset',
-  }).formatToParts(probe);
-  const tzPart = parts.find((p) => p.type === 'timeZoneName')?.value ?? 'GMT-04:00';
-  return tzPart.replace('GMT', '');
-}
-
 // El admin elige el cierre como hora de pared de Santiago; se guarda el
 // instante UTC equivalente (abierto/cerrado se deriva comparando instantes).
 function composeFechaCorte(fc: { fecha: string; hora: string }): Date {
-  return new Date(`${fc.fecha}T${fc.hora}:00${santiagoOffsetFor(fc.fecha)}`);
+  return instanteSantiago(fc.fecha, fc.hora);
 }
 
 // Fecha calendario (YYYY-MM-DD) de un instante, vista desde Santiago.

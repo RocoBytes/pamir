@@ -3,26 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { sendEmail } from '../lib/google-gmail.js';
 import { buildAlertaSalidaEmail, buildRecordatorioCierreEmail } from '../lib/email-templates.js';
 import { ADMIN_EMAIL } from '../lib/constants.js';
-
-/**
- * Derives the UTC offset of America/Santiago for a given calendar date.
- *
- * DST note: Chile observes DST (UTC-3 in summer / UTC-4 in winter), so the
- * offset must be computed for the salida's own return date — not for "now".
- * A return date on the other side of a DST transition would otherwise get
- * the wrong offset. Noon UTC of that date is used as the probe instant to
- * stay safely away from the midnight transition edges.
- */
-function santiagoOffsetFor(dateStr: string): string {
-  const probe = new Date(`${dateStr}T12:00:00Z`);
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Santiago',
-    timeZoneName: 'longOffset',
-  }).formatToParts(probe);
-  const tzPart = parts.find((p) => p.type === 'timeZoneName')?.value ?? 'GMT-04:00';
-  // longOffset produces "GMT+HH:MM" or "GMT-HH:MM"; extract the signed offset
-  return tzPart.replace('GMT', '');
-}
+import { instanteSantiago } from '../lib/santiago-time.js';
 
 /**
  * GET /api/cron/check-alertas?secret=<CRON_SECRET>
@@ -71,9 +52,11 @@ export async function checkAlertas(req: Request, res: Response): Promise<void> {
         // IS the intended return date — no timezone conversion here.
         const returnDateStr = salida.fechaRetornoEstimada.toISOString().slice(0, 10);
 
-        // Anchor horaAlerta to the Santiago offset valid on that date (DST-safe)
-        const offset = santiagoOffsetFor(returnDateStr);
-        const alarmMoment = new Date(`${returnDateStr}T${salida.horaAlerta}:00${offset}`);
+        // Anchor horaAlerta to the Santiago offset valid on that date (DST-safe:
+        // Chile observes DST, and the offset is derived for the salida's own
+        // return date — not "now" — so a return date on the other side of a DST
+        // transition still resolves correctly).
+        const alarmMoment = instanteSantiago(returnDateStr, salida.horaAlerta);
         const reminderMoment = new Date(alarmMoment.getTime() - REMINDER_LEAD_MS);
 
         // Reminder branch — resolve once, then never reconsider. Stamp first so
