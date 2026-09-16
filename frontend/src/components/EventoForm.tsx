@@ -14,6 +14,7 @@ import {
   deleteItinerarioAdjunto,
 } from '../lib/api'
 import type { EventoConCategoria } from '../lib/api'
+import { restarDias, esFechaCompleta } from '../lib/fechas'
 import { Button } from './ui/Button'
 import { FilePicker } from './ui/FilePicker'
 import { Input } from './ui/Input'
@@ -80,12 +81,6 @@ function corteASantiago(iso: string): { fecha: string; hora: string } {
     hour12: false,
   })
   return { fecha, hora }
-}
-
-// Resta días en aritmética de calendario UTC (sin sorpresas de DST)
-function restarDias(fecha: string, dias: number): string {
-  const [y = 0, m = 1, d = 1] = fecha.split('-').map(Number)
-  return new Date(Date.UTC(y, m - 1, d - dias)).toISOString().slice(0, 10)
 }
 
 function buildDefaults(evento: EventoDetail | null): EventoFormValues {
@@ -228,10 +223,11 @@ export function EventoForm({ evento, esAdminEventos = false, gestorCategoriaIds 
       })
   }, [])
 
-  // Sugerencia de cierre: dos días antes del inicio, 23:59 (solo si está vacío)
+  // Sugerencia de cierre: dos días antes del inicio, 23:59 (solo si está vacío
+  // y la fecha de inicio ya está completa, no un valor intermedio del input)
   const fechaInicioVal = watch('fechaInicio')
   useEffect(() => {
-    if (!fechaInicioVal) return
+    if (!fechaInicioVal || !esFechaCompleta(fechaInicioVal)) return
     const { fechaCorteFecha, fechaCorteHora } = getValues()
     if (fechaCorteFecha || fechaCorteHora) return
     setValue('fechaCorteFecha', restarDias(fechaInicioVal, 2))

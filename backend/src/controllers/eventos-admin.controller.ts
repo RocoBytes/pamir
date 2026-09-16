@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Busboy from 'busboy';
 import { z } from 'zod';
+import { fechaCalendarioField as fechaField } from '../lib/fecha-calendario.js';
 import { prisma } from '../lib/prisma.js';
 import { Evento, Prisma } from '../generated/prisma/client.js';
 import {
@@ -63,9 +64,6 @@ function fechaSantiagoDe(instante: Date): string {
 
 // ─── Validación ───────────────────────────────────────────────────────────────
 
-const fechaField = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido (se espera YYYY-MM-DD)');
 const horaField = z
   .string()
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Formato de hora inválido (se espera HH:MM)');
